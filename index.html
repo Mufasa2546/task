@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Task">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -221,6 +221,20 @@ textarea{resize:vertical;min-height:80px}
 .toast.alert{background:var(--coral);color:#fff}
 .toast button{background:rgba(255,255,255,.18);border:0;color:inherit;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;flex:none}
 
+.bars{display:grid;gap:8px}
+.bar-row{display:grid;grid-template-columns:84px minmax(0,1fr) 30px;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.bar-row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:10px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.bar-track span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:99px}
+.bar-row b{font-weight:700;color:var(--fg);text-align:right;font-family:var(--f-mono);font-size:12.5px}
+.tips{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.tips li{display:flex;gap:10px;align-items:flex-start;background:var(--sunk);border-radius:var(--r-sm);padding:12px 14px;font-size:14px}
+.tips li::before{content:"";flex:none;width:8px;height:8px;margin-top:7px;border-radius:50%;background:var(--gold)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;align-items:start}
+.set-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 0;border-top:1px solid var(--line)}
+.set-row:first-of-type{border-top:0;padding-top:4px}
+.set-row .t{min-width:0;flex:1 1 220px}.set-row .t b{display:block;font-size:14.5px}.set-row .t span{font-size:13px;color:var(--muted)}
+.result-kind{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
@@ -385,6 +399,10 @@ const IC = {
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   copy: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
+  insights: I('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  download: I('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  upload: I('<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>'),
   plus: I('<path d="M12 5v14M5 12h14"/>', 'stroke-width="2.6"')
 };
 
@@ -397,7 +415,10 @@ const SECTIONS = {
   log: {label: "Activity log", short: "Log", icon: "log", group: "Grow"},
   biz: {label: "Businesses", icon: "biz", group: "Work"},
   projects: {label: "Apps & websites", short: "Projects", icon: "projects", group: "Work"},
-  ai: {label: "Task AI", icon: "ai", group: "Assist"}
+  ai: {label: "Task AI", icon: "ai", group: "Assist"},
+  insights: {label: "Insights", icon: "insights", group: "Assist"},
+  search: {label: "Search", icon: "search", group: "Assist"},
+  settings: {label: "Settings & backup", short: "Settings", icon: "settings", group: "Assist"}
 };
 const TAB_KEYS = ["today", "tasks", "appts", "learn"];
 let view = "today";
@@ -503,7 +524,7 @@ function viewToday(){
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your first goal, appointment or drug card to get started."}</p>
     <div class="btn-row"><button class="btn" data-go="appts" data-open="appt">${IC.appts}New appointment</button><button class="btn" data-go="learn">${IC.learn}${due ? `Review ${due} card${due > 1 ? "s" : ""}` : "Study"}</button></div>
   </section>
-  ${notifBanner()}
+  ${notifBanner()}${!inClaude && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Appointments today</div></button>
@@ -727,7 +748,156 @@ function viewAI(){
     <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" placeholder="${apiKey() ? "Key saved. Paste a new one to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit">Save key</button>${apiKey() ? `<button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form></section>`}`;
 }
 
-const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI};
+/* ---------- Insights: patterns learned from the user's own data (on device, works offline) ---------- */
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function learnPatterns(){
+  const tasks = of("task"), appts = of("appt"), cards = of("card"), logs = of("log");
+  const recentTasks = tasks.filter(t => (t.createdAt || 0) > now() - 30 * DAY);
+  const doneTasks = tasks.filter(t => t.done && t.doneAt);
+  const onTime = doneTasks.filter(t => t.due && t.doneAt <= t.due + 15 * MIN).length, withDue = doneTasks.filter(t => t.due).length;
+  const hourBins = [["Morning", 5, 12], ["Afternoon", 12, 17], ["Evening", 17, 22], ["Night", 22, 29]];
+  const binOf = h => hourBins.find(([, a, b]) => (h >= a && h < b) || (h + 24 >= a && h + 24 < b))?.[0] || "Night";
+  const doneByBin = Object.fromEntries(hourBins.map(b => [b[0], 0])); doneTasks.forEach(t => doneByBin[binOf(new Date(t.doneAt).getHours())]++);
+  const bestBin = doneTasks.length >= 3 ? Object.entries(doneByBin).sort((a, b) => b[1] - a[1])[0][0] : null;
+  const overdue = tasks.filter(t => !t.done && t.due && t.due < now()).length;
+  const past = appts.filter(a => apptEnd(a) < now());
+  const attended = past.filter(a => a.status === "done").length, noshow = past.filter(a => a.status === "noshow").length;
+  const unresolved = past.filter(a => a.status === "scheduled").length;
+  const window8 = appts.filter(a => a.status !== "cancelled" && a.start > now() - 56 * DAY && a.start <= now() + 14 * DAY);
+  const byDay = Array(7).fill(0); window8.forEach(a => byDay[new Date(a.start).getDay()]++);
+  const byHour = {}; window8.forEach(a => { const h = new Date(a.start).getHours(); byHour[h] = (byHour[h] || 0) + 1; });
+  const peakHour = Object.entries(byHour).sort((a, b) => b[1] - a[1])[0];
+  const clients = {}; appts.forEach(a => { const k = (a.client || "").trim().toLowerCase(); if (k) (clients[k] ||= {name: a.client, n: 0, noshow: 0}).n++; if (a.status === "noshow" && k) clients[k].noshow++; });
+  const clientList = Object.values(clients), repeat = clientList.filter(c => c.n > 1).length;
+  const riskyClients = clientList.filter(c => c.noshow >= 1).sort((a, b) => b.noshow - a.noshow).slice(0, 3);
+  // forecast: average per weekday over the last 8 weeks, projected onto the next 7 days
+  const hist = appts.filter(a => a.status !== "cancelled" && a.start < now() && a.start > now() - 56 * DAY);
+  const weeks = hist.length ? Math.max(1, Math.min(8, Math.ceil((now() - Math.min(...hist.map(a => a.start))) / (7 * DAY)))) : 0;
+  const perWd = Array(7).fill(0); hist.forEach(a => perWd[new Date(a.start).getDay()]++);
+  const booked7 = appts.filter(a => a.status === "scheduled" && a.start > now() && a.start < now() + 7 * DAY).length;
+  const forecast7 = weeks ? Math.round(perWd.reduce((s, n) => s + n / weeks, 0)) : null;
+  const reviewed = cards.filter(c => (c.right || 0) + (c.wrong || 0) > 0);
+  const right = reviewed.reduce((s, c) => s + (c.right || 0), 0), wrong = reviewed.reduce((s, c) => s + (c.wrong || 0), 0);
+  const weakCards = reviewed.filter(c => (c.wrong || 0) > 0).sort((a, b) => (b.wrong / (b.right + b.wrong + 1)) - (a.wrong / (a.right + a.wrong + 1))).slice(0, 4);
+  const classAcc = {}; reviewed.forEach(c => { const k = (c.cls || "Other").split(/[(,]/)[0].trim(); const o = classAcc[k] ||= {r: 0, w: 0}; o.r += c.right || 0; o.w += c.wrong || 0; });
+  const weakClass = Object.entries(classAcc).filter(([, o]) => o.r + o.w >= 3).sort((a, b) => (a[1].r / (a[1].r + a[1].w)) - (b[1].r / (b[1].r + b[1].w)))[0];
+  const tagCount = {}; logs.filter(l => l.at > now() - 30 * DAY).forEach(l => { const k = l.tag || "General"; tagCount[k] = (tagCount[k] || 0) + 1; });
+  const topTag = Object.entries(tagCount).sort((a, b) => b[1] - a[1])[0];
+  const staleProjects = of("project").filter(p => now() - (p.checkedAt || p.updatedAt || 0) > 3 * DAY);
+  const tips = [];
+  if (overdue) tips.push(`${overdue} goal${overdue > 1 ? "s are" : " is"} overdue. Finish ${overdue > 1 ? "them" : "it"} or move the time so reminders stay useful.`);
+  if (bestBin) tips.push(`You finish most goals in the ${bestBin.toLowerCase()}. Put your most important goals there.`);
+  if (withDue >= 3 && pct(onTime, withDue) < 60) tips.push(`Only ${pct(onTime, withDue)}% of goals with a time get done on time. Try fewer goals per day or longer deadlines.`);
+  if (attended + noshow >= 3 && pct(noshow, attended + noshow) >= 15) tips.push(`${pct(noshow, attended + noshow)}% of clients didn't show up. A call or text the day before usually cuts no-shows.`);
+  if (riskyClients.length) tips.push(`Confirm ahead with ${riskyClients.map(c => c.name).join(", ")}: they have missed before.`);
+  if (unresolved) tips.push(`${unresolved} past appointment${unresolved > 1 ? "s still say" : " still says"} scheduled. Mark ${unresolved > 1 ? "them" : "it"} done or no-show so your numbers stay right.`);
+  if (forecast7 != null && forecast7 > booked7 + 1) tips.push(`Based on past weeks you usually see about ${forecast7} clients a week, and ${booked7} are booked. You have room for ${forecast7 - booked7} more.`);
+  if (peakHour && peakHour[1] >= 3) tips.push(`Your busiest appointment hour is around ${fmtTime(new Date().setHours(+peakHour[0], 0))}. Keep that slot clear of other goals.`);
+  if (weakCards.length) tips.push(`Drugs you miss most: ${weakCards.map(c => c.drug).join(", ")}. Review them first or ask Task AI to quiz you on them.`);
+  if (weakClass) tips.push(`Your weakest area is ${weakClass[0]} (${pct(weakClass[1].r, weakClass[1].r + weakClass[1].w)}% correct).`);
+  if (cardsDue().length >= 5) tips.push(`${cardsDue().length} drug cards are waiting. Ten minutes of review keeps your streak going.`);
+  if (staleProjects.length) tips.push(`${staleProjects.map(p => p.name).join(", ")} ${staleProjects.length > 1 ? "haven't" : "hasn't"} been checked in over 3 days.`);
+  return {tasks, recentTasks, doneTasks, onTime, withDue, doneByBin, overdue, attended, noshow, byDay, clientList, repeat, booked7, forecast7, reviewed, right, wrong, weakCards, topTag, logs, tips};
+}
+const barList = (rows) => { const max = Math.max(1, ...rows.map(r => r[1])); return `<div class="bars">${rows.map(([l, n]) => `<div class="bar-row"><span>${esc(l)}</span><div class="bar-track"><span style="width:${Math.round(n / max * 100)}%"></span></div><b>${n}</b></div>`).join("")}</div>`; };
+let insightText = "";
+function viewInsights(){
+  const P = learnPatterns();
+  const enough = P.tasks.length + P.clientList.length + P.reviewed.length + P.logs.length >= 3;
+  return `<div class="stats">
+      <div class="stat"><div class="n">${P.recentTasks.length ? pct(P.recentTasks.filter(t => t.done).length, P.recentTasks.length) + "%" : "–"}</div><div class="l">Goals done (30 days)</div></div>
+      <div class="stat"><div class="n">${P.attended + P.noshow ? pct(P.attended, P.attended + P.noshow) + "%" : "–"}</div><div class="l">Client attendance</div></div>
+      <div class="stat"><div class="n">${P.right + P.wrong ? pct(P.right, P.right + P.wrong) + "%" : "–"}</div><div class="l">Drug recall accuracy</div></div>
+      <div class="stat"><div class="n">${P.forecast7 ?? "–"}</div><div class="l">Expected clients next 7 days</div></div></div>
+    <section class="card"><div class="card-head"><div><h2>What Task has learned</h2><p class="sub">Patterns from your goals, clients, study and log. Worked out on this device, even offline.</p></div></div>
+      ${P.tips.length ? `<ul class="tips">${P.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : empty(enough ? "Nothing needs your attention right now." : "Not enough data yet.", enough ? "Keep using Task and new patterns will show up here." : "Add goals, appointments and review some drug cards. Insights get sharper the more you use Task.")}</section>
+    <div class="grid2">
+      <section class="card"><div class="card-head"><div><h2>Busiest days</h2><p class="sub">Appointments, last 8 weeks and next 2</p></div></div>${barList(WD.map((d, i) => [d, P.byDay[i]]))}</section>
+      <section class="card"><div class="card-head"><div><h2>When you get things done</h2><p class="sub">Goals completed by time of day</p></div></div>${barList(Object.entries(P.doneByBin))}</section>
+      <section class="card"><div class="card-head"><div><h2>Clients</h2><p class="sub">${P.clientList.length} client${P.clientList.length === 1 ? "" : "s"} · ${P.repeat} came back more than once</p></div></div>
+        ${P.clientList.length ? barList(P.clientList.sort((a, b) => b.n - a.n).slice(0, 5).map(c => [c.name.replace(/^Example: /, ""), c.n])) : empty("No clients yet.", "Book an appointment to start.")}</section>
+      <section class="card"><div class="card-head"><div><h2>Drugs to focus on</h2><p class="sub">The cards you miss most</p></div></div>
+        ${P.weakCards.length ? `<ul class="list">${P.weakCards.map(c => `<li class="row"><div class="row-main"><div class="row-title">${esc(c.drug)}</div><div class="row-meta"><span>${c.right || 0} right · ${c.wrong || 0} missed</span>${c.cls ? `<span>${esc(c.cls)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No weak spots yet.", "Review cards in Pharmacy learning and the ones you miss will show here.")}</section>
+    </div>
+    <section class="card"><div class="card-head"><div><h2>Deeper analysis</h2><p class="sub">Claude reads these patterns and gives you a plan for the week.</p></div><button class="btn sm primary" id="insight-ai">${IC.ai}Analyse with AI</button></div>
+      <div class="brief ${insightText ? "" : "placeholder"}" id="insight-out">${esc(insightText || "Press Analyse with AI for a short plan based on your patterns.")}</div></section>`;
+}
+const insightAI = btn => { const P = learnPatterns();
+  const facts = {goalsDone30d: P.recentTasks.filter(t => t.done).length + "/" + P.recentTasks.length, onTimeRate: P.withDue ? pct(P.onTime, P.withDue) + "%" : null, goalsByTimeOfDay: P.doneByBin, overdue: P.overdue,
+    attended: P.attended, noShows: P.noshow, apptsByWeekday: Object.fromEntries(WD.map((d, i) => [d, P.byDay[i]])), bookedNext7: P.booked7, expectedNext7: P.forecast7, repeatClients: P.repeat,
+    recall: P.right + P.wrong ? pct(P.right, P.right + P.wrong) + "%" : null, weakDrugs: P.weakCards.map(c => c.drug), topLogTopic: P.topTag?.[0], findings: P.tips};
+  return runInto(btn, "#insight-out", `${RULES}\n\nThese are patterns computed from my own data. Give me: 1) the 3 most important observations, 2) a concrete plan for the next 7 days (work, clients, study), 3) one habit to change. Under 200 words. Don't invent numbers.\n\nPatterns:\n${JSON.stringify(facts)}\n\nData:\n${snapshot()}`, t => insightText = t); };
+
+/* ---------- Search ---------- */
+let globalQ = "";
+function viewSearch(){
+  const q = globalQ.trim().toLowerCase();
+  const text = x => [x.title, x.client, x.purpose, x.phone, x.notes, x.drug, x.cls, x.indication, x.text, x.tag, x.name, x.url, x.location].filter(Boolean).join(" ").toLowerCase();
+  const res = q ? items.filter(x => x.kind !== "meta" && text(x).includes(q)) : [];
+  const groups = [["appt", "Appointments", a => [a.client + (a.purpose ? " · " + a.purpose : ""), fmtWhen(a.start)]], ["task", "Goals", t => [t.title, t.done ? "Done" : t.due ? fmtWhen(t.due) : "No time set"]],
+    ["card", "Drug cards", c => [c.drug, c.cls]], ["log", "Log", l => [l.text, fmtWhen(l.at)]], ["biz", "Businesses", b => [b.name, b.status]], ["project", "Apps & websites", p => [p.name, p.status]]];
+  return `<section class="card"><label class="search" style="max-width:none">${IC.search}<input id="global-search" placeholder="Search clients, goals, drugs, notes..." value="${esc(globalQ)}" aria-label="Search everything" autocomplete="off"></label>
+    ${!q ? `<p class="sub" style="color:var(--muted);margin:12px 0 0">Search across everything: client names and phone numbers, goals, drug cards, your log, businesses and projects.</p>`
+      : !res.length ? empty("Nothing found.", "Try a shorter word.")
+      : groups.map(([k, label, f]) => { const r = res.filter(x => x.kind === k); return r.length ? `<div class="result-kind">${label}</div><ul class="list">${r.slice(0, 20).map(x => { const [a, b] = f(x);
+          return `<li class="row"><div class="row-main"><div class="row-title">${esc(a)}</div>${b ? `<div class="row-meta"><span>${esc(b)}</span></div>` : ""}</div><div class="row-actions"><button class="btn sm ghost" data-find="${x.id}">Open</button></div></li>`; }).join("")}</ul>` : ""; }).join("")}</section>`;
+}
+
+/* ---------- Settings, backup, install ---------- */
+let installPrompt = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; if (view === "settings") render(); });
+addEventListener("appinstalled", () => { installPrompt = null; toast("Task is installed. Open it from your home screen."); });
+const isInstalled = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+function getTheme(){ try { return localStorage.getItem("task.theme") || "auto"; } catch { return "auto"; } }
+function setTheme(t){ try { localStorage.setItem("task.theme", t); } catch {} applyTheme(); }
+function applyTheme(){ const t = getTheme(); if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t; }
+applyTheme();
+const lastBackup = () => { try { return +localStorage.getItem("task.lastBackup") || 0; } catch { return 0; } };
+async function downloadBackup(){
+  const data = JSON.stringify({app: "Task", version: 1, exportedAt: new Date().toISOString(), items}, null, 1);
+  const filename = `task-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  try {
+    const dl = await cap("downloads");
+    if (dl) await dl.save({filename, data});
+    else { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([data], {type: "application/json"})); a.download = filename; a.click(); }
+    try { localStorage.setItem("task.lastBackup", String(now())); } catch {}
+    toast("Backup saved: " + filename); render();
+  } catch (e) { if (e?.code !== "declined") toast("Couldn't save the backup (" + (e?.code || "error") + ")."); }
+}
+async function restoreBackup(file){
+  try {
+    const parsed = JSON.parse(await file.text()); const list = Array.isArray(parsed) ? parsed : parsed.items;
+    if (!Array.isArray(list)) throw new Error("not a Task backup");
+    let n = 0;
+    for (const r of list){ if (!r || !r.id || !r.kind) continue; const ex = byId(r.id); if (!ex || (r.updatedAt || 0) > (ex.updatedAt || 0)){ await put({...r}); n++; } }
+    toast(n ? `Restored ${n} item${n > 1 ? "s" : ""} from the backup.` : "Everything in that backup is already here.");
+  } catch (e) { toast("That file isn't a Task backup."); }
+  const f = $("#restore-file"); if (f) f.value = "";
+}
+function viewSettings(){
+  const lb = lastBackup(), theme = getTheme(), n = items.filter(x => x.kind !== "meta").length;
+  const notif = !("Notification" in window) ? "Not supported in this browser" : Notification.permission === "granted" ? "On" : Notification.permission === "denied" ? "Blocked in browser settings" : "Off";
+  return `<div class="grid2">
+    <section class="card"><div class="card-head"><div><h2>Backup and restore</h2><p class="sub">${inClaude ? "Your data syncs with your Claude account." : "Your data lives on this device. Save a backup so you never lose it, and use it to move to a new phone."}</p></div></div>
+      <div class="set-row"><div class="t"><b>Save a backup</b><span>${n} items · ${lb ? "last backup " + esc(ago(lb)) : "no backup yet"}</span></div><button class="btn primary" id="backup-btn">${IC.download}Download backup</button></div>
+      <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><button class="btn" id="restore-btn">${IC.upload}Choose file</button><input type="file" id="restore-file" accept="application/json,.json" hidden></div></section>
+    <section class="card"><div class="card-head"><div><h2>App</h2><p class="sub">${isInstalled() ? "Installed on this device." : "Install Task so it opens like a normal app, works offline and can send reminders."}</p></div></div>
+      ${inClaude ? `<div class="set-row"><div class="t"><b>Install on your phone</b><span>Open task.brandbridgeacademy.workers.dev in your phone's browser to install it.</span></div></div>`
+        : isInstalled() ? "" : installPrompt ? `<div class="set-row"><div class="t"><b>Install Task</b><span>Adds Task to your home screen.</span></div><button class="btn primary" id="install-btn">${IC.download}Install</button></div>`
+        : `<div class="set-row"><div class="t"><b>Install Task</b><span>${isIOS() ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu (⋮), then Install app or Add to Home screen."}</span></div></div>`}
+      <div class="set-row"><div class="t"><b>Appearance</b><span>Brandbridge light or dark</span></div><div class="seg">${[["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div></div>
+      <div class="set-row"><div class="t"><b>Notifications</b><span>${esc(notif)}</span></div>${!inClaude && "Notification" in window && Notification.permission === "default" ? `<button class="btn" id="notif-btn">Turn on</button>` : ""}</div>
+      <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? "API key saved on this device" : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>
+    <section class="card"><div class="card-head"><div><h2>Danger zone</h2><p class="sub">Download a backup first. This can't be undone.</p></div></div>
+      <div class="set-row"><div class="t"><b>Erase all data</b><span>Removes every goal, client, card and note from this device.</span></div><button class="btn danger" id="wipe-btn">Erase all data</button></div></section>
+    <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
+  </div>`;
+}
+const APP_VERSION = "1.4";
+
+const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
@@ -735,6 +905,7 @@ function render(){
   const openStates = [...document.querySelectorAll("details.adder")].map(d => [d.dataset.form, d.open]);
   $("#views").innerHTML = VIEWS[view]();
   openStates.forEach(([k, o]) => { const d = document.querySelector(`details.adder[data-form="${k}"]`); if (d && o) d.open = true; });
+  if (focusId === "global-search"){ const el = $("#global-search"); el?.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} }
   if (focusId === "card-search"){ const el = $("#card-search"); el?.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} }
   if (view === "ai"){ const lg = $("#chat-log"); lg.scrollTop = lg.scrollHeight; if (keep) $("#chat-in").value = keep; }
   updateTitle();
@@ -747,7 +918,8 @@ function updateTitle(){
     today: d.toLocaleDateString([], {month: "long", day: "numeric"}) + " · " + d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}),
     tasks: `${c.tasks} open`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
-    ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline")
+    ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
+    insights: "Learned from your own data, on this device", search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -783,9 +955,23 @@ document.addEventListener("click", async ev => {
   if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
+  if (d.theme){ setTheme(d.theme); render(); return; }
+  if (d.find){ const r = byId(d.find); if (!r) return;
+    if (r.kind === "card"){ learnTab = "library"; cardSearch = r.drug; }
+    editing = ["task", "appt", "biz", "project"].includes(r.kind) ? r : null;
+    go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects"}[r.kind] || "today");
+    if (editing) setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 30); return; }
   if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
   switch (t.id){
     case "load-examples": loadExamples(); break;
+    case "backup-btn": downloadBackup(); break;
+    case "restore-btn": $("#restore-file")?.click(); break;
+    case "install-btn": if (installPrompt){ installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; render(); }); } break;
+    case "insight-ai": insightAI(t); break;
+    case "reload-app": location.reload(); break;
+    case "wipe-btn":
+      if (!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent = "Tap again to erase everything"; setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.textContent = "Erase all data"; } }, 4000); break; }
+      for (const x of items.slice()) await remove(x.id); chat = []; saveChat(); toast("All data erased from this device."); break;
     case "starter-deck": loadStarterDeck(); break;
     case "start-review": { const q = cardsDue().sort((a, b) => (a.box || 1) - (b.box || 1)).map(c => c.id); q.total = q.length; reviewQueue = q; revealed = false; render(); break; }
     case "reveal": revealed = true; render(); break;
@@ -803,7 +989,11 @@ document.addEventListener("click", async ev => {
       render(); break;
   }
 });
-document.addEventListener("input", ev => { if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); } });
+document.addEventListener("input", ev => {
+  if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); }
+  if (ev.target.id === "global-search"){ globalQ = ev.target.value; render(); }
+});
+document.addEventListener("change", ev => { if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
@@ -848,7 +1038,7 @@ function gradeCard(knew){
   reviewQueue.shift(); if (!knew) reviewQueue.push(c.id);
   revealed = false;
   if (!reviewQueue.length){ reviewQueue = null; toast("Review finished. Nice work."); }
-  put({...c, box, nextReview: next, lastReviewed: now()});
+  put({...c, box, nextReview: next, lastReviewed: now(), right: (c.right || 0) + (knew ? 1 : 0), wrong: (c.wrong || 0) + (knew ? 0 : 1)});
 }
 
 /* ---------- Reminders ---------- */
@@ -918,7 +1108,8 @@ function snapshot(){
     drugCards: of("card").map(c => ({drug: c.drug, cls: c.cls, memoryLevel: c.box || 1})),
     log: of("log").sort((a, b) => b.at - a.at).slice(0, 30).map(l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
     businesses: of("biz").map(b => ({name: b.name, status: b.status, url: b.url, notes: b.notes})),
-    projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()}))
+    projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()})),
+    learnedPatterns: learnPatterns().tips
   });
 }
 const RULES = `You are Task AI, a sharp, warm personal assistant inside the user's command-center app. The user is a pharmacist who also runs businesses and builds apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
@@ -1099,7 +1290,14 @@ let swReg = null;
 async function setupOffline(){
   if (inClaude || !("serviceWorker" in navigator)) return;
   try {
+    const hadController = !!navigator.serviceWorker.controller;
     swReg = await navigator.serviceWorker.register("sw.js");
+    let shown = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!hadController || shown) return; shown = true;
+      const el = document.createElement("div"); el.className = "toast";
+      el.innerHTML = `<span>A new version of Task is ready.</span><button id="reload-app">Reload</button><button aria-label="Dismiss">✕</button>`;
+      el.addEventListener("click", e => { if (e.target.tagName === "BUTTON") el.remove(); }); $("#toasts").append(el); });
+    setInterval(() => swReg.update().catch(() => {}), 30 * MIN);
     navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified"){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
     try { const db = await idb(); const req = db.transaction("kv").objectStore("kv").get("sent");
       req.onsuccess = () => (req.result || []).forEach(id => { const r = byId(id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
