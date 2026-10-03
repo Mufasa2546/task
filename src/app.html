@@ -2,149 +2,256 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a command console. Header briefing strip, one panel per section, bottom dock on phones, side rail on desktop. */
+/* Layout: grouped sidebar + sticky top bar on desktop; top bar + 5-tab bottom bar + "More" sheet on phones. Content in a single centered column of cards. */
 :root{
-  --bg:#eef1f4; --panel:#ffffff; --sunk:#e3e8ee; --line:#cfd6df;
-  --fg:#16202b; --muted:#5b6878; --accent:#b8321f; --accent-2:#c98a12; --accent-ink:#ffffff;
-  --good:#1d7a4f; --warn:#a86a00; --bad:#b3261e;
-  --f-display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --bg:#f4f7f7; --panel:#ffffff; --sunk:#edf2f2; --line:#e0e7e8; --line-strong:#cad5d7;
+  --fg:#0f1c20; --muted:#5b6c72; --accent:#0c7a70; --accent-soft:#e3f2f0; --accent-ink:#ffffff;
+  --coral:#e8603c; --good:#1f8a52; --warn:#b26b00; --bad:#c62f26;
+  --shadow:0 1px 2px rgba(15,28,32,.05),0 4px 16px rgba(15,28,32,.05);
   --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
-  --r:10px;
+  --r:14px; --r-sm:10px; --nav-h:64px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0e141b; --panel:#151d26; --sunk:#0b1016; --line:#26323f;
-  --fg:#e4e9ef; --muted:#8b98a8; --accent:#e5533a; --accent-2:#e8b03d; --accent-ink:#fff;
-  --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e; color-scheme:dark}}
+  --bg:#0b1214; --panel:#111a1d; --sunk:#0d1518; --line:#1f2b2f; --line-strong:#2c3b40;
+  --fg:#e5eef0; --muted:#8fa2a8; --accent:#2fb7a7; --accent-soft:#12302d; --accent-ink:#04201d;
+  --coral:#ff8a66; --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0e141b; --panel:#151d26; --sunk:#0b1016; --line:#26323f;
-  --fg:#e4e9ef; --muted:#8b98a8; --accent:#e5533a; --accent-2:#e8b03d; --accent-ink:#fff;
-  --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e; color-scheme:dark}
+  --bg:#0b1214; --panel:#111a1d; --sunk:#0d1518; --line:#1f2b2f; --line-strong:#2c3b40;
+  --fg:#e5eef0; --muted:#8fa2a8; --accent:#2fb7a7; --accent-soft:#12302d; --accent-ink:#04201d;
+  --coral:#ff8a66; --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); color-scheme:dark}
 *{box-sizing:border-box}
-html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
-.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100%}
-.rail{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;padding:20px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;background:var(--panel)}
-.brand{font-family:var(--f-display);font-weight:700;letter-spacing:.12em;font-size:20px;display:flex;align-items:center;gap:10px;padding:0 8px 16px}
-.reactor{width:22px;height:22px;border-radius:50%;border:3px solid var(--accent-2);box-shadow:inset 0 0 0 3px var(--panel),inset 0 0 0 7px var(--accent)}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:.02em;padding:0 8px}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex:none}
+.logo svg{width:18px;height:18px}
+.nav-group{display:grid;gap:2px}
+.nav-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 10px 4px}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 10px;border-radius:var(--r-sm);color:var(--muted);font-weight:600;font-size:14px;text-align:left}
 .nav-btn:hover{background:var(--sunk);color:var(--fg)}
-.nav-btn[aria-current="true"]{background:var(--sunk);color:var(--fg);box-shadow:inset 3px 0 0 var(--accent)}
-.nav-btn svg{width:18px;height:18px;flex:none}
-.nav-count{margin-left:auto;font-family:var(--f-mono);font-size:12px}
-.rail-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px}
-main{padding-inline:clamp(16px,4vw,40px);padding-block:24px 96px;max-width:1080px;width:100%;min-width:0}
-.hud{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:22px}
-.hud h1{font-family:var(--f-display);font-weight:800;letter-spacing:-.02em;font-size:clamp(24px,4vw,32px);margin:0;line-height:1.15;text-wrap:balance}
-.hud .sub{color:var(--muted);margin:4px 0 0}
-.clock{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
-.clock b{display:block;font-size:22px;color:var(--fg);font-weight:500}
-.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--muted);font-weight:600;margin:0 0 10px}
-h2{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;font-size:20px;margin:0}
-.section-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
-.stat{background:var(--panel);padding:12px 14px}
-.stat .n{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums}
-.stat .l{font-size:12px;color:var(--muted)}
-.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.nav-btn[aria-current="true"]{background:var(--accent-soft);color:var(--accent)}
+.nav-btn svg{width:19px;height:19px;flex:none}
+.nav-count{margin-left:auto;font-family:var(--f-mono);font-size:11px;background:var(--sunk);color:var(--muted);border-radius:99px;padding:1px 7px}
+.nav-btn[aria-current="true"] .nav-count{background:var(--panel);color:var(--accent)}
+.side-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 10px;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
+.dot.off{background:var(--warn)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-inline:clamp(16px,3vw,32px);padding-block:12px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+.topbar-in{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.topbar .m-brand{display:none}
+.page-title{min-width:0}
+.page-title h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page-title p{margin:0;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none;position:relative}
+.content{width:100%;max-width:1120px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:22px 48px;display:grid;gap:18px;align-content:start}
+
+/* Controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--line-strong);background:var(--panel);font-weight:600;font-size:14px;white-space:nowrap;line-height:1}
 .btn:hover{background:var(--sunk)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.primary:hover{filter:brightness(1.08)}
-.btn.small{padding:4px 10px;font-size:13px}
+.btn.primary:hover{filter:brightness(1.07)}
 .btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.btn.ghost:hover{background:var(--sunk);color:var(--fg)}
+.btn.danger{color:var(--bad)}
+.btn.sm{min-height:32px;padding:0 12px;font-size:13px}
 .btn:disabled{opacity:.5;cursor:default}
-form.add{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));align-items:end;margin-bottom:16px}
-form.add .wide{grid-column:1/-1}
-label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
-input,select,textarea{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
-textarea{resize:vertical;min-height:70px}
-.check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--fg)}
-.check input{width:auto}
-ul.list{list-style:none;margin:0;padding:0;display:grid}
-ul.list li{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
-ul.list li:first-child{border-top:0}
-.li-main{flex:1;min-width:0}
-.li-title{font-weight:500;overflow-wrap:anywhere}
-.li-meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px}
-.li-notes{font-size:14px;color:var(--muted);margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
-.done .li-title{text-decoration:line-through;color:var(--muted)}
-.tick{appearance:none;width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;cursor:pointer;margin-top:1px;background:var(--panel);padding:0}
-.tick:checked{background:var(--good);border-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 6.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E")}
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-family:var(--f-mono);padding:1px 8px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
-.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.s-live,.s-done{color:var(--good)} .s-building,.s-due{color:var(--warn)} .s-down,.s-overdue{color:var(--bad)} .s-paused,.s-idea{color:var(--muted)}
-.actions{display:flex;gap:4px;flex:none}
-.icon-btn{border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;font-size:13px}
+.btn svg{width:16px;height:16px}
+a.btn{text-decoration:none;color:inherit}
+a.btn.ghost{color:var(--muted)}
+.row-meta .btn.sm{min-height:28px;padding:0 8px}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;border:0;background:none;color:var(--muted);flex:none}
 .icon-btn:hover{background:var(--sunk);color:var(--fg)}
-.empty{color:var(--muted);text-align:left;padding:18px 4px;font-size:14px}
-.empty b{color:var(--fg);display:block;margin-bottom:4px}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
-.card h3{margin:0;font-size:16px;font-weight:600;overflow-wrap:anywhere}
-.card a{color:var(--accent);overflow-wrap:anywhere;font-size:13px;font-family:var(--f-mono)}
-.card .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.timeline{list-style:none;margin:0;padding:0}
-.timeline li{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
-.timeline li:first-child{border-top:0}
-.t-time{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
-.day-head{font-family:var(--f-display);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 4px}
-.chat{display:flex;flex-direction:column;height:min(70vh,640px);min-height:360px}
-.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px 2px 12px}
-.msg{max-width:85%;padding:10px 14px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
-.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:3px}
-.msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:3px}
-.msg.sys{align-self:center;font-size:12px;color:var(--muted);font-family:var(--f-mono);padding:2px}
-.chat-form{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}
-.chat-form textarea{min-height:44px;height:44px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer}
+.icon-btn svg{width:17px;height:17px}
+.icon-btn.armed{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);width:auto;padding:0 10px;font-size:12px;font-weight:700}
+.menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px;min-width:210px;display:grid;z-index:40}
+.menu button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:10px 12px;border-radius:var(--r-sm);font-weight:600;font-size:14px;text-align:left}
+.menu button:hover{background:var(--sunk)}
+.menu svg{width:18px;height:18px;color:var(--accent)}
+
+/* Cards */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;min-width:0}
+.card-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card-head h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.005em}
+.card-head .sub{font-size:13px;color:var(--muted);margin:2px 0 0}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start}
+.hero{background:linear-gradient(135deg,var(--accent) 0%,color-mix(in srgb,var(--accent) 70%,#0a3b5c) 100%);color:#fff;border:0;padding:22px}
+.hero h2{margin:0;font-size:clamp(22px,3.4vw,28px);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.hero p{margin:6px 0 0;opacity:.92;max-width:60ch}
+.hero .btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);color:#fff}
+.hero .btn:hover{background:rgba(255,255,255,.26)}
+.hero .btn-row{margin-top:16px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;min-width:0}
+button.stat:hover{border-color:var(--accent)}
+.stat .n{font-family:var(--f-mono);font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+.notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--accent-soft);border-radius:var(--r);padding:12px 16px;font-size:14px}
+.notice p{margin:0;flex:1 1 240px}
+
+/* Lists */
+.list{list-style:none;margin:0;padding:0}
+.row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.list > .row:first-child{border-top:0;padding-top:2px}
+.row-main{flex:1;min-width:0}
+.row-title{font-weight:600;overflow-wrap:anywhere}
+.row-meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin-top:3px;align-items:center}
+.row-notes{font-size:14px;color:var(--muted);margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.row-actions{display:flex;gap:2px;flex:none;align-items:center}
+.done .row-title{text-decoration:line-through;color:var(--muted)}
+.time-chip{flex:none;width:62px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
+.tick{appearance:none;-webkit-appearance:none;width:22px;height:22px;border:2px solid var(--line-strong);border-radius:7px;flex:none;margin:1px 0 0;background:var(--panel);cursor:pointer}
+.tick:checked{background:var(--good);border-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 6.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E")}
+.kind-ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
+.kind-ic svg{width:16px;height:16px}
+.kind-ic.appt{background:color-mix(in srgb,var(--coral) 14%,transparent);color:var(--coral)}
+.kind-ic.task{background:var(--accent-soft);color:var(--accent)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-good{color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.s-warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.s-bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.s-mute{color:var(--muted)}
+.empty{padding:18px 4px;color:var(--muted);font-size:14px}
+.empty b{display:block;color:var(--fg);margin-bottom:2px}
+.group-head{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:16px 0 2px}
+.group-head:first-child{margin-top:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.tile h3{margin:0;font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.tile a{font-family:var(--f-mono);font-size:12.5px;overflow-wrap:anywhere}
+.tile-top,.tile-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+
+/* Forms */
+details.adder{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+details.adder > summary{list-style:none;display:flex;align-items:center;gap:10px;padding:14px 18px;font-weight:700;cursor:pointer}
+details.adder > summary::-webkit-details-marker{display:none}
+details.adder > summary .plus{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+details.adder[open] > summary{border-bottom:1px solid var(--line)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px 14px;padding:16px 18px 18px;align-items:end}
+.form .wide{grid-column:1/-1}
+.field{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);min-width:0}
+input,select,textarea{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;width:100%;min-width:0;min-height:42px;font-size:15px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;min-height:80px}
+.check{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--fg);min-height:42px}
+.check input{width:20px;height:20px;min-height:0;accent-color:var(--accent)}
+.form .btn-row{grid-column:1/-1}
+.seg{display:inline-flex;background:var(--sunk);border-radius:var(--r-sm);padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:8px;font-weight:600;font-size:13px;color:var(--muted);min-height:32px}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--fg);box-shadow:var(--shadow)}
+.search{position:relative;flex:1 1 220px;max-width:360px}
+.search input{padding-left:36px}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted)}
+
+/* Learning */
+.flash{display:grid;gap:14px;text-align:center;padding:26px 18px}
+.flash .drug{font-size:clamp(24px,4vw,32px);font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+.flash .cls{color:var(--muted);font-weight:600}
+.facts{display:grid;gap:10px;text-align:left;max-width:640px;margin:0 auto;width:100%}
+.fact{background:var(--sunk);border-radius:var(--r-sm);padding:10px 12px}
+.fact dt{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.fact dd{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.progress{height:6px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);border-radius:99px}
+.box-dots{display:inline-flex;gap:3px}
+.box-dots i{width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+.box-dots i.on{background:var(--accent)}
+.quiz-q{padding:14px 0;border-top:1px solid var(--line)}
+.quiz-q:first-child{border-top:0}
+.quiz-q .q{font-weight:600;margin-bottom:10px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1px solid var(--line-strong);background:var(--panel);border-radius:var(--r-sm);padding:10px 12px;font-size:14.5px;min-height:44px}
+.opt:hover{border-color:var(--accent)}
+.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 12%,transparent)}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.why{font-size:13.5px;color:var(--muted);margin-top:8px}
+.caution{font-size:12.5px;color:var(--muted);border-left:3px solid var(--warn);padding:4px 10px;margin:0}
+
+/* Chat */
+.chat{display:flex;flex-direction:column;height:min(68vh,660px);min-height:380px;padding:0;overflow:hidden}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line-strong);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
-.brief{white-space:pre-wrap;font-size:14.5px}
-.toast-wrap{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:50;max-width:min(360px,calc(100vw - 32px))}
-.toast{background:var(--fg);color:var(--bg);padding:12px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:14px;display:flex;gap:10px;align-items:flex-start}
-.toast.alert{background:var(--accent);color:var(--accent-ink)}
-.toast button{margin-left:auto;background:none;border:0;color:inherit;cursor:pointer;font-weight:600}
-.notice{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:10px 12px;margin-bottom:14px}
-.dock{display:none}
-.confirm-row{display:flex;gap:6px;align-items:center;font-size:13px}
-.tabs{display:flex;gap:4px;flex-wrap:wrap}
-.tabs button{border:1px solid var(--line);background:none;padding:4px 12px;border-radius:99px;cursor:pointer;font-size:13px;color:var(--muted)}
-.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-@media (max-width:760px){
-  .app{grid-template-columns:minmax(0,1fr)}
-  .rail{display:none}
+.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 16px}
+.msg{max-width:min(85%,640px);padding:10px 14px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
+.msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:5px}
+.msg.sys{align-self:center;font-size:13px;color:var(--muted);text-align:center;background:none}
+.chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
+.chat-form textarea{min-height:44px;height:44px;max-height:140px}
+.brief{white-space:pre-wrap;font-size:14.5px;color:var(--fg)}
+.brief.placeholder{color:var(--muted)}
+
+/* Mobile chrome */
+.tabbar,.sheet,.scrim{display:none}
+.toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:60;width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--fg);color:var(--bg);padding:12px 12px 12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;display:flex;gap:8px;align-items:center}
+.toast span{flex:1;min-width:0}
+.toast.alert{background:var(--coral);color:#fff}
+.toast button{background:rgba(255,255,255,.18);border:0;color:inherit;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;flex:none}
+
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .topbar .m-brand{display:grid}
+  .page-title h1{font-size:18px}
+  .content{padding-block:16px calc(var(--nav-h) + 28px + env(safe-area-inset-bottom,0px))}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around}
-  .dock .nav-btn{flex-direction:column;gap:2px;font-size:11px;padding:6px 4px;width:auto;flex:1;align-items:center;text-align:center}
-  .dock .nav-btn .nav-count{display:none}
-  .dock .nav-btn[aria-current="true"]{box-shadow:inset 0 -3px 0 var(--accent);background:none;color:var(--fg)}
-  .timeline li{grid-template-columns:54px minmax(0,1fr) auto}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+  .tabbar button{border:0;background:none;display:grid;justify-items:center;gap:3px;padding:6px 2px;font-size:11px;font-weight:600;color:var(--muted);border-radius:10px;min-width:0}
+  .tabbar button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tabbar svg{width:22px;height:22px}
+  .tabbar button[aria-current="true"]{color:var(--accent)}
+  .toasts{left:16px;right:16px;width:auto;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px))}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--panel);border-radius:20px 20px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.2)}
+  .sheet .grip{width:40px;height:4px;border-radius:99px;background:var(--line-strong);margin:0 auto 12px}
+  .sheet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .sheet-grid button{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--sunk);border-radius:var(--r);padding:14px;font-weight:600;font-size:14px;text-align:left;min-width:0}
+  .sheet-grid svg{width:20px;height:20px;color:var(--accent);flex:none}
+  body.sheet-open .scrim,body.sheet-open .sheet{display:block}
+  .new-label{display:none}
+  .time-chip{width:52px}
 }
-@media (prefers-reduced-motion:no-preference){.toast{animation:slide .25s ease-out}@keyframes slide{from{transform:translateY(8px);opacity:.4}}}
+@media (max-width:420px){ .row-actions .icon-btn{width:30px} }
+@media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{transform:translateY(6px);opacity:.3}}}
 </style>
 
-<div class="app">
-  <aside class="rail" id="rail">
-    <div class="brand"><span class="reactor" aria-hidden="true"></span>TASK</div>
-  </aside>
-  <main>
-    <header class="hud">
-      <div>
-        <p class="eyebrow" id="hud-date">Today</p>
-        <h1 id="greeting">Good day.</h1>
-        <p class="sub" id="hud-sub">Here is where everything stands.</p>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Sections"></aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-in">
+        <span class="logo m-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>
+        <div class="page-title"><h1 id="page-h1">Today</h1><p id="page-sub">&nbsp;</p></div>
+        <div class="top-actions">
+          <button class="btn primary" id="new-btn" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="new-label">New</span></button>
+          <div class="menu" id="new-menu" hidden></div>
+        </div>
       </div>
-      <div class="clock"><b id="clock">--:--</b><span id="sync-state">Saved on this device</span></div>
     </header>
-    <div id="views"></div>
-  </main>
+    <main class="content" id="views"></main>
+  </div>
 </div>
-<nav class="dock" id="dock" aria-label="Sections"></nav>
-<div class="toast-wrap" id="toasts" aria-live="polite"></div>
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="More sections"><div class="grip"></div><div class="sheet-grid" id="sheet-grid"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
 (() => {
@@ -153,24 +260,22 @@ const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const now = () => Date.now();
+const MIN = 6e4, HOUR = 36e5, DAY = 864e5;
 // Works inside Claude (capabilities) and as a standalone installed app (none).
 const inClaude = !!(window.claude && window.claude.use);
 const cap = n => inClaude ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
 
-/* ---------- Store: cloud (db capability) with a local fallback ---------- */
+/* ---------- Store ---------- */
 const LS_KEY = "jarvis.items.v1";
-let items = [];          // every record: {id, kind:'task'|'log'|'biz'|'project', ...}
-let cloud = null;        // collection ref when signed in
-let loaded = false;
-
+let items = [];
+let cloud = null;
 function loadLocal(){ try { items = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { items = []; } }
 function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {} mirrorToIdb(); }
 function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open("task-app", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
 async function mirrorToIdb(){
   try { const db = await idb(); const tx = db.transaction("kv", "readwrite");
-    tx.objectStore("kv").put(items.filter(t => t.kind === "task" && t.remind && !t.done && t.due && !t.notified).map(t => ({id: t.id, title: t.title, due: t.due})), "reminders"); } catch {}
+    tx.objectStore("kv").put(items.filter(x => remindAt(x) && !x.notified).map(x => ({id: x.id, title: reminderText(x), due: remindAt(x)})), "reminders"); } catch {}
 }
-
 async function put(rec){
   rec.updatedAt = now();
   const i = items.findIndex(x => x.id === rec.id);
@@ -185,282 +290,513 @@ async function remove(id){
 }
 const add = (kind, fields) => put({ id: uid(), kind, createdAt: now(), ...fields });
 const of = kind => items.filter(x => x.kind === kind);
+const byId = id => items.find(x => x.id === id);
 
 async function connectCloud(){
   try {
     const [db, user] = await Promise.all([cap("db"), cap("user")]);
     if (!db || !user) return;
-    const me = await user.id();
-    if (!me) return;
+    const me = await user.id(); if (!me) return;
     cloud = db.collection("data/users/" + me);
-    const localOnly = items.slice();
-    let first = true;
+    const localOnly = items.slice(); let first = true;
     cloud.onSnapshot(snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (first) {
-        first = false;
-        // Carry anything made before sign-in up to the cloud copy.
-        const ids = new Set(remote.map(r => r.id));
-        localOnly.filter(r => !ids.has(r.id)).forEach(r => { const {id, ...d} = r; cloud.doc(id).set(d).catch(()=>{}); remote.push(r); });
-      }
-      items = remote; saveLocal(); loaded = true;
-      $("#sync-state").textContent = "Synced to your Claude account";
-      render();
-    }, e => { $("#sync-state").textContent = "Offline copy (" + e.code + ")"; });
-  } catch { /* stay local */ }
+      if (first) { first = false; const ids = new Set(remote.map(r => r.id));
+        localOnly.filter(r => !ids.has(r.id)).forEach(r => { const {id, ...d} = r; cloud.doc(id).set(d).catch(() => {}); remote.push(r); }); }
+      items = remote; saveLocal(); syncLabel = "Synced to your Claude account"; render();
+    }, e => { syncLabel = "Offline copy (" + e.code + ")"; render(); });
+  } catch {}
 }
 
-/* ---------- Time helpers ---------- */
-const fmtTime = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
-const fmtDay = t => {
-  const d = new Date(t), today = new Date(); today.setHours(0,0,0,0);
-  const diff = Math.round((new Date(d).setHours(0,0,0,0) - today) / 864e5);
-  if (diff === 0) return "Today"; if (diff === -1) return "Yesterday"; if (diff === 1) return "Tomorrow";
-  return d.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
-};
+/* ---------- Time ---------- */
+const fmtTime = t => new Date(t).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"});
+const dayDiff = t => Math.round((new Date(t).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / DAY);
+const fmtDay = t => { const d = dayDiff(t); if (d === 0) return "Today"; if (d === -1) return "Yesterday"; if (d === 1) return "Tomorrow";
+  return new Date(t).toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"}); };
 const fmtWhen = t => fmtDay(t) + ", " + fmtTime(t);
-const ago = t => { const m = Math.round((now()-t)/6e4); if (m < 1) return "just now"; if (m < 60) return m+"m ago"; const h = Math.round(m/60); if (h < 24) return h+"h ago"; return Math.round(h/24)+"d ago"; };
-const toLocalInput = t => { const d = new Date(t - new Date(t).getTimezoneOffset()*6e4); return d.toISOString().slice(0,16); };
-const isToday = t => new Date(t).toDateString() === new Date().toDateString();
-function taskState(t){ if (t.done) return "done"; if (!t.due) return ""; if (t.due < now()) return "overdue"; if (t.due - now() < 36e5*3) return "due"; return ""; }
+const ago = t => { const m = Math.round((now() - t) / MIN); if (m < 1) return "just now"; if (m < 60) return m + "m ago"; const h = Math.round(m / 60); if (h < 24) return h + "h ago"; return Math.round(h / 24) + "d ago"; };
+const toInput = t => t ? new Date(t - new Date(t).getTimezoneOffset() * MIN).toISOString().slice(0, 16) : "";
+const fromInput = v => v ? new Date(v).getTime() : null;
+const isToday = t => t && dayDiff(t) === 0;
+const dayKey = t => new Date(t).toDateString();
+
+/* ---------- Domain helpers ---------- */
+const sortTasks = arr => arr.sort((a, b) => (a.done - b.done) || ((a.due || 9e15) - (b.due || 9e15)));
+function taskState(t){ if (t.done) return ""; if (!t.due) return ""; if (t.due < now()) return "overdue"; if (t.due - now() < 3 * HOUR) return "soon"; return ""; }
+const apptEnd = a => a.start + (a.duration || 30) * MIN;
+function remindAt(x){
+  if (x.kind === "task" && x.remind && !x.done && x.due) return x.due;
+  if (x.kind === "appt" && x.status === "scheduled" && x.start && x.lead != null && x.lead >= 0) return x.start - x.lead * MIN;
+  return null;
+}
+const reminderText = x => x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${fmtTime(x.start)}` : x.title;
+const LEARN_META = "learn-meta";
+const learnMeta = () => byId(LEARN_META) || {id: LEARN_META, kind: "meta", days: []};
+const BOX_DAYS = [0, 0, 1, 3, 7, 16];
+const cardsDue = () => of("card").filter(c => (c.nextReview || 0) <= now());
+function streak(){
+  const days = new Set(learnMeta().days || []); let s = 0; const d = new Date();
+  if (!days.has(d.toDateString())) d.setDate(d.getDate() - 1);
+  while (days.has(d.toDateString())) { s++; d.setDate(d.getDate() - 1); }
+  return s;
+}
+
+/* ---------- Icons ---------- */
+const I = (p, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
+const IC = {
+  today: I('<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v3M16 2.5v3"/><circle cx="12" cy="15" r="1.6" fill="currentColor"/>'),
+  tasks: I('<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>'),
+  appts: I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M17 4v6M14 7h6"/>'),
+  learn: I('<rect x="3" y="9" width="18" height="7" rx="3.5" transform="rotate(-35 12 12.5)"/><path d="M9.2 8.6l5.6 7.8"/>'),
+  log: I('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  biz: I('<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>'),
+  projects: I('<rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M8 21h8M12 17v4M7.5 9l2.5 2-2.5 2M12.5 13h4"/>'),
+  ai: I('<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>'),
+  more: I('<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>'),
+  trash: I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
+  edit: I('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  cal: I('<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v3M16 2.5v3M12 12v6M9 15h6"/>'),
+  check: I('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
+  search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
+  copy: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
+  plus: I('<path d="M12 5v14M5 12h14"/>', 'stroke-width="2.6"')
+};
 
 /* ---------- Navigation ---------- */
-const ICONS = {
-  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>',
-  tasks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/></svg>',
-  log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>',
-  biz:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3"/></svg>',
-  projects:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M7 9l3 2-3 2M13 13h4"/></svg>',
-  ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>'
+const SECTIONS = {
+  today: {label: "Today", icon: "today", group: "Plan"},
+  tasks: {label: "Goals", icon: "tasks", group: "Plan"},
+  appts: {label: "Appointments", short: "Clients", icon: "appts", group: "Plan"},
+  learn: {label: "Pharmacy learning", short: "Learn", icon: "learn", group: "Grow"},
+  log: {label: "Activity log", short: "Log", icon: "log", group: "Grow"},
+  biz: {label: "Businesses", icon: "biz", group: "Work"},
+  projects: {label: "Apps & websites", short: "Projects", icon: "projects", group: "Work"},
+  ai: {label: "Task AI", icon: "ai", group: "Assist"}
 };
-const SECTIONS = [["today","Today"],["tasks","Goals"],["log","Log"],["biz","Businesses"],["projects","Projects"],["ai","Task AI"]];
+const TAB_KEYS = ["today", "tasks", "appts", "learn"];
 let view = "today";
-try { const v = localStorage.getItem("jarvis.view"); if (SECTIONS.some(s => s[0] === v)) view = v; } catch {}
-if (location.hash && SECTIONS.some(s => "#" + s[0] === location.hash)) view = location.hash.slice(1);
+try { const v = localStorage.getItem("jarvis.view"); if (SECTIONS[v]) view = v; } catch {}
+if (location.hash && SECTIONS[location.hash.slice(1)]) view = location.hash.slice(1);
+let syncLabel = inClaude ? "Saved on this device" : "";
 
-function navHTML(){
-  const counts = { tasks: of("task").filter(t => !t.done).length, biz: of("biz").length, projects: of("project").length };
-  return SECTIONS.map(([k, l]) => `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="nav-count">${counts[k]}</span>` : ""}</button>`).join("");
+function counts(){
+  return { tasks: of("task").filter(t => !t.done).length,
+    appts: of("appt").filter(a => a.status === "scheduled" && apptEnd(a) >= now()).length,
+    learn: cardsDue().length, biz: of("biz").length, projects: of("project").length };
 }
-function go(k){ view = k; try { localStorage.setItem("jarvis.view", k); } catch {} render(); window.scrollTo(0,0); }
+function renderChrome(){
+  const c = counts();
+  const groups = {};
+  for (const [k, s] of Object.entries(SECTIONS)) (groups[s.group] ||= []).push(k);
+  const online = inClaude ? !!cloud : navigator.onLine;
+  const foot = inClaude ? (cloud ? "Synced across your devices" : "Saved on this device") : (navigator.onLine ? "Online · saved on this device" : "Offline · everything still works");
+  $("#side").innerHTML = `<div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>Task</div>` +
+    Object.entries(groups).map(([g, keys]) => `<div class="nav-group"><div class="nav-label">${g}</div>${keys.map(k =>
+      `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span>${c[k] ? `<span class="nav-count">${c[k]}</span>` : ""}</button>`).join("")}</div>`).join("") +
+    `<div class="side-foot"><span class="dot ${online || inClaude ? "" : "off"}"></span>${esc(syncLabel || foot)}</div>`;
+  const inMore = !TAB_KEYS.includes(view);
+  $("#tabbar").innerHTML = TAB_KEYS.map(k => `<button data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].short || SECTIONS[k].label}</span></button>`).join("") +
+    `<button data-sheet="open" aria-current="${inMore}">${IC.more}<span>${inMore ? (SECTIONS[view].short || SECTIONS[view].label) : "More"}</span></button>`;
+  $("#sheet-grid").innerHTML = Object.keys(SECTIONS).filter(k => !TAB_KEYS.includes(k)).map(k =>
+    `<button data-nav="${k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span></button>`).join("");
+  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["appt","appts","Client appointment"],["card","learn","Drug card"],["log","log","Log an update"]]
+    .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
+}
+function go(k, opts = {}){
+  view = k; document.body.classList.remove("sheet-open");
+  try { localStorage.setItem("jarvis.view", k); } catch {}
+  if (opts.open) openForm = opts.open;
+  render(); window.scrollTo(0, 0);
+  if (opts.open) setTimeout(() => { const f = document.querySelector(`details[data-form="${opts.open}"]`); if (f){ f.open = true; f.querySelector("input,textarea")?.focus(); } }, 30);
+}
+let openForm = null;
+
+/* ---------- Shared bits ---------- */
+const delBtn = id => `<button class="icon-btn" data-del="${id}" aria-label="Delete" title="Delete">${IC.trash}</button>`;
+const editBtn = id => `<button class="icon-btn" data-edit="${id}" aria-label="Edit" title="Edit">${IC.edit}</button>`;
+const calBtn = id => `<button class="icon-btn" data-ics="${id}" aria-label="Add to calendar" title="Add to phone calendar">${IC.cal}</button>`;
+const bizOptions = sel => `<option value="">None</option>` + of("biz").map(b => `<option value="${b.id}" ${sel === b.id ? "selected" : ""}>${esc(b.name)}</option>`).join("");
+const empty = (t, s) => `<div class="empty"><b>${esc(t)}</b>${esc(s)}</div>`;
+function adder(key, title, body, open){
+  return `<details class="adder" data-form="${key}" ${open || openForm === key ? "open" : ""}><summary><span class="plus">${IC.plus}</span>${esc(title)}</summary>${body}</details>`;
+}
+function notifBanner(){
+  if (!("Notification" in window) || Notification.permission === "granted") return "";
+  if (!inClaude) return `<div class="notice"><p>Turn on notifications so Task can alert you before appointments and when goals are due.</p><button class="btn sm primary" id="notif-btn">Turn on notifications</button></div>`;
+  return `<div class="notice"><p>Reminders pop up inside Task while it's open. For alerts when it's closed, tap the calendar icon on a goal or appointment to add an alarm to your phone's calendar.</p></div>`;
+}
 
 /* ---------- Views ---------- */
-function taskLi(t){
-  const st = taskState(t);
-  const biz = t.bizId && items.find(b => b.id === t.bizId);
-  return `<li class="${t.done ? "done" : ""}">
+function taskRow(t){
+  const st = taskState(t), biz = t.bizId && byId(t.bizId);
+  return `<li class="row ${t.done ? "done" : ""}">
     <input type="checkbox" class="tick" data-toggle="${t.id}" ${t.done ? "checked" : ""} aria-label="Mark done">
-    <div class="li-main"><div class="li-title">${esc(t.title)}</div>
-      <div class="li-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : ""}${st && st !== "done" ? `<span class="pill s-${st}">${st === "overdue" ? "overdue" : "due soon"}</span>` : ""}${t.remind && !t.done ? "<span>🔔 reminder on</span>" : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
-      ${t.notes ? `<div class="li-notes">${esc(t.notes)}</div>` : ""}</div>
-    <div class="actions">${t.due && !t.done ? `<button class="icon-btn" data-ics="${t.id}" title="Add to phone calendar">+Cal</button>` : ""}<button class="icon-btn" data-del="${t.id}" aria-label="Delete">✕</button></div></li>`;
+    <div class="row-main"><div class="row-title">${esc(t.title)}</div>
+      <div class="row-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : `<span>No time set</span>`}
+        ${st === "overdue" ? `<span class="pill s-bad">Overdue</span>` : st === "soon" ? `<span class="pill s-warn">Due soon</span>` : ""}
+        ${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+      ${t.notes ? `<div class="row-notes">${esc(t.notes)}</div>` : ""}</div>
+    <div class="row-actions">${t.due && !t.done ? calBtn(t.id) : ""}${editBtn(t.id)}${delBtn(t.id)}</div></li>`;
 }
-const sortTasks = arr => arr.sort((a,b) => (a.done - b.done) || ((a.due || 9e15) - (b.due || 9e15)));
-const bizOptions = sel => `<option value="">None</option>` + of("biz").map(b => `<option value="${b.id}" ${sel === b.id ? "selected" : ""}>${esc(b.name)}</option>`).join("");
+function apptStatus(a){
+  if (a.status === "done") return `<span class="pill s-good">Done</span>`;
+  if (a.status === "cancelled") return `<span class="pill s-mute">Cancelled</span>`;
+  if (a.status === "noshow") return `<span class="pill s-bad">No-show</span>`;
+  if (apptEnd(a) < now()) return `<span class="pill s-warn">Needs update</span>`;
+  if (a.start <= now()) return `<span class="pill s-good">Now</span>`;
+  if (a.start - now() < 2 * HOUR) return `<span class="pill s-warn">Soon</span>`;
+  return `<span class="pill">Scheduled</span>`;
+}
+function apptRow(a, showDay = true){
+  const biz = a.bizId && byId(a.bizId);
+  return `<li class="row ${a.status === "cancelled" ? "done" : ""}">
+    <span class="time-chip">${esc(fmtTime(a.start))}</span>
+    <div class="row-main"><div class="row-title">${esc(a.client)}${a.purpose ? ` · <span style="font-weight:500">${esc(a.purpose)}</span>` : ""}</div>
+      <div class="row-meta">${showDay ? `<span>${esc(fmtDay(a.start))}</span>` : ""}<span>${a.duration || 30} min</span>${a.location ? `<span>${esc(a.location)}</span>` : ""}${apptStatus(a)}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+      ${a.phone ? `<div class="row-meta"><span style="font-family:var(--f-mono)">${esc(a.phone)}</span><button class="btn ghost sm" data-copy="${esc(a.phone)}">${IC.copy}Copy</button>${inClaude ? "" : `<a class="btn ghost sm" href="tel:${esc(a.phone.replace(/[^\d+]/g, ""))}">Call</a>`}</div>` : ""}
+      ${a.notes ? `<div class="row-notes">${esc(a.notes)}</div>` : ""}
+      ${a.status === "scheduled" && a.start <= now() + HOUR ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-appt="${a.id}" data-to="done">${IC.check}Mark done</button><button class="btn sm ghost" data-appt="${a.id}" data-to="noshow">No-show</button></div>` : ""}</div>
+    <div class="row-actions">${a.status === "scheduled" && a.start > now() ? calBtn(a.id) : ""}${editBtn(a.id)}${delBtn(a.id)}</div></li>`;
+}
 
 function viewToday(){
-  const open = of("task").filter(t => !t.done);
-  const today = sortTasks(of("task").filter(t => !t.done && t.due && (isToday(t.due) || t.due < now()))).concat(sortTasks(open.filter(t => !t.due)).slice(0,3));
-  const doneToday = of("task").filter(t => t.done && t.doneAt && isToday(t.doneAt)).length;
-  const logs = of("log").sort((a,b) => b.at - a.at).slice(0,5);
-  const projs = of("project");
+  const tasksToday = sortTasks(of("task").filter(t => !t.done && t.due && (isToday(t.due) || t.due < now())));
+  const apptsToday = of("appt").filter(a => isToday(a.start) && a.status !== "cancelled").sort((a, b) => a.start - b.start);
+  const schedule = [...apptsToday.map(a => ({t: a.start, html: apptRow(a, false)})), ...tasksToday.map(t => ({t: t.due, html: taskRow(t)}))].sort((a, b) => a.t - b.t);
+  const unscheduled = sortTasks(of("task").filter(t => !t.done && !t.due)).slice(0, 3);
+  const due = cardsDue().length, projs = of("project");
   const attention = projs.filter(p => p.status === "down" || p.status === "building");
+  const logs = of("log").sort((a, b) => b.at - a.at).slice(0, 4);
+  const nextAppt = of("appt").filter(a => a.status === "scheduled" && a.start > now()).sort((a, b) => a.start - b.start)[0];
+  const nextTask = sortTasks(of("task").filter(t => !t.done && t.due && t.due > now()))[0];
+  const next = [nextAppt && {t: nextAppt.start, s: `${nextAppt.client} at ${fmtWhen(nextAppt.start)}`}, nextTask && {t: nextTask.due, s: `${nextTask.title}, ${fmtWhen(nextTask.due)}`}].filter(Boolean).sort((a, b) => a.t - b.t)[0];
+  const h = new Date().getHours();
   return `
-  <div class="stats">
-    <div class="stat"><div class="n">${today.length}</div><div class="l">Goals on deck today</div></div>
-    <div class="stat"><div class="n">${doneToday}</div><div class="l">Finished today</div></div>
-    <div class="stat"><div class="n">${of("biz").length}</div><div class="l">Businesses</div></div>
-    <div class="stat"><div class="n" style="color:${projs.some(p=>p.status==="down")?"var(--bad)":"inherit"}">${projs.filter(p=>p.status==="live").length}/${projs.length}</div><div class="l">Projects live</div></div>
-  </div>
+  <section class="card hero">
+    <h2>${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}.</h2>
+    <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your first goal, appointment or drug card to get started."}</p>
+    <div class="btn-row"><button class="btn" data-go="appts" data-open="appt">${IC.appts}New appointment</button><button class="btn" data-go="learn">${IC.learn}${due ? `Review ${due} card${due > 1 ? "s" : ""}` : "Study"}</button></div>
+  </section>
   ${notifBanner()}
-  <div class="grid2">
-    <section class="panel">
-      <div class="section-head"><h2>Today's goals</h2><button class="btn small" data-nav="tasks">Add goal</button></div>
-      ${today.length ? `<ul class="list">${today.map(taskLi).join("")}</ul>` : `<div class="empty"><b>Nothing scheduled for today.</b>Add a goal with a time and Task will remind you.</div>`}
-    </section>
-    <section class="panel">
-      <div class="section-head"><h2>Daily briefing</h2><button class="btn small primary" id="brief-btn">Brief me</button></div>
-      <div class="brief" id="brief-out">${esc(briefCache || "Ask Task for a short briefing on your goals, recent updates, businesses and projects.")}</div>
-    </section>
-    <section class="panel">
-      <div class="section-head"><h2>Latest updates</h2><button class="btn small" data-nav="log">Log something</button></div>
-      ${logs.length ? `<ul class="list">${logs.map(l => `<li><div class="li-main"><div class="li-title">${esc(l.text)}</div><div class="li-meta"><span>${esc(ago(l.at))}</span>${l.tag ? `<span>${esc(l.tag)}</span>` : ""}</div></div></li>`).join("")}</ul>` : `<div class="empty"><b>No updates yet.</b>Log what you did and it shows up here.</div>`}
-    </section>
-    <section class="panel">
-      <div class="section-head"><h2>Projects needing attention</h2><button class="btn small" data-nav="projects">All projects</button></div>
-      ${attention.length ? `<ul class="list">${attention.map(p => `<li><div class="li-main"><div class="li-title">${esc(p.name)}</div><div class="li-meta"><span class="pill s-${p.status}">${p.status}</span><span>checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>${p.notes ? `<div class="li-notes">${esc(p.notes)}</div>` : ""}</div></li>`).join("")}</ul>` : `<div class="empty"><b>${projs.length ? "Everything is live." : "No projects yet."}</b>${projs.length ? "No site is marked down or in progress." : "Add your apps and websites under Projects."}</div>`}
-    </section>
+  <div class="stats">
+    <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
+    <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Appointments today</div></button>
+    <button class="stat" data-nav="learn"><div class="n">${due}</div><div class="l">Cards to review${streak() ? ` · ${streak()}-day streak` : ""}</div></button>
+    <button class="stat" data-nav="projects"><div class="n" ${projs.some(p => p.status === "down") ? 'style="color:var(--bad)"' : ""}>${projs.filter(p => p.status === "live").length}/${projs.length}</div><div class="l">Projects live</div></button>
   </div>
-  ${items.length ? "" : `<div class="panel" style="margin-top:16px"><div class="section-head"><div><h2>Start here</h2><p class="li-notes">Your command center is empty. Add your first goal, or load a few example entries to see how it works (you can delete them anytime).</p></div><button class="btn" id="load-examples">Load examples</button></div></div>`}`;
+  <div class="grid-2">
+    <section class="card">
+      <div class="card-head"><div><h2>Today's schedule</h2><p class="sub">Appointments and goals, in time order</p></div><button class="btn sm" data-go="tasks" data-open="task">${IC.plus}Goal</button></div>
+      ${schedule.length ? `<ul class="list">${schedule.map(s => s.html).join("")}</ul>` : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
+      ${unscheduled.length ? `<div class="group-head">Anytime</div><ul class="list">${unscheduled.map(taskRow).join("")}</ul>` : ""}
+    </section>
+    <div style="display:grid;gap:18px">
+      <section class="card">
+        <div class="card-head"><h2>Daily briefing</h2><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div>
+        <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: appointments, goals, study, businesses and projects.")}</div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="projects">Projects</button></div>
+        ${attention.length ? `<ul class="list">${attention.map(p => `<li class="row"><div class="row-main"><div class="row-title">${esc(p.name)}</div><div class="row-meta">${projPill(p.status)}<span>checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div></div></li>`).join("")}</ul>`
+          : empty(projs.length ? "All projects are live." : "No projects yet.", projs.length ? "No site is down or in progress." : "Add your apps and websites under Projects.")}
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>Latest updates</h2><button class="btn sm ghost" data-go="log" data-open="log">Log</button></div>
+        ${logs.length ? `<ul class="list">${logs.map(l => `<li class="row"><div class="row-main"><div class="row-title">${esc(l.text)}</div><div class="row-meta"><span>${esc(ago(l.at))}</span>${l.tag ? `<span>${esc(l.tag)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No updates yet.", "Log what you did and it shows up here.")}
+      </section>
+    </div>
+  </div>
+  ${items.filter(x => x.kind !== "meta").length ? "" : `<section class="card"><div class="card-head"><div><h2>Try it with examples</h2><p class="sub">Load a few sample goals, appointments and drug cards. You can delete them anytime.</p></div><button class="btn" id="load-examples">Load examples</button></div></section>`}`;
 }
 
 let taskFilter = "open";
+function taskForm(e){
+  return `<form class="form" id="task-form">
+    <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Restock the pharmacy shelves" autocomplete="off"></label>
+    <label class="field">When<input id="t-due" type="datetime-local" value="${toInput(e?.due)}"></label>
+    <label class="field">Business<select id="t-biz">${bizOptions(e?.bizId)}</select></label>
+    <label class="check"><input id="t-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
+    <label class="field wide">Notes<textarea id="t-notes" placeholder="Optional details">${esc(e?.notes)}</textarea></label>
+    <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add goal"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
+}
 function viewTasks(){
-  const all = of("task");
-  const list = sortTasks(all.filter(t => taskFilter === "all" ? true : taskFilter === "done" ? t.done : !t.done));
-  return `<div class="section-head"><h2>Goals and reminders</h2>
-    <div class="tabs">${["open","done","all"].map(f => `<button data-tfilter="${f}" aria-pressed="${taskFilter===f}">${f[0].toUpperCase()+f.slice(1)}</button>`).join("")}</div></div>
-  ${notifBanner()}
-  <form class="add panel" id="task-form">
-    <label class="wide">Goal<input id="t-title" required placeholder="Call the supplier about the new order" autocomplete="off"></label>
-    <label>When<input id="t-due" type="datetime-local"></label>
-    <label>Business<select id="t-biz">${bizOptions()}</select></label>
-    <label class="check"><input id="t-remind" type="checkbox" checked> Remind me</label>
-    <label class="wide">Notes<textarea id="t-notes" placeholder="Optional details"></textarea></label>
-    <div><button class="btn primary" type="submit">Add goal</button></div>
-  </form>
-  <section class="panel">${list.length ? `<ul class="list">${list.map(taskLi).join("")}</ul>` : `<div class="empty"><b>No ${taskFilter === "all" ? "" : taskFilter + " "}goals.</b>Add one above.</div>`}</section>`;
+  const e = editing?.kind === "task" ? editing : null;
+  const list = sortTasks(of("task").filter(t => taskFilter === "all" ? true : taskFilter === "done" ? t.done : !t.done));
+  return `${notifBanner()}
+  ${adder("task", e ? "Edit goal" : "New goal", taskForm(e), !!e)}
+  <section class="card">
+    <div class="card-head"><h2>${taskFilter === "done" ? "Finished" : taskFilter === "all" ? "All goals" : "Open goals"}</h2>
+      <div class="seg">${["open", "done", "all"].map(f => `<button data-tfilter="${f}" aria-pressed="${taskFilter === f}">${f[0].toUpperCase() + f.slice(1)}</button>`).join("")}</div></div>
+    ${list.length ? `<ul class="list">${list.map(taskRow).join("")}</ul>` : empty(taskFilter === "done" ? "Nothing finished yet." : "No open goals.", "Add one above.")}
+  </section>`;
+}
+
+let apptFilter = "upcoming";
+function apptForm(e){
+  const d = e?.start || (() => { const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); })();
+  return `<form class="form" id="appt-form">
+    <label class="field">Client name<input id="a-client" required value="${esc(e?.client)}" placeholder="Mary Wanjiku" autocomplete="off"></label>
+    <label class="field">Phone<input id="a-phone" type="tel" value="${esc(e?.phone)}" placeholder="+254 7..." autocomplete="off"></label>
+    <label class="field">Purpose<input id="a-purpose" list="purposes" value="${esc(e?.purpose)}" placeholder="Medication review"><datalist id="purposes"><option>Medication review</option><option>Blood pressure check</option><option>Blood sugar check</option><option>Prescription pickup</option><option>Vaccination</option><option>Consultation</option><option>Home delivery</option><option>Follow-up</option></datalist></label>
+    <label class="field">Date and time<input id="a-start" type="datetime-local" required value="${toInput(d)}"></label>
+    <label class="field">Length<select id="a-dur">${[15, 30, 45, 60, 90].map(m => `<option value="${m}" ${(e?.duration || 30) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
+    <label class="field">Remind me<select id="a-lead">${[[-1, "No reminder"], [0, "At start time"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [1440, "1 day before"]].map(([v, l]) => `<option value="${v}" ${(e ? (e.lead ?? -1) : 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label class="field">Location<input id="a-loc" value="${esc(e?.location)}" placeholder="Pharmacy, phone call, client's home"></label>
+    <label class="field">Business<select id="a-biz">${bizOptions(e?.bizId)}</select></label>
+    <label class="field wide">Notes<textarea id="a-notes" placeholder="Current medicines, allergies, what to prepare">${esc(e?.notes)}</textarea></label>
+    <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Book appointment"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
+}
+function viewAppts(){
+  const e = editing?.kind === "appt" ? editing : null;
+  const all = of("appt");
+  let list, groups = "";
+  if (apptFilter === "upcoming"){
+    list = all.filter(a => a.status === "scheduled" && apptEnd(a) >= now() - 12 * HOUR || (a.status === "scheduled" && apptEnd(a) < now())).sort((a, b) => a.start - b.start);
+    let last = "";
+    for (const a of list){ const d = fmtDay(a.start); if (d !== last){ if (last) groups += "</ul>"; groups += `<div class="group-head">${esc(d)}</div><ul class="list">`; last = d; } groups += apptRow(a, false); }
+    if (last) groups += "</ul>";
+  } else {
+    list = all.filter(a => a.status !== "scheduled").sort((a, b) => b.start - a.start);
+    groups = list.length ? `<ul class="list">${list.map(a => apptRow(a)).join("")}</ul>` : "";
+  }
+  const clients = new Set(all.map(a => a.client.trim().toLowerCase())).size;
+  return `${notifBanner()}
+  ${adder("appt", e ? "Edit appointment" : "New appointment", apptForm(e), !!e)}
+  <section class="card">
+    <div class="card-head"><div><h2>${apptFilter === "upcoming" ? "Upcoming" : "History"}</h2><p class="sub">${clients} client${clients === 1 ? "" : "s"} · ${all.filter(a => a.status === "done").length} completed</p></div>
+      <div class="seg">${[["upcoming", "Upcoming"], ["past", "History"]].map(([f, l]) => `<button data-afilter="${f}" aria-pressed="${apptFilter === f}">${l}</button>`).join("")}</div></div>
+    ${groups || empty(apptFilter === "upcoming" ? "No upcoming appointments." : "No past appointments yet.", "Book one above and Task will remind you before it starts.")}
+  </section>`;
+}
+
+/* Learning */
+let learnTab = "review", reviewQueue = null, revealed = false, cardSearch = "", quiz = null, draftCard = null;
+const FIELDS = [["indication", "Used for"], ["moa", "How it works"], ["dosing", "Usual adult dose"], ["adverse", "Side effects"], ["interactions", "Interactions"], ["counselling", "Counselling points"], ["notes", "My notes"]];
+function cardForm(e){
+  const v = e || draftCard || {};
+  return `<form class="form" id="card-form">
+    <label class="field">Drug name<input id="c-drug" required value="${esc(v.drug)}" placeholder="Amoxicillin" autocomplete="off"></label>
+    <label class="field">Class<input id="c-cls" value="${esc(v.cls)}" placeholder="Penicillin antibiotic"></label>
+    ${FIELDS.map(([k, l]) => `<label class="field wide">${l}<textarea id="c-${k}" rows="2" style="min-height:60px">${esc(v[k])}</textarea></label>`).join("")}
+    <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Save card"}</button>${!e ? `<button class="btn" type="button" id="ai-card-btn">${IC.ai}Fill with AI</button>` : ""}${e || draftCard ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div>
+    ${draftCard ? `<p class="caution wide">Filled by AI. Check every line against your references (product label, national formulary) before relying on it.</p>` : ""}</form>`;
+}
+function cardFacts(c){ return `<dl class="facts">${FIELDS.filter(([k]) => c[k]).map(([k, l]) => `<div class="fact"><dt>${l}</dt><dd>${esc(c[k])}</dd></div>`).join("") || `<div class="fact"><dd>No details yet. Edit the card to add them.</dd></div>`}</dl>`; }
+const boxDots = b => `<span class="box-dots" title="Memory level ${b || 1} of 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= (b || 1) ? "on" : ""}"></i>`).join("")}</span>`;
+function viewLearn(){
+  const cards = of("card"), due = cardsDue();
+  const tabs = `<div class="seg">${[["review", `Review${due.length ? ` (${due.length})` : ""}`], ["library", `Drug cards (${cards.length})`], ["quiz", "AI quiz"]].map(([k, l]) => `<button data-ltab="${k}" aria-pressed="${learnTab === k}">${l}</button>`).join("")}</div>`;
+  const mastered = cards.filter(c => (c.box || 1) >= 4).length;
+  const head = `<div class="stats">
+    <div class="stat"><div class="n">${cards.length}</div><div class="l">Drug cards</div></div>
+    <div class="stat"><div class="n">${due.length}</div><div class="l">Due for review</div></div>
+    <div class="stat"><div class="n">${mastered}</div><div class="l">Well learned</div></div>
+    <div class="stat"><div class="n">${streak()}</div><div class="l">Day streak</div></div></div>
+    <div class="btn-row" style="justify-content:space-between">${tabs}</div>`;
+  let body = "";
+  if (learnTab === "review"){
+    if (!reviewQueue || !reviewQueue.length){
+      body = `<section class="card"><div class="card-head"><div><h2>${due.length ? `${due.length} card${due.length > 1 ? "s" : ""} ready` : "You're all caught up"}</h2><p class="sub">Cards you know come back less often. Missed cards come back soon.</p></div>
+        ${due.length ? `<button class="btn primary" id="start-review">Start review</button>` : `<button class="btn" data-ltab="library">Add drug cards</button>`}</div>
+        ${!cards.length ? empty("No drug cards yet.", "Add drugs you're studying in Drug cards, or load the starter deck.") + `<button class="btn" id="starter-deck">Load starter deck</button>` : ""}</section>`;
+    } else {
+      const c = byId(reviewQueue[0]); const total = reviewQueue.total, doneN = total - reviewQueue.length;
+      body = !c ? "" : `<section class="card"><div class="progress" aria-label="Progress"><span style="width:${Math.round(doneN / total * 100)}%"></span></div>
+        <div class="flash"><div class="row-meta" style="justify-content:center">Card ${doneN + 1} of ${total} · ${boxDots(c.box)}</div>
+          <div class="drug">${esc(c.drug)}</div>${c.cls && revealed ? `<div class="cls">${esc(c.cls)}</div>` : ""}
+          ${revealed ? cardFacts(c) + `<div class="btn-row" style="justify-content:center"><button class="btn" data-grade="0">${IC.x}Missed it</button><button class="btn primary" data-grade="1">${IC.check}Knew it</button></div>`
+            : `<p class="sub" style="color:var(--muted);margin:0">Recall its class, use, dose, side effects and counselling points, then reveal.</p><div class="btn-row" style="justify-content:center"><button class="btn primary" id="reveal">Show answer</button></div>`}
+          <div><button class="btn ghost sm" id="end-review">End review</button></div></div></section>`;
+    }
+  } else if (learnTab === "library"){
+    const e = editing?.kind === "card" ? editing : null;
+    const q = cardSearch.toLowerCase();
+    const list = cards.filter(c => !q || [c.drug, c.cls, c.indication].join(" ").toLowerCase().includes(q)).sort((a, b) => a.drug.localeCompare(b.drug));
+    body = `${adder("card", e ? "Edit drug card" : "New drug card", cardForm(e), !!(e || draftCard))}
+      <section class="card"><div class="card-head"><h2>Drug cards</h2><label class="search">${IC.search}<input id="card-search" placeholder="Search drug, class or use" value="${esc(cardSearch)}" aria-label="Search drug cards"></label></div>
+      ${list.length ? `<ul class="list">${list.map(c => `<li class="row"><div class="row-main"><details><summary style="cursor:pointer;list-style:none"><div class="row-title">${esc(c.drug)}</div><div class="row-meta">${c.cls ? `<span>${esc(c.cls)}</span>` : ""}${boxDots(c.box)}<span>${(c.nextReview || 0) <= now() ? "Due now" : "Next " + esc(fmtDay(c.nextReview))}</span></div></summary><div style="margin-top:10px">${cardFacts(c)}</div></details></div><div class="row-actions">${editBtn(c.id)}${delBtn(c.id)}</div></li>`).join("")}</ul>`
+        : empty(cards.length ? "No cards match." : "No drug cards yet.", cards.length ? "Try another word." : "Add your first one above, or let AI fill it in from the drug name.")}
+      ${!cards.length ? `<button class="btn" id="starter-deck">Load starter deck</button>` : ""}</section>`;
+  } else {
+    body = `<section class="card"><div class="card-head"><div><h2>Quiz me</h2><p class="sub">Multiple-choice questions written by AI on any topic or on your own cards.</p></div></div>
+      <form class="form" id="quiz-form" style="padding:0">
+        <label class="field">Topic<input id="q-topic" list="topics" placeholder="Anticoagulants" value="${esc(quiz?.topic || "")}"><datalist id="topics"><option>My drug cards</option><option>Antibiotics</option><option>Antihypertensives</option><option>Diabetes medicines</option><option>Anticoagulants</option><option>Drug interactions</option><option>Paediatric dosing</option><option>Pharmacy law and ethics</option><option>Pharmacokinetics</option></datalist></label>
+        <label class="field">Questions<select id="q-n">${[5, 10].map(n => `<option>${n}</option>`).join("")}</select></label>
+        <div class="btn-row"><button class="btn primary" type="submit" id="quiz-go">${IC.ai}Make quiz</button></div></form>
+      <p class="caution" style="margin-top:12px">AI questions can contain mistakes. Check anything you'll use in practice against your references.</p></section>
+      <section class="card" id="quiz-out" ${quiz?.qs || quiz?.status ? "" : "hidden"}>${quizHTML()}</section>`;
+  }
+  return head + body;
+}
+function quizHTML(){
+  if (!quiz) return "";
+  if (quiz.status) return `<div class="brief">${esc(quiz.status)}</div>`;
+  const answered = quiz.qs.filter(q => q.picked != null), right = answered.filter(q => q.picked === q.answer).length;
+  return `<div class="card-head"><h2>${esc(quiz.topic)}</h2><span class="pill ${answered.length === quiz.qs.length ? "s-good" : ""}">${right}/${quiz.qs.length} correct</span></div>` +
+    quiz.qs.map((q, i) => `<div class="quiz-q"><div class="q">${i + 1}. ${esc(q.q)}</div><div class="opts">${q.options.map((o, j) =>
+      `<button class="opt ${q.picked != null ? (j === q.answer ? "right" : j === q.picked ? "wrong" : "") : ""}" data-qi="${i}" data-oj="${j}" ${q.picked != null ? "disabled" : ""}>${String.fromCharCode(65 + j)}. ${esc(o)}</button>`).join("")}</div>
+      ${q.picked != null && q.why ? `<div class="why">${esc(q.why)}</div>` : ""}</div>`).join("");
 }
 
 function viewLog(){
-  const logs = of("log").sort((a,b) => b.at - a.at);
-  let lastDay = "", rows = "";
-  for (const l of logs){
-    const d = fmtDay(l.at);
-    if (d !== lastDay){ if (rows) rows += "</ul>"; rows += `<div class="day-head">${esc(d)}</div><ul class="timeline">`; lastDay = d; }
-    rows += `<li><span class="t-time">${esc(fmtTime(l.at))}</span><div class="li-main"><div class="li-title">${esc(l.text)}</div>${l.tag ? `<div class="li-meta"><span>${esc(l.tag)}</span></div>` : ""}</div><button class="icon-btn" data-del="${l.id}" aria-label="Delete">✕</button></li>`;
-  }
-  if (rows) rows += "</ul>";
-  const tags = ["Personal", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
-  return `<div class="section-head"><h2>Activity log</h2></div>
-  <form class="add panel" id="log-form">
-    <label class="wide">What did you do?<textarea id="l-text" required placeholder="Signed the lease for the second shop"></textarea></label>
-    <label>About<select id="l-tag"><option value="">General</option>${tags.map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
-    <div><button class="btn primary" type="submit">Log it</button></div>
-  </form>
-  <section class="panel">${rows || `<div class="empty"><b>Your log is empty.</b>Every update you add is timestamped and shows here by day.</div>`}</section>`;
+  const logs = of("log").sort((a, b) => b.at - a.at);
+  let last = "", rows = "";
+  for (const l of logs){ const d = fmtDay(l.at); if (d !== last){ if (last) rows += "</ul>"; rows += `<div class="group-head">${esc(d)}</div><ul class="list">`; last = d; }
+    rows += `<li class="row"><span class="time-chip">${esc(fmtTime(l.at))}</span><div class="row-main"><div class="row-title">${esc(l.text)}</div>${l.tag ? `<div class="row-meta"><span>${esc(l.tag)}</span></div>` : ""}</div><div class="row-actions">${delBtn(l.id)}</div></li>`; }
+  if (last) rows += "</ul>";
+  const tags = ["Personal", "Pharmacy", "Learning", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
+  return `${adder("log", "Log an update", `<form class="form" id="log-form">
+      <label class="field wide">What did you do?<textarea id="l-text" required placeholder="Counselled 6 clients on new hypertension regimens"></textarea></label>
+      <label class="field">About<select id="l-tag"><option value="">General</option>${[...new Set(tags)].map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
+      <div class="btn-row"><button class="btn primary" type="submit">Log it</button></div></form>`, !logs.length)}
+    <section class="card">${rows || empty("Your log is empty.", "Every update is timestamped and grouped by day.")}</section>`;
 }
 
 let editing = null;
+const projPill = s => `<span class="pill ${({live: "s-good", building: "s-warn", down: "s-bad"})[s] || "s-mute"}">${esc(s)}</span>`;
 function viewBiz(){
-  const list = of("biz");
-  const e = editing && editing.kind === "biz" ? editing : null;
-  return `<div class="section-head"><h2>Businesses</h2></div>
-  <form class="add panel" id="biz-form">
-    <label>Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Kupa Logistics"></label>
-    <label>Status<select id="b-status">${["active","building","idea","paused"].map(s => `<option ${e?.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
-    <label>Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
-    <label class="wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
-    <div style="display:flex;gap:8px"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" id="cancel-edit">Cancel</button>` : ""}</div>
-  </form>
-  ${list.length ? `<div class="cards">${list.map(b => {
-    const open = of("task").filter(t => t.bizId === b.id && !t.done).length;
-    const stCls = {active:"live", building:"building", idea:"idea", paused:"paused"}[b.status] || "idea";
-    return `<article class="card"><div class="foot"><span class="pill s-${stCls}">${esc(b.status)}</span><span>${open} open goal${open===1?"":"s"}</span></div>
-      <h3>${esc(b.name)}</h3>${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url.replace(/^https?:\/\//,""))}</a>` : ""}
-      ${b.notes ? `<div class="li-notes">${esc(b.notes)}</div>` : ""}
-      <div class="foot"><span>Updated ${esc(ago(b.updatedAt))}</span><span class="actions"><button class="icon-btn" data-edit="${b.id}">Edit</button><button class="icon-btn" data-del="${b.id}" aria-label="Delete">✕</button></span></div></article>`;
-  }).join("")}</div>` : `<div class="panel empty"><b>No businesses yet.</b>Add each one so Task can tie goals and updates to it.</div>`}`;
+  const e = editing?.kind === "biz" ? editing : null, list = of("biz");
+  return `${adder("biz", e ? "Edit business" : "New business", `<form class="form" id="biz-form">
+      <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Mufasa Pharmacy"></label>
+      <label class="field">Status<select id="b-status">${["active", "building", "idea", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+      <label class="field">Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
+      <label class="field wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
+    ${list.length ? `<div class="tiles">${list.map(b => {
+      const open = of("task").filter(t => t.bizId === b.id && !t.done).length, appts = of("appt").filter(a => a.bizId === b.id && a.status === "scheduled" && a.start > now()).length;
+      return `<article class="tile"><div class="tile-top"><span class="pill ${({active: "s-good", building: "s-warn"})[b.status] || "s-mute"}">${esc(b.status)}</span><span>${open} goal${open === 1 ? "" : "s"} · ${appts} appt${appts === 1 ? "" : "s"}</span></div>
+        <h3>${esc(b.name)}</h3>${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url.replace(/^https?:\/\//, ""))}</a>` : ""}
+        ${b.notes ? `<div class="row-notes">${esc(b.notes)}</div>` : ""}
+        <div class="tile-foot"><span>Updated ${esc(ago(b.updatedAt))}</span><span class="row-actions">${editBtn(b.id)}${delBtn(b.id)}</span></div></article>`; }).join("")}</div>` : ""}`;
 }
-
+let projSummary = "";
 function viewProjects(){
-  const list = of("project");
-  const e = editing && editing.kind === "project" ? editing : null;
-  return `<div class="section-head"><h2>Apps and websites</h2>${list.length ? `<button class="btn small primary" id="proj-summary">Summarize all</button>` : ""}</div>
-  <p class="notice">Set each project's status and paste in what changed (release notes, analytics, errors). Task turns it into a summary. Automatic checks from GitHub or your hosting need a hosted version of this app; see the setup note in the chat thread.</p>
-  <div id="proj-summary-out" class="panel brief" ${projSummary ? "" : "hidden"}>${esc(projSummary)}</div>
-  <form class="add panel" id="proj-form" style="margin-top:14px">
-    <label>Name<input id="p-name" required value="${esc(e?.name)}" placeholder="Booking app"></label>
-    <label>Status<select id="p-status">${["live","building","down","paused"].map(s => `<option ${e?.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
-    <label>URL<input id="p-url" value="${esc(e?.url)}" placeholder="https://"></label>
-    <label>Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
-    <label class="wide">Latest status notes<textarea id="p-notes" placeholder="Shipped login page. 42 signups this week. Checkout bug open.">${esc(e?.notes)}</textarea></label>
-    <div style="display:flex;gap:8px"><button class="btn primary" type="submit">${e ? "Save changes" : "Add project"}</button>${e ? `<button class="btn ghost" type="button" id="cancel-edit">Cancel</button>` : ""}</div>
-  </form>
-  ${list.length ? `<div class="cards">${list.map(p => `<article class="card">
-      <div class="foot"><span class="pill s-${p.status}">${esc(p.status)}</span><span>Checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>
-      <h3>${esc(p.name)}</h3>
-      ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace(/^https?:\/\//,""))}</a>` : ""}
-      ${p.repo ? `<span class="li-meta">${esc(p.repo)}</span>` : ""}
-      ${p.notes ? `<div class="li-notes">${esc(p.notes)}</div>` : ""}
-      <div class="foot"><span class="actions"><button class="icon-btn" data-checked="${p.id}">Mark checked</button></span><span class="actions"><button class="icon-btn" data-edit="${p.id}">Update</button><button class="icon-btn" data-del="${p.id}" aria-label="Delete">✕</button></span></div></article>`).join("")}</div>`
-    : `<div class="panel empty"><b>No projects yet.</b>Add the apps and websites you're building to track them in one place.</div>`}`;
+  const e = editing?.kind === "project" ? editing : null, list = of("project");
+  return `${adder("project", e ? "Update project" : "New project", `<form class="form" id="proj-form">
+      <label class="field">Name<input id="p-name" required value="${esc(e?.name)}" placeholder="Brandbridge Academy"></label>
+      <label class="field">Status<select id="p-status">${["live", "building", "down", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+      <label class="field">URL<input id="p-url" value="${esc(e?.url)}" placeholder="https://"></label>
+      <label class="field">Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
+      <label class="field wide">Latest status notes<textarea id="p-notes" placeholder="What shipped, signups this week, open bugs">${esc(e?.notes)}</textarea></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add project"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
+    ${list.length ? `<section class="card"><div class="card-head"><div><h2>Status summary</h2><p class="sub">AI turns your notes into one report.</p></div><button class="btn sm primary" id="proj-summary">${IC.ai}Summarize all</button></div>
+      <div class="brief ${projSummary ? "" : "placeholder"}" id="proj-summary-out">${esc(projSummary || "Press Summarize all for a one-line status per project and the most important next step.")}</div></section>
+    <div class="tiles">${list.map(p => `<article class="tile"><div class="tile-top">${projPill(p.status)}<span>Checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>
+      <h3>${esc(p.name)}</h3>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace(/^https?:\/\//, ""))}</a>` : ""}${p.repo ? `<span class="row-meta">${esc(p.repo)}</span>` : ""}
+      ${p.notes ? `<div class="row-notes">${esc(p.notes)}</div>` : ""}
+      <div class="tile-foot"><button class="btn sm" data-checked="${p.id}">${IC.check}Mark checked</button><span class="row-actions">${editBtn(p.id)}${delBtn(p.id)}</span></div></article>`).join("")}</div>` : ""}`;
 }
 
 let chat = [];
 try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30); } catch {}
-let aiState = "unknown"; // unknown | ready | off
+let aiState = "unknown";
 function viewAI(){
-  return `<div class="section-head"><h2>Task AI</h2>${chat.length ? `<button class="btn small ghost" id="chat-clear">Clear chat</button>` : ""}</div>
-  <section class="panel chat">
-    <div class="chips">${["Plan my day","What should I focus on this week?","Add a goal to call the bank tomorrow at 10am","Summarize my projects","Log that I finished the pitch deck"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task knows your goals, log, businesses and projects, and can add or update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
-    <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask Task anything, or tell it what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
+  return `<section class="card chat">
+    <div class="chips">${["Plan my day", "Book Mary for a BP check tomorrow at 10am", "Quiz me on antibiotics", "Explain metformin counselling points", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
+    <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
-  ${inClaude ? "" : `<section class="panel" style="margin-top:16px"><h2 style="font-size:16px">AI settings</h2>
-    <p class="li-notes">The assistant uses your own Anthropic API key (from console.anthropic.com). It's stored only on this device.</p>
-    <form id="key-form" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="api-key" type="password" autocomplete="off" placeholder="${apiKey() ? "Key saved. Paste a new one to replace it" : "sk-ant-..."}" style="flex:1;min-width:200px"><button class="btn primary" type="submit">Save key</button>${apiKey() ? `<button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form></section>`}`;
+  <div class="btn-row" style="justify-content:flex-end">${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
+  ${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>AI settings</h2><p class="sub">Task AI uses your own Anthropic API key from console.anthropic.com. It's stored only on this device.</p></div></div>
+    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" placeholder="${apiKey() ? "Key saved. Paste a new one to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit">Save key</button>${apiKey() ? `<button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form></section>`}`;
 }
 
-function notifBanner(){
-  if (!("Notification" in window)) return "";
-  if (Notification.permission === "granted") return "";
-  if (!inClaude) return `<p class="notice">Turn on notifications so Task can alert you when a goal is due. <button class="btn small primary" id="notif-btn">Turn on notifications</button></p>`;
-  return `<p class="notice">Reminders pop up inside Task while it's open. <button class="btn small" id="notif-btn">Try system notifications</button> For alerts when the app is closed, tap <b>+Cal</b> on a goal to add it to your phone's calendar with an alarm.</p>`;
-}
-
+const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI};
 function render(){
-  const navs = navHTML();
-  $("#rail").innerHTML = `<div class="brand"><span class="reactor" aria-hidden="true"></span>TASK</div>${navs}<div class="rail-foot" id="rail-foot">${cloud ? "Synced across your devices" : "Stored on this device"}</div>`;
-  $("#dock").innerHTML = navs;
+  renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
-  $("#views").innerHTML = ({today:viewToday, tasks:viewTasks, log:viewLog, biz:viewBiz, projects:viewProjects, ai:viewAI})[view]();
+  const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
+  const openStates = [...document.querySelectorAll("details.adder")].map(d => [d.dataset.form, d.open]);
+  $("#views").innerHTML = VIEWS[view]();
+  openStates.forEach(([k, o]) => { const d = document.querySelector(`details.adder[data-form="${k}"]`); if (d && o) d.open = true; });
+  if (focusId === "card-search"){ const el = $("#card-search"); el?.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} }
   if (view === "ai"){ const lg = $("#chat-log"); lg.scrollTop = lg.scrollHeight; if (keep) $("#chat-in").value = keep; }
-  updateHud();
+  updateTitle();
 }
-
-function updateHud(){
-  const d = new Date(), h = d.getHours();
-  $("#clock").textContent = d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
-  $("#hud-date").textContent = d.toLocaleDateString([], {weekday:"long", month:"long", day:"numeric"});
-  $("#greeting").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + ".";
-  const open = of("task").filter(t => !t.done);
-  const overdue = open.filter(t => t.due && t.due < now()).length;
-  const next = sortTasks(open.filter(t => t.due && t.due >= now()))[0];
-  $("#hud-sub").textContent = overdue ? `${overdue} goal${overdue>1?"s are":" is"} overdue.` + (next ? ` Next up: ${next.title} at ${fmtTime(next.due)}.` : "")
-    : next ? `Next up: ${next.title}, ${fmtWhen(next.due)}.` : open.length ? `${open.length} open goal${open.length>1?"s":""}, none scheduled.` : "Nothing pending. Add a goal to get started.";
+function updateTitle(){
+  const d = new Date();
+  $("#page-h1").textContent = view === "today" ? d.toLocaleDateString([], {weekday: "long"}) : SECTIONS[view].label;
+  const c = counts();
+  $("#page-sub").textContent = ({
+    today: d.toLocaleDateString([], {month: "long", day: "numeric"}) + " · " + d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}),
+    tasks: `${c.tasks} open`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
+    log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
+    ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline")
+  })[view];
 }
 
 /* ---------- Events ---------- */
+function closeMenu(){ $("#new-menu").hidden = true; $("#new-btn").setAttribute("aria-expanded", "false"); }
 document.addEventListener("click", async ev => {
-  const t = ev.target.closest("button, input.tick"); if (!t) return;
+  const t = ev.target.closest("button, input.tick, #scrim");
+  if (!ev.target.closest(".top-actions")) closeMenu();
+  if (!t) return;
+  if (t.id === "scrim"){ document.body.classList.remove("sheet-open"); return; }
   const d = t.dataset;
-  if (d.nav) return go(d.nav);
-  if (d.toggle){ const r = items.find(x => x.id === d.toggle); if (r) put({...r, done: !r.done, doneAt: !r.done ? now() : null}); return; }
+  if (t.id === "new-btn"){ const m = $("#new-menu"); m.hidden = !m.hidden; t.setAttribute("aria-expanded", String(!m.hidden)); return; }
+  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
+  if (d.sheet){ document.body.classList.add("sheet-open"); return; }
+  if (d.nav){ editing = null; return go(d.nav); }
+  if (d.go){ editing = null; return go(d.go, {open: d.open}); }
+  if (d.toggle){ const r = byId(d.toggle); if (r) put({...r, done: !r.done, doneAt: !r.done ? now() : null}); return; }
   if (d.del){
-    if (t.dataset.armed){ remove(d.del); return; }
-    t.dataset.armed = "1"; t.textContent = "Delete?"; t.style.color = "var(--bad)";
-    setTimeout(() => { if (t.isConnected){ delete t.dataset.armed; t.textContent = "✕"; t.style.color = ""; } }, 3000);
+    if (t.classList.contains("armed")){ if (editing?.id === d.del) editing = null; remove(d.del); return; }
+    t.classList.add("armed"); t.textContent = "Delete?";
+    setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.innerHTML = IC.trash; } }, 3000);
     return;
   }
-  if (d.edit){ editing = items.find(x => x.id === d.edit) || null; render(); window.scrollTo(0,0); return; }
-  if (d.checked){ const r = items.find(x => x.id === d.checked); if (r) put({...r, checkedAt: now()}); return; }
+  if (d.edit){ editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library"; render(); window.scrollTo(0, 0);
+    setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 0); return; }
+  if (t.hasAttribute("data-cancel")){ editing = null; draftCard = null; openForm = null; render(); return; }
+  if (d.checked){ const r = byId(d.checked); if (r) put({...r, checkedAt: now()}); return; }
   if (d.tfilter){ taskFilter = d.tfilter; render(); return; }
-  if (d.ics) return exportIcs(items.find(x => x.id === d.ics));
+  if (d.afilter){ apptFilter = d.afilter; render(); return; }
+  if (d.appt){ const r = byId(d.appt); if (r){ put({...r, status: d.to}); toast(d.to === "done" ? `Marked ${r.client}'s appointment done.` : "Marked as no-show."); } return; }
+  if (d.ics) return exportIcs(byId(d.ics));
+  if (d.copy){ try { await navigator.clipboard.writeText(d.copy); toast("Copied " + d.copy); } catch { toast(d.copy); } return; }
+  if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
+  if (d.grade != null) return gradeCard(d.grade === "1");
+  if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
   if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
   switch (t.id){
-    case "cancel-edit": editing = null; render(); break;
     case "load-examples": loadExamples(); break;
+    case "starter-deck": loadStarterDeck(); break;
+    case "start-review": { const q = cardsDue().sort((a, b) => (a.box || 1) - (b.box || 1)).map(c => c.id); q.total = q.length; reviewQueue = q; revealed = false; render(); break; }
+    case "reveal": revealed = true; render(); break;
+    case "end-review": reviewQueue = null; render(); break;
     case "brief-btn": briefing(t); break;
     case "proj-summary": summarizeProjects(t); break;
-    case "key-clear": try { localStorage.removeItem("task.apiKey"); } catch {} toast("API key removed."); render(); break;
+    case "ai-card-btn": aiFillCard(t); break;
     case "chat-clear": chat = []; saveChat(); render(); break;
     case "chat-stop": aiCtl?.abort(); break;
+    case "key-clear": try { localStorage.removeItem("task.apiKey"); } catch {} toast("API key removed."); render(); break;
     case "notif-btn":
       unlockAudio();
-      try { const p = await Notification.requestPermission(); toast(p === "granted" ? "System notifications are on." : "System notifications are blocked here, so reminders will pop up inside Task instead."); }
-      catch { toast("System notifications are blocked here, so reminders will pop up inside Task instead."); }
+      try { const p = await Notification.requestPermission(); toast(p === "granted" ? "Notifications are on." : "Notifications are blocked, so reminders will pop up inside Task instead."); }
+      catch { toast("Notifications are blocked, so reminders will pop up inside Task instead."); }
       render(); break;
   }
 });
+document.addEventListener("input", ev => { if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); } });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
-  const f = ev.target.id, v = id => $(id).value.trim();
+  const f = ev.target.id, v = id => ($(id)?.value || "").trim();
   if (f === "task-form"){
-    const due = $("#t-due").value ? new Date($("#t-due").value).getTime() : null;
-    add("task", {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null, done: false});
-    toast("Goal added" + (due ? `, reminder at ${fmtWhen(due)}` : ""));
+    const due = fromInput($("#t-due").value);
+    const data = {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null};
+    if (editing?.kind === "task") put({...editing, ...data, notified: editing.due === due ? editing.notified : null}); else add("task", {...data, done: false});
+    toast((editing ? "Goal updated" : "Goal added") + (due ? `, reminder at ${fmtWhen(due)}` : "")); editing = null; openForm = null;
+  } else if (f === "appt-form"){
+    const start = fromInput($("#a-start").value), lead = +$("#a-lead").value;
+    const data = {client: v("#a-client"), phone: v("#a-phone"), purpose: v("#a-purpose"), start, duration: +$("#a-dur").value, lead, location: v("#a-loc"), bizId: $("#a-biz").value || null, notes: v("#a-notes")};
+    if (editing?.kind === "appt") put({...editing, ...data, notified: editing.start === start && editing.lead === lead ? editing.notified : null}); else add("appt", {...data, status: "scheduled"});
+    toast(`${editing ? "Updated" : "Booked"} ${data.client}, ${fmtWhen(start)}`); editing = null; openForm = null;
+  } else if (f === "card-form"){
+    const data = {drug: v("#c-drug"), cls: v("#c-cls")}; FIELDS.forEach(([k]) => data[k] = v("#c-" + k));
+    if (editing?.kind === "card") put({...editing, ...data}); else add("card", {...data, box: 1, nextReview: now(), source: draftCard ? "ai" : "me"});
+    toast(`Saved ${data.drug}`); editing = null; draftCard = null; openForm = null;
   } else if (f === "log-form"){
     add("log", {text: v("#l-text"), tag: $("#l-tag").value, at: now()}); toast("Logged");
   } else if (f === "biz-form"){
@@ -469,12 +805,26 @@ document.addEventListener("submit", ev => {
   } else if (f === "proj-form"){
     const data = {name: v("#p-name"), status: $("#p-status").value, url: v("#p-url"), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
     editing?.kind === "project" ? put({...editing, ...data}) : add("project", data); editing = null; toast("Project saved");
-  } else if (f === "chat-form") sendChat();
-  else if (f === "key-form"){ const k = $("#api-key").value.trim(); if (k){ try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; toast("API key saved on this device."); render(); } }
+  } else if (f === "quiz-form") makeQuiz();
+  else if (f === "chat-form") sendChat();
+  else if (f === "key-form"){ const k = v("#api-key"); if (k){ try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; toast("API key saved on this device."); render(); } }
 });
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
+  if (ev.key === "Escape"){ closeMenu(); document.body.classList.remove("sheet-open"); }
 });
+
+function gradeCard(knew){
+  const c = byId(reviewQueue[0]); if (!c) return;
+  const box = knew ? Math.min(5, (c.box || 1) + 1) : 1;
+  const next = knew ? now() + Math.max(BOX_DAYS[box], 0.5) * DAY : now() + 10 * MIN;
+  const meta = learnMeta(), today = new Date().toDateString();
+  if (!(meta.days || []).includes(today)) put({...meta, days: [...(meta.days || []), today].slice(-400)});
+  reviewQueue.shift(); if (!knew) reviewQueue.push(c.id);
+  revealed = false;
+  if (!reviewQueue.length){ reviewQueue = null; toast("Review finished. Nice work."); }
+  put({...c, box, nextReview: next, lastReviewed: now()});
+}
 
 /* ---------- Reminders ---------- */
 let audioCtx = null;
@@ -482,25 +832,26 @@ function unlockAudio(){ try { audioCtx ||= new (window.AudioContext || window.we
 function chime(){
   try { if (!audioCtx) return; const t0 = audioCtx.currentTime;
     [880, 1320].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
-      g.gain.setValueAtTime(0.0001, t0 + i*.18); g.gain.exponentialRampToValueAtTime(0.2, t0 + i*.18 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i*.18 + .4); o.start(t0 + i*.18); o.stop(t0 + i*.18 + .45); });
+      g.gain.setValueAtTime(0.0001, t0 + i * .18); g.gain.exponentialRampToValueAtTime(0.2, t0 + i * .18 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * .18 + .4); o.start(t0 + i * .18); o.stop(t0 + i * .18 + .45); });
   } catch {}
 }
 function checkReminders(){
-  for (const t of of("task")){
-    if (t.remind && !t.done && t.due && t.due <= now() && !t.notified){
-      put({...t, notified: now()});
-      chime();
-      toast("Reminder: " + t.title, true, t.id);
-      showSystemNotification(t);
+  for (const x of items){
+    const at = remindAt(x);
+    if (at && at <= now() && !x.notified && now() - at < DAY){
+      put({...x, notified: now()}); chime();
+      toast((x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
+      showSystemNotification(x);
     }
   }
 }
-async function showSystemNotification(t){
+async function showSystemNotification(x){
   try {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const title = x.kind === "appt" ? "Appointment" : "Task reminder", body = reminderText(x);
     const reg = swReg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
-    if (reg) await reg.showNotification("Task reminder", {body: t.title, tag: t.id, icon: "icon-192.png", badge: "icon-192.png", requireInteraction: true, data: {id: t.id}});
-    else new Notification("Task reminder", {body: t.title});
+    if (reg) await reg.showNotification(title, {body, tag: x.id, icon: "icon-192.png", badge: "icon-192.png", requireInteraction: true, data: {id: x.id}});
+    else new Notification(title, {body});
   } catch {}
 }
 function toast(text, alert = false, taskId = null){
@@ -509,64 +860,80 @@ function toast(text, alert = false, taskId = null){
   el.innerHTML = `<span>${esc(text)}</span>${taskId ? `<button data-toggle="${taskId}">Done</button>` : ""}<button aria-label="Dismiss">✕</button>`;
   el.addEventListener("click", e => { if (e.target.tagName === "BUTTON") el.remove(); });
   $("#toasts").append(el);
+  const all = $("#toasts").children; if (all.length > 3) all[0].remove();
   if (!alert) setTimeout(() => el.remove(), 4000);
 }
-
-/* Calendar export: a real alarm on the phone even when Task is closed */
-async function exportIcs(t){
-  if (!t?.due) return;
+async function exportIcs(x){
+  if (!x) return;
+  const start = x.kind === "appt" ? x.start : x.due; if (!start) return;
+  const end = x.kind === "appt" ? apptEnd(x) : start + 30 * MIN;
+  const title = x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""}` : x.title;
+  const lead = x.kind === "appt" ? Math.max(x.lead ?? 10, 0) : 10;
   const z = ms => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const clean = s => String(s || "").replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
-  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Task//EN","BEGIN:VEVENT",`UID:${t.id}@jarvis`,`DTSTAMP:${z(now())}`,`DTSTART:${z(t.due)}`,`DTEND:${z(t.due + 18e5)}`,
-    `SUMMARY:${clean(t.title)}`, t.notes ? `DESCRIPTION:${clean(t.notes)}` : "", "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${clean(t.title)}`,"TRIGGER:-PT10M","END:VALARM","BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${clean(t.title)}`,"TRIGGER:PT0M","END:VALARM","END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n");
+  const desc = [x.phone && "Phone: " + x.phone, x.notes].filter(Boolean).join("\n");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Task//EN", "BEGIN:VEVENT", `UID:${x.id}@task`, `DTSTAMP:${z(now())}`, `DTSTART:${z(start)}`, `DTEND:${z(end)}`,
+    `SUMMARY:${clean(title)}`, desc ? `DESCRIPTION:${clean(desc)}` : "", x.location ? `LOCATION:${clean(x.location)}` : "",
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${clean(title)}`, `TRIGGER:-PT${lead}M`, "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+  const filename = title.replace(/[^\w ]+/g, "").slice(0, 40).trim().replace(/ /g, "-") + ".ics";
   try {
     const dl = await cap("downloads");
-    if (!dl){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([ics], {type: "text/calendar"})); a.download = "task-reminder.ics"; a.click(); toast("Calendar file saved. Open it to add the alarm to your calendar."); return; }
-    await dl.save({filename: t.title.replace(/[^\w ]+/g, "").slice(0, 40).trim().replace(/ /g, "-") + ".ics", data: ics});
-    toast("Calendar file saved. Open it to add the alarm to your calendar.");
+    if (!dl){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([ics], {type: "text/calendar"})); a.download = filename; a.click(); toast("Calendar file saved. Open it to add the alarm."); return; }
+    await dl.save({filename, data: ics}); toast("Calendar file saved. Open it to add the alarm.");
   } catch (e) { if (e?.code !== "declined") toast("Couldn't save the calendar file here (" + (e?.code || "error") + ")."); }
 }
 
-/* ---------- AI (Claude via the viewer's account) ---------- */
+/* ---------- AI ---------- */
 function snapshot(){
-  const pick = (arr, f) => arr.map(f);
   return JSON.stringify({
     now: new Date().toString(),
-    goals: pick(of("task"), t => ({id: t.id, title: t.title, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: items.find(b => b.id === t.bizId)?.name, notes: t.notes})),
-    log: pick(of("log").sort((a,b) => b.at - a.at).slice(0, 40), l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
-    businesses: pick(of("biz"), b => ({id: b.id, name: b.name, status: b.status, url: b.url, notes: b.notes})),
-    projects: pick(of("project"), p => ({id: p.id, name: p.name, status: p.status, url: p.url, repo: p.repo, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()}))
+    user: "A pharmacist who runs businesses and builds apps and websites.",
+    goals: of("task").map(t => ({id: t.id, title: t.title, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: byId(t.bizId)?.name, notes: t.notes})),
+    appointments: of("appt").filter(a => a.start > now() - 14 * DAY).map(a => ({id: a.id, client: a.client, purpose: a.purpose, start: new Date(a.start).toString(), minutes: a.duration, status: a.status, location: a.location, notes: a.notes})),
+    drugCards: of("card").map(c => ({drug: c.drug, cls: c.cls, memoryLevel: c.box || 1})),
+    log: of("log").sort((a, b) => b.at - a.at).slice(0, 30).map(l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
+    businesses: of("biz").map(b => ({name: b.name, status: b.status, url: b.url, notes: b.notes})),
+    projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()}))
   });
 }
-const RULES = `You are Task, a sharp, warm personal chief-of-staff inside the user's command-center app. The user runs several businesses and is building apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers, no tables). When the user asks you to add, log, update or complete something, use the tools to do it, then confirm in one line. Convert relative dates and times ("tomorrow at 10am") using the current time in the data. Never invent facts about their businesses or projects; if information is missing, say what to add.`;
-
+const RULES = `You are Task AI, a sharp, warm personal assistant inside the user's command-center app. The user is a pharmacist who also runs businesses and builds apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
 const tools = [
-  {name: "add_goal", description: "Add a goal/task. Optional due time as an ISO 8601 local datetime like 2026-10-04T10:00. Returns the new goal id.",
-   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, business: {type: "string", description: "business name, if it belongs to one"}}, required: ["title"]},
+  {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00.",
+   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}}, required: ["title"]},
    execute: async i => { const due = i.due ? new Date(String(i.due)).getTime() : null; if (i.due && isNaN(due)) throw new Error("Unreadable due time");
-     const biz = i.business ? of("biz").find(b => b.name.toLowerCase() === String(i.business).toLowerCase()) : null;
-     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: biz?.id || null, done: false}); return {id: r.id, due: due ? new Date(due).toString() : null}; }},
+     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false}); return {id: r.id}; }},
   {name: "complete_goal", description: "Mark a goal done by its id.", inputSchema: {type: "object", properties: {id: {type: "string"}}, required: ["id"]},
-   execute: async i => { const r = items.find(x => x.id === String(i.id) && x.kind === "task"); if (!r) throw new Error("No goal with that id"); await put({...r, done: true, doneAt: now()}); return "done"; }},
+   execute: async i => { const r = byId(String(i.id)); if (!r || r.kind !== "task") throw new Error("No goal with that id"); await put({...r, done: true, doneAt: now()}); return "done"; }},
+  {name: "book_appointment", description: "Book a client appointment. start is ISO 8601 local datetime. remindMinutesBefore defaults to 30.",
+   inputSchema: {type: "object", properties: {client: {type: "string"}, start: {type: "string"}, purpose: {type: "string"}, minutes: {type: "number"}, phone: {type: "string"}, location: {type: "string"}, notes: {type: "string"}, remindMinutesBefore: {type: "number"}}, required: ["client", "start"]},
+   execute: async i => { const start = new Date(String(i.start)).getTime(); if (isNaN(start)) throw new Error("Unreadable start time");
+     const r = await add("appt", {client: String(i.client), start, purpose: String(i.purpose || ""), duration: Number(i.minutes) || 30, phone: String(i.phone || ""), location: String(i.location || ""), notes: String(i.notes || ""), lead: i.remindMinutesBefore != null ? Number(i.remindMinutesBefore) : 30, status: "scheduled", bizId: null});
+     return {id: r.id, start: new Date(start).toString()}; }},
+  {name: "update_appointment", description: "Change an appointment's status (done, cancelled, noshow) or reschedule it, by id.",
+   inputSchema: {type: "object", properties: {id: {type: "string"}, status: {type: "string", enum: ["scheduled", "done", "cancelled", "noshow"]}, start: {type: "string"}}, required: ["id"]},
+   execute: async i => { const r = byId(String(i.id)); if (!r || r.kind !== "appt") throw new Error("No appointment with that id");
+     const patch = {}; if (i.status) patch.status = String(i.status); if (i.start){ const s = new Date(String(i.start)).getTime(); if (isNaN(s)) throw new Error("Unreadable time"); patch.start = s; patch.notified = null; }
+     await put({...r, ...patch}); return "updated"; }},
+  {name: "add_drug_card", description: "Save a study flashcard for a drug. Keep each field short and factual.",
+   inputSchema: {type: "object", properties: {drug: {type: "string"}, cls: {type: "string"}, indication: {type: "string"}, moa: {type: "string"}, dosing: {type: "string"}, adverse: {type: "string"}, interactions: {type: "string"}, counselling: {type: "string"}}, required: ["drug"]},
+   execute: async i => { const d = {}; ["drug", "cls", ...FIELDS.map(f => f[0])].forEach(k => d[k] = String(i[k] || "")); await add("card", {...d, box: 1, nextReview: now(), source: "ai"}); return "saved"; }},
   {name: "log_update", description: "Add an entry to the activity log.", inputSchema: {type: "object", properties: {text: {type: "string"}, about: {type: "string"}}, required: ["text"]},
    execute: async i => { await add("log", {text: String(i.text), tag: String(i.about || ""), at: now()}); return "logged"; }},
-  {name: "add_business", description: "Add a business.", inputSchema: {type: "object", properties: {name: {type: "string"}, status: {type: "string", enum: ["active","building","idea","paused"]}, notes: {type: "string"}, url: {type: "string"}}, required: ["name"]},
-   execute: async i => { const r = await add("biz", {name: String(i.name), status: String(i.status || "active"), notes: String(i.notes || ""), url: String(i.url || "")}); return {id: r.id}; }},
-  {name: "update_project", description: "Create or update an app/website project by name: status (live, building, down, paused) and/or notes.", inputSchema: {type: "object", properties: {name: {type: "string"}, status: {type: "string", enum: ["live","building","down","paused"]}, notes: {type: "string"}, url: {type: "string"}}, required: ["name"]},
+  {name: "update_project", description: "Create or update an app/website project by name: status (live, building, down, paused) and/or notes.",
+   inputSchema: {type: "object", properties: {name: {type: "string"}, status: {type: "string", enum: ["live", "building", "down", "paused"]}, notes: {type: "string"}}, required: ["name"]},
    execute: async i => { const ex = of("project").find(p => p.name.toLowerCase() === String(i.name).toLowerCase());
-     const data = {name: String(i.name), ...(i.status ? {status: String(i.status)} : {}), ...(i.notes ? {notes: String(i.notes)} : {}), ...(i.url ? {url: String(i.url)} : {}), checkedAt: now()};
+     const data = {name: String(i.name), ...(i.status ? {status: String(i.status)} : {}), ...(i.notes ? {notes: String(i.notes)} : {}), checkedAt: now()};
      ex ? await put({...ex, ...data}) : await add("project", {status: "building", notes: "", url: "", repo: "", ...data}); return "saved"; }}
 ];
 
-let aiCtl = null, briefCache = "", projSummary = "";
-const aiOffText = () => inClaude ? "The AI assistant isn't available in this view. Open the app on claude.ai while signed in."
+let aiCtl = null, briefCache = "";
+const aiOffText = () => inClaude ? "Task AI isn't available in this view. Open the app on claude.ai while signed in."
   : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
-  : "Add your Anthropic API key in the AI settings below the chat to turn on the assistant.";
+  : "Add your Anthropic API key in AI settings (open Task AI and scroll down) to turn on the assistant.";
 async function getSample(){
   const s = await cap("sample");
   if (s){ aiState = "ready"; return s; }
-  const key = apiKey();
-  if (key && navigator.onLine){ aiState = "ready"; return apiSample; }
+  if (apiKey() && navigator.onLine){ aiState = "ready"; return apiSample; }
   aiState = "off"; return null;
 }
 function apiKey(){ try { return localStorage.getItem("task.apiKey") || ""; } catch { return ""; } }
@@ -578,18 +945,18 @@ async function apiSample(input, opts = {}){
   const apiTools = (opts.tools || []).map(t => ({name: t.name, description: t.description, input_schema: t.inputSchema || {type: "object", properties: {}}}));
   let all = "";
   for (let round = 0; round < 8; round++){
-    if (opts.signal?.aborted) throw {code: "cancelled"};
+    if (opts.signal?.aborted) throw {code: "cancelled", text: all};
     let res;
     try {
       res = await client.beta.messages.create({model: "claude-opus-5-5", max_tokens: 16000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
         messages, ...(apiTools.length ? {tools: apiTools} : {})}, {signal: opts.signal});
     } catch (e){
       if (opts.signal?.aborted) throw {code: "cancelled", text: all};
-      throw {code: e instanceof Anthropic.AuthenticationError ? "bad_key" : e instanceof Anthropic.RateLimitError ? "rate_limited" : "upstream_error", text: all};
+      throw {code: e instanceof Anthropic.AuthenticationError ? "bad_key" : e instanceof Anthropic.RateLimitError ? "rate_limited" : e instanceof Anthropic.APIConnectionError ? "offline" : "upstream_error", text: all};
     }
     if (res.stop_reason === "refusal") throw {code: "refused", text: all};
     const text = res.content.filter(b => b.type === "text").map(b => b.text).join("");
-    if (text) { all += (all ? "\n\n" : "") + text; opts.onText?.({text: all}); }
+    if (text){ all += (all ? "\n\n" : "") + text; opts.onText?.({text: all}); }
     messages.push({role: "assistant", content: res.content});
     const uses = res.content.filter(b => b.type === "tool_use");
     if (res.stop_reason !== "tool_use" || !uses.length) return {text: all, truncated: res.stop_reason === "max_tokens"};
@@ -603,74 +970,103 @@ async function apiSample(input, opts = {}){
   return {text: all, truncated: false};
 }
 apiSample.limits = async () => ({tools: {}});
-const errCopy = e => ({bad_key: "That API key didn't work. Check it in the AI settings below the chat.", refused: "Claude declined that request. Try rephrasing it.", not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Give it a moment, then try again.", cancelled: "Stopped."}[e?.code] || "Task couldn't answer that (" + (e?.code || "error") + "). Try again.");
+async function askJson(sample, prompt){
+  if (sample.json) return sample.json(prompt);
+  const {text} = await sample(prompt + "\n\nReply with only the JSON, no other text.");
+  const m = text.match(/[\[{][\s\S]*[\]}]/); if (!m) throw {code: "invalid_json"};
+  return JSON.parse(m[0]);
+}
+const errCopy = e => ({bad_key: "That API key didn't work. Check it in AI settings.", refused: "Claude declined that request. Try rephrasing it.", offline: "Couldn't reach Claude. Check your connection.",
+  not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Wait a moment, then try again.", cancelled: "Stopped.", invalid_json: "The answer came back in the wrong shape. Try again."}[e?.code] || "Couldn't get an answer (" + (e?.code || "error") + "). Try again.");
 
 async function sendChat(){
   const box = $("#chat-in"); if (!box) return;
   const text = box.value.trim(); if (!text || aiCtl) return;
-  box.value = "";
-  chat.push({role: "user", content: text}); saveChat();
-  const log = $("#chat-log");
-  log.querySelector(".msg.sys")?.remove();
-  log.insertAdjacentHTML("beforeend", `<div class="msg me">${esc(text)}</div><div class="msg ai" id="pending">Thinking...</div>`);
-  log.scrollTop = log.scrollHeight;
-  const sample = await getSample();
-  const bubble = () => $("#pending");
-  if (!sample){ bubble().textContent = aiOffText(); bubble().removeAttribute("id"); return; }
+  box.value = ""; chat.push({role: "user", content: text}); saveChat();
+  const log = $("#chat-log"); log.querySelector(".msg.sys")?.remove();
+  log.insertAdjacentHTML("beforeend", `<div class="msg me">${esc(text)}</div><div class="msg ai" id="pending">Thinking...</div>`); log.scrollTop = log.scrollHeight;
+  const sample = await getSample(), bubble = () => $("#pending");
+  if (!sample){ if (bubble()){ bubble().textContent = aiOffText(); bubble().removeAttribute("id"); } return; }
   aiCtl = new AbortController(); $("#chat-send").disabled = true; $("#chat-stop").hidden = false;
   const lim = await sample.limits().catch(() => null);
   const input = [{role: "user", content: RULES + "\n\nCurrent data (JSON):\n" + snapshot()}, ...chat.slice(-16)];
   try {
-    const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, modelTier: "default", ...(lim?.tools ? {tools} : {}),
-      onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; log.scrollTop = log.scrollHeight; } }});
-    const final = answer;
-    chat.push({role: "assistant", content: final}); saveChat();
-    if (bubble()) bubble().textContent = final;
+    const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
+      onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
+    chat.push({role: "assistant", content: answer}); saveChat(); if (bubble()) bubble().textContent = answer;
   } catch (e){
     if (bubble()) bubble().textContent = (e.text ? e.text + "\n\n" : "") + errCopy(e);
-    if (e.text) { chat.push({role: "assistant", content: e.text}); saveChat(); }
+    if (e.text){ chat.push({role: "assistant", content: e.text}); saveChat(); }
   } finally {
     aiCtl = null; bubble()?.removeAttribute("id");
-    if ($("#chat-send")) { $("#chat-send").disabled = false; $("#chat-stop").hidden = true; }
+    if ($("#chat-send")){ $("#chat-send").disabled = false; $("#chat-stop").hidden = true; }
   }
 }
 function saveChat(){ try { localStorage.setItem("jarvis.chat", JSON.stringify(chat.slice(-30))); } catch {} }
-
-async function briefing(btn){
-  const out = $("#brief-out"); btn.disabled = true; out.textContent = "Thinking...";
+async function runInto(btn, outSel, prompt, store){
+  const out = $(outSel); btn.disabled = true; out.classList.remove("placeholder"); out.textContent = "Thinking...";
   const sample = await getSample();
   if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
-  try {
-    const {text} = await sample(`${RULES}\n\nWrite my daily briefing: what's on today and overdue, what I got done recently, anything about my businesses and projects that needs attention, and the 3 things I should focus on next. Under 180 words.\n\nData:\n${snapshot()}`,
-      {onText: ({text}) => { out.textContent = text; }});
-    briefCache = text; out.textContent = text;
-  } catch (e){ out.textContent = errCopy(e); }
+  try { const {text} = await sample(prompt, {onText: ({text}) => { const o = $(outSel); if (o) o.textContent = text; }}); store(text); const o = $(outSel); if (o) o.textContent = text; }
+  catch (e){ const o = $(outSel); if (o) o.textContent = errCopy(e); }
   btn.disabled = false;
 }
-async function summarizeProjects(btn){
-  const out = $("#proj-summary-out"); out.hidden = false; btn.disabled = true; out.textContent = "Thinking...";
+const briefing = btn => runInto(btn, "#brief-out", `${RULES}\n\nWrite my daily briefing: today's appointments and goals, anything overdue, study cards due, anything about my businesses and projects that needs attention, and the 3 things to focus on next. Under 170 words.\n\nData:\n${snapshot()}`, t => briefCache = t);
+const summarizeProjects = btn => runInto(btn, "#proj-summary-out", `${RULES}\n\nSummarize my apps and websites: one line per project (status, what changed, risk), then the single most important next action. Flag any not checked in over 3 days.\n\nData:\n${snapshot()}`, t => projSummary = t);
+async function aiFillCard(btn){
+  const name = ($("#c-drug")?.value || "").trim(); if (!name){ toast("Type a drug name first."); $("#c-drug")?.focus(); return; }
+  btn.disabled = true; btn.textContent = "Filling...";
   const sample = await getSample();
-  if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
+  if (!sample){ toast(aiOffText()); btn.disabled = false; btn.innerHTML = IC.ai + "Fill with AI"; return; }
   try {
-    const {text} = await sample(`${RULES}\n\nSummarize the state of my apps and websites: one line per project (status, what changed, risk), then the single most important next action across all of them. Flag any project not checked in over 3 days.\n\nData:\n${snapshot()}`,
-      {onText: ({text}) => { out.textContent = text; }});
-    projSummary = text; out.textContent = text;
-  } catch (e){ out.textContent = errCopy(e); }
-  btn.disabled = false;
+    const r = await askJson(sample, `Write a concise pharmacist study card for "${name}" as a JSON object with string fields: drug, cls (drug class), indication, moa (mechanism, one sentence), dosing (usual adult dose for the main indication, note renal/hepatic adjustment if important), adverse (common and serious), interactions (most important), counselling (key patient counselling points). Short lines separated by "; ". If "${name}" is not a real medicine, return {"drug": "", "error": "not a recognised medicine"}.`);
+    if (!r || !r.drug){ toast(r?.error ? `AI: ${r.error}.` : "Couldn't fill that card."); }
+    else { draftCard = {drug: r.drug, cls: r.cls}; FIELDS.forEach(([k]) => { if (r[k]) draftCard[k] = String(r[k]); }); openForm = "card"; render(); }
+  } catch (e){ toast(errCopy(e)); }
+  if (btn.isConnected){ btn.disabled = false; btn.innerHTML = IC.ai + "Fill with AI"; }
+}
+async function makeQuiz(){
+  const topic = ($("#q-topic").value || "").trim() || "General pharmacy practice", n = +$("#q-n").value;
+  const mine = topic.toLowerCase() === "my drug cards";
+  if (mine && !of("card").length){ toast("Add some drug cards first."); return; }
+  quiz = {topic, status: "Writing your questions..."}; render();
+  const sample = await getSample();
+  if (!sample){ quiz.status = aiOffText(); render(); return; }
+  try {
+    const src = mine ? "these drugs from my study cards: " + of("card").map(c => c.drug).join(", ") : topic;
+    const qs = await askJson(sample, `Write ${n} multiple-choice questions for a practising pharmacist on ${src}. Mix clinical scenarios, dosing, interactions, adverse effects and counselling. Return a JSON array of objects: {"q": question, "options": [4 short options], "answer": index 0-3 of the correct option, "why": one-sentence explanation}. Vary the correct option's position.`);
+    const clean = (Array.isArray(qs) ? qs : []).filter(q => q && q.q && Array.isArray(q.options) && q.options.length >= 2 && Number.isInteger(+q.answer)).map(q => ({q: String(q.q), options: q.options.map(String), answer: +q.answer, why: String(q.why || "")}));
+    quiz = clean.length ? {topic, qs: clean} : {topic, status: "Couldn't make a quiz on that. Try another topic."};
+  } catch (e){ quiz = {topic, status: errCopy(e)}; }
+  if (view === "learn" && learnTab === "quiz") render();
 }
 
 /* ---------- Examples ---------- */
 async function loadExamples(){
-  const h = 36e5, base = new Date(); base.setMinutes(0,0,0);
-  const b1 = await add("biz", {name: "Example: Coffee Kiosk", status: "active", url: "", notes: "Example entry. Two locations, weekly revenue around $3,400. Next: hire a weekend barista."});
-  await add("biz", {name: "Example: Online Store", status: "building", url: "", notes: "Example entry. Launching in November."});
-  await add("task", {title: "Example: Review kiosk sales numbers", due: base.getTime() + 2*h, remind: true, notes: "", bizId: b1.id, done: false});
-  await add("task", {title: "Example: Reply to supplier emails", due: base.getTime() + 5*h, remind: true, notes: "", bizId: null, done: false});
-  await add("task", {title: "Example: Sketch the store homepage", due: null, remind: false, notes: "", bizId: null, done: false});
-  await add("log", {text: "Example: Met with the accountant about Q4 taxes", tag: "Personal", at: now() - 3*h});
-  await add("project", {name: "Example: Booking app", status: "building", url: "", repo: "", notes: "Example entry. Login done, payments in progress.", checkedAt: now() - 26*h});
-  await add("project", {name: "Example: Company website", status: "live", url: "", repo: "", notes: "Example entry. 1,200 visits last week.", checkedAt: now() - 2*h});
-  toast("Examples loaded. Delete them anytime with ✕.");
+  const base = new Date(); base.setMinutes(0, 0, 0); const b = base.getTime();
+  const b1 = await add("biz", {name: "Example: Community Pharmacy", status: "active", url: "", notes: "Example entry. Two counters, weekday clinic hours 9 to 6."});
+  await add("task", {title: "Example: Check expiry dates on shelf B", due: b + 2 * HOUR, remind: true, notes: "", bizId: b1.id, done: false});
+  await add("task", {title: "Example: Order antimalarial stock", due: null, remind: false, notes: "", bizId: b1.id, done: false});
+  await add("appt", {client: "Example: Jane Doe", phone: "+000 000 000", purpose: "Blood pressure check", start: b + 3 * HOUR, duration: 15, lead: 30, location: "Pharmacy", notes: "Example entry. On amlodipine 5 mg.", status: "scheduled", bizId: b1.id});
+  await add("appt", {client: "Example: John Smith", phone: "", purpose: "Medication review", start: b + DAY + 2 * HOUR, duration: 30, lead: 60, location: "Phone call", notes: "Example entry.", status: "scheduled", bizId: b1.id});
+  await add("log", {text: "Example: Counselled 4 clients on inhaler technique", tag: "Pharmacy", at: now() - 3 * HOUR});
+  await add("project", {name: "Example: Pharmacy website", status: "live", url: "", repo: "", notes: "Example entry.", checkedAt: now() - 2 * HOUR});
+  await loadStarterDeck(true);
+  toast("Examples loaded. Delete them anytime with the bin icon.");
+}
+// Short, widely taught facts for practice. Users should confirm against their own references.
+const STARTER = [
+  {drug: "Amoxicillin", cls: "Penicillin (beta-lactam) antibiotic", indication: "Respiratory, ear, urinary and dental infections; H. pylori eradication (in combination)", moa: "Inhibits bacterial cell-wall synthesis by binding penicillin-binding proteins", dosing: "Commonly 500 mg three times daily (check local guidance and indication)", adverse: "Diarrhoea, nausea, rash; anaphylaxis in penicillin allergy", interactions: "Methotrexate (reduced clearance); may alter INR with warfarin", counselling: "Ask about penicillin allergy; complete the course; report rash or breathing problems"},
+  {drug: "Metformin", cls: "Biguanide (antidiabetic)", indication: "Type 2 diabetes", moa: "Reduces hepatic glucose production and improves insulin sensitivity", dosing: "Start 500 mg once or twice daily with meals, titrate; review in renal impairment", adverse: "GI upset, metallic taste, B12 deficiency with long-term use; lactic acidosis (rare)", interactions: "Iodinated contrast (withhold around procedure); alcohol excess", counselling: "Take with food; GI effects usually settle; hold if dehydrated or very unwell (sick-day rules)"},
+  {drug: "Amlodipine", cls: "Dihydropyridine calcium-channel blocker", indication: "Hypertension, angina", moa: "Blocks L-type calcium channels causing arterial vasodilation", dosing: "Usually 5 mg once daily, max 10 mg", adverse: "Ankle swelling, flushing, headache, palpitations", interactions: "Simvastatin (limit dose); strong CYP3A4 inhibitors raise levels", counselling: "Take at the same time daily; ankle swelling is common, report if troublesome"},
+  {drug: "Warfarin", cls: "Vitamin K antagonist (anticoagulant)", indication: "Prevention and treatment of thromboembolism (e.g. AF, DVT/PE)", moa: "Inhibits vitamin K epoxide reductase, reducing clotting factors II, VII, IX, X", dosing: "Individualised to INR target (often 2 to 3)", adverse: "Bleeding, bruising; skin necrosis (rare)", interactions: "Many: antibiotics, azoles, amiodarone, NSAIDs, alcohol; keep vitamin K intake steady", counselling: "Regular INR checks; report bleeding or black stools; check before starting any new medicine or herbal product"},
+  {drug: "Omeprazole", cls: "Proton pump inhibitor", indication: "GORD, peptic ulcer, H. pylori eradication, NSAID gastroprotection", moa: "Irreversibly inhibits the gastric H+/K+ ATPase", dosing: "Commonly 20 mg once daily before breakfast", adverse: "Headache, GI upset; long term: low magnesium, B12 deficiency, fracture risk", interactions: "Clopidogrel (reduced activation); reduces absorption of some drugs needing acid", counselling: "Take 30 to 60 minutes before food; review the need for long-term use"},
+  {drug: "Salbutamol", cls: "Short-acting beta-2 agonist", indication: "Relief of asthma and COPD symptoms", moa: "Stimulates beta-2 receptors causing bronchial smooth-muscle relaxation", dosing: "Inhaler 100 to 200 micrograms when needed", adverse: "Tremor, palpitations, headache; low potassium at high doses", interactions: "Non-selective beta-blockers oppose its effect", counselling: "Check inhaler technique and spacer use; needing it more than usual means asthma is poorly controlled"}
+];
+async function loadStarterDeck(quiet){
+  const have = new Set(of("card").map(c => c.drug.toLowerCase()));
+  for (const c of STARTER) if (!have.has(c.drug.toLowerCase())) await add("card", {...c, notes: "Starter card. Confirm against your references.", box: 1, nextReview: now(), source: "starter"});
+  if (!quiet) toast("Starter deck added: 6 common medicines.");
 }
 
 /* ---------- Boot ---------- */
@@ -679,17 +1075,16 @@ async function setupOffline(){
   if (inClaude || !("serviceWorker" in navigator)) return;
   try {
     swReg = await navigator.serviceWorker.register("sw.js");
-    navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified") { const r = items.find(x => x.id === e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified"){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
     try { const db = await idb(); const req = db.transaction("kv").objectStore("kv").get("sent");
-      req.onsuccess = () => (req.result || []).forEach(id => { const r = items.find(x => x.id === id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
-    if ("periodicSync" in swReg) { try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * 60 * 1000}); } catch {} }
+      req.onsuccess = () => (req.result || []).forEach(id => { const r = byId(id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
+    if ("periodicSync" in swReg){ try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * MIN}); } catch {} }
   } catch {}
 }
-function netState(){ if (inClaude) return; $("#sync-state").textContent = navigator.onLine ? "Online · saved on this device" : "Offline · everything still works"; }
-addEventListener("online", () => { netState(); if (view === "ai") render(); });
-addEventListener("offline", () => { netState(); if (view === "ai") render(); });
-loadLocal(); render(); netState(); setupOffline(); mirrorToIdb();
-setInterval(() => { updateHud(); checkReminders(); }, 15000);
+addEventListener("online", () => render());
+addEventListener("offline", () => render());
+loadLocal(); render(); setupOffline(); mirrorToIdb();
+setInterval(() => { updateTitle(); checkReminders(); }, 15000);
 setTimeout(checkReminders, 1500);
 document.addEventListener("pointerdown", unlockAudio, {once: true});
 connectCloud();

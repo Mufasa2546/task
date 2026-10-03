@@ -1,5 +1,5 @@
 // Task service worker: offline cache + reminder notifications.
-const CACHE = "task-v1";
+const CACHE = "task-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
