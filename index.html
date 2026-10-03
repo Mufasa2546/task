@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e141b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Task">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a command console. Header briefing strip, one panel per section, bottom dock on phones, side rail on desktop. */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --sunk:#e3e8ee; --line:#cfd6df;
+  --fg:#16202b; --muted:#5b6878; --accent:#b8321f; --accent-2:#c98a12; --accent-ink:#ffffff;
+  --good:#1d7a4f; --warn:#a86a00; --bad:#b3261e;
+  --f-display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141b; --panel:#151d26; --sunk:#0b1016; --line:#26323f;
+  --fg:#e4e9ef; --muted:#8b98a8; --accent:#e5533a; --accent-2:#e8b03d; --accent-ink:#fff;
+  --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141b; --panel:#151d26; --sunk:#0b1016; --line:#26323f;
+  --fg:#e4e9ef; --muted:#8b98a8; --accent:#e5533a; --accent-2:#e8b03d; --accent-ink:#fff;
+  --good:#4cc38a; --warn:#e8b03d; --bad:#ff6b5e; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100%}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;padding:20px 14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;background:var(--panel)}
+.brand{font-family:var(--f-display);font-weight:700;letter-spacing:.12em;font-size:20px;display:flex;align-items:center;gap:10px;padding:0 8px 16px}
+.reactor{width:22px;height:22px;border-radius:50%;border:3px solid var(--accent-2);box-shadow:inset 0 0 0 3px var(--panel),inset 0 0 0 7px var(--accent)}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:10px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+.nav-btn:hover{background:var(--sunk);color:var(--fg)}
+.nav-btn[aria-current="true"]{background:var(--sunk);color:var(--fg);box-shadow:inset 3px 0 0 var(--accent)}
+.nav-btn svg{width:18px;height:18px;flex:none}
+.nav-count{margin-left:auto;font-family:var(--f-mono);font-size:12px}
+.rail-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 8px}
+main{padding-inline:clamp(16px,4vw,40px);padding-block:24px 96px;max-width:1080px;width:100%;min-width:0}
+.hud{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.hud h1{font-family:var(--f-display);font-weight:800;letter-spacing:-.02em;font-size:clamp(24px,4vw,32px);margin:0;line-height:1.15;text-wrap:balance}
+.hud .sub{color:var(--muted);margin:4px 0 0}
+.clock{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.clock b{display:block;font-size:22px;color:var(--fg);font-weight:500}
+.eyebrow{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--muted);font-weight:600;margin:0 0 10px}
+h2{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;font-size:20px;margin:0}
+.section-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.stat{background:var(--panel);padding:12px 14px}
+.stat .n{font-family:var(--f-mono);font-size:24px;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+form.add{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));align-items:end;margin-bottom:16px}
+form.add .wide{grid-column:1/-1}
+label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+input,select,textarea{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:70px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--fg)}
+.check input{width:auto}
+ul.list{list-style:none;margin:0;padding:0;display:grid}
+ul.list li{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+ul.list li:first-child{border-top:0}
+.li-main{flex:1;min-width:0}
+.li-title{font-weight:500;overflow-wrap:anywhere}
+.li-meta{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:2px}
+.li-notes{font-size:14px;color:var(--muted);margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.done .li-title{text-decoration:line-through;color:var(--muted)}
+.tick{appearance:none;width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;cursor:pointer;margin-top:1px;background:var(--panel);padding:0}
+.tick:checked{background:var(--good);border-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 6.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E")}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-family:var(--f-mono);padding:1px 8px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.s-live,.s-done{color:var(--good)} .s-building,.s-due{color:var(--warn)} .s-down,.s-overdue{color:var(--bad)} .s-paused,.s-idea{color:var(--muted)}
+.actions{display:flex;gap:4px;flex:none}
+.icon-btn{border:0;background:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;font-size:13px}
+.icon-btn:hover{background:var(--sunk);color:var(--fg)}
+.empty{color:var(--muted);text-align:left;padding:18px 4px;font-size:14px}
+.empty b{color:var(--fg);display:block;margin-bottom:4px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.card h3{margin:0;font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.card a{color:var(--accent);overflow-wrap:anywhere;font-size:13px;font-family:var(--f-mono)}
+.card .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.timeline li:first-child{border-top:0}
+.t-time{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
+.day-head{font-family:var(--f-display);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 4px}
+.chat{display:flex;flex-direction:column;height:min(70vh,640px);min-height:360px}
+.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px 2px 12px}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:3px}
+.msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:3px}
+.msg.sys{align-self:center;font-size:12px;color:var(--muted);font-family:var(--f-mono);padding:2px}
+.chat-form{display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.chat-form textarea{min-height:44px;height:44px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.brief{white-space:pre-wrap;font-size:14.5px}
+.toast-wrap{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));display:grid;gap:8px;z-index:50;max-width:min(360px,calc(100vw - 32px))}
+.toast{background:var(--fg);color:var(--bg);padding:12px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.toast.alert{background:var(--accent);color:var(--accent-ink)}
+.toast button{margin-left:auto;background:none;border:0;color:inherit;cursor:pointer;font-weight:600}
+.notice{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:8px;padding:10px 12px;margin-bottom:14px}
+.dock{display:none}
+.confirm-row{display:flex;gap:6px;align-items:center;font-size:13px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:none;padding:4px 12px;border-radius:99px;cursor:pointer;font-size:13px;color:var(--muted)}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dock{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around}
+  .dock .nav-btn{flex-direction:column;gap:2px;font-size:11px;padding:6px 4px;width:auto;flex:1;align-items:center;text-align:center}
+  .dock .nav-btn .nav-count{display:none}
+  .dock .nav-btn[aria-current="true"]{box-shadow:inset 0 -3px 0 var(--accent);background:none;color:var(--fg)}
+  .timeline li{grid-template-columns:54px minmax(0,1fr) auto}
+}
+@media (prefers-reduced-motion:no-preference){.toast{animation:slide .25s ease-out}@keyframes slide{from{transform:translateY(8px);opacity:.4}}}
+</style>
+
+<div class="app">
+  <aside class="rail" id="rail">
+    <div class="brand"><span class="reactor" aria-hidden="true"></span>TASK</div>
+  </aside>
+  <main>
+    <header class="hud">
+      <div>
+        <p class="eyebrow" id="hud-date">Today</p>
+        <h1 id="greeting">Good day.</h1>
+        <p class="sub" id="hud-sub">Here is where everything stands.</p>
+      </div>
+      <div class="clock"><b id="clock">--:--</b><span id="sync-state">Saved on this device</span></div>
+    </header>
+    <div id="views"></div>
+  </main>
+</div>
+<nav class="dock" id="dock" aria-label="Sections"></nav>
+<div class="toast-wrap" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => Date.now();
+// Works inside Claude (capabilities) and as a standalone installed app (none).
+const inClaude = !!(window.claude && window.claude.use);
+const cap = n => inClaude ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+
+/* ---------- Store: cloud (db capability) with a local fallback ---------- */
+const LS_KEY = "jarvis.items.v1";
+let items = [];          // every record: {id, kind:'task'|'log'|'biz'|'project', ...}
+let cloud = null;        // collection ref when signed in
+let loaded = false;
+
+function loadLocal(){ try { items = JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { items = []; } }
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch {} mirrorToIdb(); }
+function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open("task-app", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
+async function mirrorToIdb(){
+  try { const db = await idb(); const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(items.filter(t => t.kind === "task" && t.remind && !t.done && t.due && !t.notified).map(t => ({id: t.id, title: t.title, due: t.due})), "reminders"); } catch {}
+}
+
+async function put(rec){
+  rec.updatedAt = now();
+  const i = items.findIndex(x => x.id === rec.id);
+  if (i >= 0) items[i] = rec; else items.push(rec);
+  saveLocal(); render();
+  if (cloud) { try { const {id, ...data} = rec; await cloud.doc(id).set(data); } catch (e) { toast("Couldn't sync that change: " + (e.message || e.code)); } }
+  return rec;
+}
+async function remove(id){
+  items = items.filter(x => x.id !== id); saveLocal(); render();
+  if (cloud) { try { await cloud.doc(id).delete(); } catch (e) { toast("Couldn't sync the delete: " + (e.message || e.code)); } }
+}
+const add = (kind, fields) => put({ id: uid(), kind, createdAt: now(), ...fields });
+const of = kind => items.filter(x => x.kind === kind);
+
+async function connectCloud(){
+  try {
+    const [db, user] = await Promise.all([cap("db"), cap("user")]);
+    if (!db || !user) return;
+    const me = await user.id();
+    if (!me) return;
+    cloud = db.collection("data/users/" + me);
+    const localOnly = items.slice();
+    let first = true;
+    cloud.onSnapshot(snap => {
+      const remote = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (first) {
+        first = false;
+        // Carry anything made before sign-in up to the cloud copy.
+        const ids = new Set(remote.map(r => r.id));
+        localOnly.filter(r => !ids.has(r.id)).forEach(r => { const {id, ...d} = r; cloud.doc(id).set(d).catch(()=>{}); remote.push(r); });
+      }
+      items = remote; saveLocal(); loaded = true;
+      $("#sync-state").textContent = "Synced to your Claude account";
+      render();
+    }, e => { $("#sync-state").textContent = "Offline copy (" + e.code + ")"; });
+  } catch { /* stay local */ }
+}
+
+/* ---------- Time helpers ---------- */
+const fmtTime = t => new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const fmtDay = t => {
+  const d = new Date(t), today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((new Date(d).setHours(0,0,0,0) - today) / 864e5);
+  if (diff === 0) return "Today"; if (diff === -1) return "Yesterday"; if (diff === 1) return "Tomorrow";
+  return d.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
+};
+const fmtWhen = t => fmtDay(t) + ", " + fmtTime(t);
+const ago = t => { const m = Math.round((now()-t)/6e4); if (m < 1) return "just now"; if (m < 60) return m+"m ago"; const h = Math.round(m/60); if (h < 24) return h+"h ago"; return Math.round(h/24)+"d ago"; };
+const toLocalInput = t => { const d = new Date(t - new Date(t).getTimezoneOffset()*6e4); return d.toISOString().slice(0,16); };
+const isToday = t => new Date(t).toDateString() === new Date().toDateString();
+function taskState(t){ if (t.done) return "done"; if (!t.due) return ""; if (t.due < now()) return "overdue"; if (t.due - now() < 36e5*3) return "due"; return ""; }
+
+/* ---------- Navigation ---------- */
+const ICONS = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>',
+  tasks:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/></svg>',
+  log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>',
+  biz:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4h6v3"/></svg>',
+  projects:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M7 9l3 2-3 2M13 13h4"/></svg>',
+  ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>'
+};
+const SECTIONS = [["today","Today"],["tasks","Goals"],["log","Log"],["biz","Businesses"],["projects","Projects"],["ai","Task AI"]];
+let view = "today";
+try { const v = localStorage.getItem("jarvis.view"); if (SECTIONS.some(s => s[0] === v)) view = v; } catch {}
+if (location.hash && SECTIONS.some(s => "#" + s[0] === location.hash)) view = location.hash.slice(1);
+
+function navHTML(){
+  const counts = { tasks: of("task").filter(t => !t.done).length, biz: of("biz").length, projects: of("project").length };
+  return SECTIONS.map(([k, l]) => `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="nav-count">${counts[k]}</span>` : ""}</button>`).join("");
+}
+function go(k){ view = k; try { localStorage.setItem("jarvis.view", k); } catch {} render(); window.scrollTo(0,0); }
+
+/* ---------- Views ---------- */
+function taskLi(t){
+  const st = taskState(t);
+  const biz = t.bizId && items.find(b => b.id === t.bizId);
+  return `<li class="${t.done ? "done" : ""}">
+    <input type="checkbox" class="tick" data-toggle="${t.id}" ${t.done ? "checked" : ""} aria-label="Mark done">
+    <div class="li-main"><div class="li-title">${esc(t.title)}</div>
+      <div class="li-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : ""}${st && st !== "done" ? `<span class="pill s-${st}">${st === "overdue" ? "overdue" : "due soon"}</span>` : ""}${t.remind && !t.done ? "<span>🔔 reminder on</span>" : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+      ${t.notes ? `<div class="li-notes">${esc(t.notes)}</div>` : ""}</div>
+    <div class="actions">${t.due && !t.done ? `<button class="icon-btn" data-ics="${t.id}" title="Add to phone calendar">+Cal</button>` : ""}<button class="icon-btn" data-del="${t.id}" aria-label="Delete">✕</button></div></li>`;
+}
+const sortTasks = arr => arr.sort((a,b) => (a.done - b.done) || ((a.due || 9e15) - (b.due || 9e15)));
+const bizOptions = sel => `<option value="">None</option>` + of("biz").map(b => `<option value="${b.id}" ${sel === b.id ? "selected" : ""}>${esc(b.name)}</option>`).join("");
+
+function viewToday(){
+  const open = of("task").filter(t => !t.done);
+  const today = sortTasks(of("task").filter(t => !t.done && t.due && (isToday(t.due) || t.due < now()))).concat(sortTasks(open.filter(t => !t.due)).slice(0,3));
+  const doneToday = of("task").filter(t => t.done && t.doneAt && isToday(t.doneAt)).length;
+  const logs = of("log").sort((a,b) => b.at - a.at).slice(0,5);
+  const projs = of("project");
+  const attention = projs.filter(p => p.status === "down" || p.status === "building");
+  return `
+  <div class="stats">
+    <div class="stat"><div class="n">${today.length}</div><div class="l">Goals on deck today</div></div>
+    <div class="stat"><div class="n">${doneToday}</div><div class="l">Finished today</div></div>
+    <div class="stat"><div class="n">${of("biz").length}</div><div class="l">Businesses</div></div>
+    <div class="stat"><div class="n" style="color:${projs.some(p=>p.status==="down")?"var(--bad)":"inherit"}">${projs.filter(p=>p.status==="live").length}/${projs.length}</div><div class="l">Projects live</div></div>
+  </div>
+  ${notifBanner()}
+  <div class="grid2">
+    <section class="panel">
+      <div class="section-head"><h2>Today's goals</h2><button class="btn small" data-nav="tasks">Add goal</button></div>
+      ${today.length ? `<ul class="list">${today.map(taskLi).join("")}</ul>` : `<div class="empty"><b>Nothing scheduled for today.</b>Add a goal with a time and Task will remind you.</div>`}
+    </section>
+    <section class="panel">
+      <div class="section-head"><h2>Daily briefing</h2><button class="btn small primary" id="brief-btn">Brief me</button></div>
+      <div class="brief" id="brief-out">${esc(briefCache || "Ask Task for a short briefing on your goals, recent updates, businesses and projects.")}</div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><h2>Latest updates</h2><button class="btn small" data-nav="log">Log something</button></div>
+      ${logs.length ? `<ul class="list">${logs.map(l => `<li><div class="li-main"><div class="li-title">${esc(l.text)}</div><div class="li-meta"><span>${esc(ago(l.at))}</span>${l.tag ? `<span>${esc(l.tag)}</span>` : ""}</div></div></li>`).join("")}</ul>` : `<div class="empty"><b>No updates yet.</b>Log what you did and it shows up here.</div>`}
+    </section>
+    <section class="panel">
+      <div class="section-head"><h2>Projects needing attention</h2><button class="btn small" data-nav="projects">All projects</button></div>
+      ${attention.length ? `<ul class="list">${attention.map(p => `<li><div class="li-main"><div class="li-title">${esc(p.name)}</div><div class="li-meta"><span class="pill s-${p.status}">${p.status}</span><span>checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>${p.notes ? `<div class="li-notes">${esc(p.notes)}</div>` : ""}</div></li>`).join("")}</ul>` : `<div class="empty"><b>${projs.length ? "Everything is live." : "No projects yet."}</b>${projs.length ? "No site is marked down or in progress." : "Add your apps and websites under Projects."}</div>`}
+    </section>
+  </div>
+  ${items.length ? "" : `<div class="panel" style="margin-top:16px"><div class="section-head"><div><h2>Start here</h2><p class="li-notes">Your command center is empty. Add your first goal, or load a few example entries to see how it works (you can delete them anytime).</p></div><button class="btn" id="load-examples">Load examples</button></div></div>`}`;
+}
+
+let taskFilter = "open";
+function viewTasks(){
+  const all = of("task");
+  const list = sortTasks(all.filter(t => taskFilter === "all" ? true : taskFilter === "done" ? t.done : !t.done));
+  return `<div class="section-head"><h2>Goals and reminders</h2>
+    <div class="tabs">${["open","done","all"].map(f => `<button data-tfilter="${f}" aria-pressed="${taskFilter===f}">${f[0].toUpperCase()+f.slice(1)}</button>`).join("")}</div></div>
+  ${notifBanner()}
+  <form class="add panel" id="task-form">
+    <label class="wide">Goal<input id="t-title" required placeholder="Call the supplier about the new order" autocomplete="off"></label>
+    <label>When<input id="t-due" type="datetime-local"></label>
+    <label>Business<select id="t-biz">${bizOptions()}</select></label>
+    <label class="check"><input id="t-remind" type="checkbox" checked> Remind me</label>
+    <label class="wide">Notes<textarea id="t-notes" placeholder="Optional details"></textarea></label>
+    <div><button class="btn primary" type="submit">Add goal</button></div>
+  </form>
+  <section class="panel">${list.length ? `<ul class="list">${list.map(taskLi).join("")}</ul>` : `<div class="empty"><b>No ${taskFilter === "all" ? "" : taskFilter + " "}goals.</b>Add one above.</div>`}</section>`;
+}
+
+function viewLog(){
+  const logs = of("log").sort((a,b) => b.at - a.at);
+  let lastDay = "", rows = "";
+  for (const l of logs){
+    const d = fmtDay(l.at);
+    if (d !== lastDay){ if (rows) rows += "</ul>"; rows += `<div class="day-head">${esc(d)}</div><ul class="timeline">`; lastDay = d; }
+    rows += `<li><span class="t-time">${esc(fmtTime(l.at))}</span><div class="li-main"><div class="li-title">${esc(l.text)}</div>${l.tag ? `<div class="li-meta"><span>${esc(l.tag)}</span></div>` : ""}</div><button class="icon-btn" data-del="${l.id}" aria-label="Delete">✕</button></li>`;
+  }
+  if (rows) rows += "</ul>";
+  const tags = ["Personal", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
+  return `<div class="section-head"><h2>Activity log</h2></div>
+  <form class="add panel" id="log-form">
+    <label class="wide">What did you do?<textarea id="l-text" required placeholder="Signed the lease for the second shop"></textarea></label>
+    <label>About<select id="l-tag"><option value="">General</option>${tags.map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
+    <div><button class="btn primary" type="submit">Log it</button></div>
+  </form>
+  <section class="panel">${rows || `<div class="empty"><b>Your log is empty.</b>Every update you add is timestamped and shows here by day.</div>`}</section>`;
+}
+
+let editing = null;
+function viewBiz(){
+  const list = of("biz");
+  const e = editing && editing.kind === "biz" ? editing : null;
+  return `<div class="section-head"><h2>Businesses</h2></div>
+  <form class="add panel" id="biz-form">
+    <label>Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Kupa Logistics"></label>
+    <label>Status<select id="b-status">${["active","building","idea","paused"].map(s => `<option ${e?.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label>Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
+    <label class="wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
+    <div style="display:flex;gap:8px"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" id="cancel-edit">Cancel</button>` : ""}</div>
+  </form>
+  ${list.length ? `<div class="cards">${list.map(b => {
+    const open = of("task").filter(t => t.bizId === b.id && !t.done).length;
+    const stCls = {active:"live", building:"building", idea:"idea", paused:"paused"}[b.status] || "idea";
+    return `<article class="card"><div class="foot"><span class="pill s-${stCls}">${esc(b.status)}</span><span>${open} open goal${open===1?"":"s"}</span></div>
+      <h3>${esc(b.name)}</h3>${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url.replace(/^https?:\/\//,""))}</a>` : ""}
+      ${b.notes ? `<div class="li-notes">${esc(b.notes)}</div>` : ""}
+      <div class="foot"><span>Updated ${esc(ago(b.updatedAt))}</span><span class="actions"><button class="icon-btn" data-edit="${b.id}">Edit</button><button class="icon-btn" data-del="${b.id}" aria-label="Delete">✕</button></span></div></article>`;
+  }).join("")}</div>` : `<div class="panel empty"><b>No businesses yet.</b>Add each one so Task can tie goals and updates to it.</div>`}`;
+}
+
+function viewProjects(){
+  const list = of("project");
+  const e = editing && editing.kind === "project" ? editing : null;
+  return `<div class="section-head"><h2>Apps and websites</h2>${list.length ? `<button class="btn small primary" id="proj-summary">Summarize all</button>` : ""}</div>
+  <p class="notice">Set each project's status and paste in what changed (release notes, analytics, errors). Task turns it into a summary. Automatic checks from GitHub or your hosting need a hosted version of this app; see the setup note in the chat thread.</p>
+  <div id="proj-summary-out" class="panel brief" ${projSummary ? "" : "hidden"}>${esc(projSummary)}</div>
+  <form class="add panel" id="proj-form" style="margin-top:14px">
+    <label>Name<input id="p-name" required value="${esc(e?.name)}" placeholder="Booking app"></label>
+    <label>Status<select id="p-status">${["live","building","down","paused"].map(s => `<option ${e?.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label>URL<input id="p-url" value="${esc(e?.url)}" placeholder="https://"></label>
+    <label>Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
+    <label class="wide">Latest status notes<textarea id="p-notes" placeholder="Shipped login page. 42 signups this week. Checkout bug open.">${esc(e?.notes)}</textarea></label>
+    <div style="display:flex;gap:8px"><button class="btn primary" type="submit">${e ? "Save changes" : "Add project"}</button>${e ? `<button class="btn ghost" type="button" id="cancel-edit">Cancel</button>` : ""}</div>
+  </form>
+  ${list.length ? `<div class="cards">${list.map(p => `<article class="card">
+      <div class="foot"><span class="pill s-${p.status}">${esc(p.status)}</span><span>Checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>
+      <h3>${esc(p.name)}</h3>
+      ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace(/^https?:\/\//,""))}</a>` : ""}
+      ${p.repo ? `<span class="li-meta">${esc(p.repo)}</span>` : ""}
+      ${p.notes ? `<div class="li-notes">${esc(p.notes)}</div>` : ""}
+      <div class="foot"><span class="actions"><button class="icon-btn" data-checked="${p.id}">Mark checked</button></span><span class="actions"><button class="icon-btn" data-edit="${p.id}">Update</button><button class="icon-btn" data-del="${p.id}" aria-label="Delete">✕</button></span></div></article>`).join("")}</div>`
+    : `<div class="panel empty"><b>No projects yet.</b>Add the apps and websites you're building to track them in one place.</div>`}`;
+}
+
+let chat = [];
+try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30); } catch {}
+let aiState = "unknown"; // unknown | ready | off
+function viewAI(){
+  return `<div class="section-head"><h2>Task AI</h2>${chat.length ? `<button class="btn small ghost" id="chat-clear">Clear chat</button>` : ""}</div>
+  <section class="panel chat">
+    <div class="chips">${["Plan my day","What should I focus on this week?","Add a goal to call the bank tomorrow at 10am","Summarize my projects","Log that I finished the pitch deck"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task knows your goals, log, businesses and projects, and can add or update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
+    <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask Task anything, or tell it what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
+  </section>
+  ${inClaude ? "" : `<section class="panel" style="margin-top:16px"><h2 style="font-size:16px">AI settings</h2>
+    <p class="li-notes">The assistant uses your own Anthropic API key (from console.anthropic.com). It's stored only on this device.</p>
+    <form id="key-form" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><input id="api-key" type="password" autocomplete="off" placeholder="${apiKey() ? "Key saved. Paste a new one to replace it" : "sk-ant-..."}" style="flex:1;min-width:200px"><button class="btn primary" type="submit">Save key</button>${apiKey() ? `<button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form></section>`}`;
+}
+
+function notifBanner(){
+  if (!("Notification" in window)) return "";
+  if (Notification.permission === "granted") return "";
+  if (!inClaude) return `<p class="notice">Turn on notifications so Task can alert you when a goal is due. <button class="btn small primary" id="notif-btn">Turn on notifications</button></p>`;
+  return `<p class="notice">Reminders pop up inside Task while it's open. <button class="btn small" id="notif-btn">Try system notifications</button> For alerts when the app is closed, tap <b>+Cal</b> on a goal to add it to your phone's calendar with an alarm.</p>`;
+}
+
+function render(){
+  const navs = navHTML();
+  $("#rail").innerHTML = `<div class="brand"><span class="reactor" aria-hidden="true"></span>TASK</div>${navs}<div class="rail-foot" id="rail-foot">${cloud ? "Synced across your devices" : "Stored on this device"}</div>`;
+  $("#dock").innerHTML = navs;
+  const keep = view === "ai" ? $("#chat-in")?.value : null;
+  $("#views").innerHTML = ({today:viewToday, tasks:viewTasks, log:viewLog, biz:viewBiz, projects:viewProjects, ai:viewAI})[view]();
+  if (view === "ai"){ const lg = $("#chat-log"); lg.scrollTop = lg.scrollHeight; if (keep) $("#chat-in").value = keep; }
+  updateHud();
+}
+
+function updateHud(){
+  const d = new Date(), h = d.getHours();
+  $("#clock").textContent = d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  $("#hud-date").textContent = d.toLocaleDateString([], {weekday:"long", month:"long", day:"numeric"});
+  $("#greeting").textContent = (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + ".";
+  const open = of("task").filter(t => !t.done);
+  const overdue = open.filter(t => t.due && t.due < now()).length;
+  const next = sortTasks(open.filter(t => t.due && t.due >= now()))[0];
+  $("#hud-sub").textContent = overdue ? `${overdue} goal${overdue>1?"s are":" is"} overdue.` + (next ? ` Next up: ${next.title} at ${fmtTime(next.due)}.` : "")
+    : next ? `Next up: ${next.title}, ${fmtWhen(next.due)}.` : open.length ? `${open.length} open goal${open.length>1?"s":""}, none scheduled.` : "Nothing pending. Add a goal to get started.";
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", async ev => {
+  const t = ev.target.closest("button, input.tick"); if (!t) return;
+  const d = t.dataset;
+  if (d.nav) return go(d.nav);
+  if (d.toggle){ const r = items.find(x => x.id === d.toggle); if (r) put({...r, done: !r.done, doneAt: !r.done ? now() : null}); return; }
+  if (d.del){
+    if (t.dataset.armed){ remove(d.del); return; }
+    t.dataset.armed = "1"; t.textContent = "Delete?"; t.style.color = "var(--bad)";
+    setTimeout(() => { if (t.isConnected){ delete t.dataset.armed; t.textContent = "✕"; t.style.color = ""; } }, 3000);
+    return;
+  }
+  if (d.edit){ editing = items.find(x => x.id === d.edit) || null; render(); window.scrollTo(0,0); return; }
+  if (d.checked){ const r = items.find(x => x.id === d.checked); if (r) put({...r, checkedAt: now()}); return; }
+  if (d.tfilter){ taskFilter = d.tfilter; render(); return; }
+  if (d.ics) return exportIcs(items.find(x => x.id === d.ics));
+  if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
+  switch (t.id){
+    case "cancel-edit": editing = null; render(); break;
+    case "load-examples": loadExamples(); break;
+    case "brief-btn": briefing(t); break;
+    case "proj-summary": summarizeProjects(t); break;
+    case "key-clear": try { localStorage.removeItem("task.apiKey"); } catch {} toast("API key removed."); render(); break;
+    case "chat-clear": chat = []; saveChat(); render(); break;
+    case "chat-stop": aiCtl?.abort(); break;
+    case "notif-btn":
+      unlockAudio();
+      try { const p = await Notification.requestPermission(); toast(p === "granted" ? "System notifications are on." : "System notifications are blocked here, so reminders will pop up inside Task instead."); }
+      catch { toast("System notifications are blocked here, so reminders will pop up inside Task instead."); }
+      render(); break;
+  }
+});
+
+document.addEventListener("submit", ev => {
+  ev.preventDefault(); unlockAudio();
+  const f = ev.target.id, v = id => $(id).value.trim();
+  if (f === "task-form"){
+    const due = $("#t-due").value ? new Date($("#t-due").value).getTime() : null;
+    add("task", {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null, done: false});
+    toast("Goal added" + (due ? `, reminder at ${fmtWhen(due)}` : ""));
+  } else if (f === "log-form"){
+    add("log", {text: v("#l-text"), tag: $("#l-tag").value, at: now()}); toast("Logged");
+  } else if (f === "biz-form"){
+    const data = {name: v("#b-name"), status: $("#b-status").value, url: v("#b-url"), notes: v("#b-notes")};
+    editing?.kind === "biz" ? put({...editing, ...data}) : add("biz", data); editing = null; toast("Business saved");
+  } else if (f === "proj-form"){
+    const data = {name: v("#p-name"), status: $("#p-status").value, url: v("#p-url"), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
+    editing?.kind === "project" ? put({...editing, ...data}) : add("project", data); editing = null; toast("Project saved");
+  } else if (f === "chat-form") sendChat();
+  else if (f === "key-form"){ const k = $("#api-key").value.trim(); if (k){ try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; toast("API key saved on this device."); render(); } }
+});
+document.addEventListener("keydown", ev => {
+  if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
+});
+
+/* ---------- Reminders ---------- */
+let audioCtx = null;
+function unlockAudio(){ try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {} }
+function chime(){
+  try { if (!audioCtx) return; const t0 = audioCtx.currentTime;
+    [880, 1320].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, t0 + i*.18); g.gain.exponentialRampToValueAtTime(0.2, t0 + i*.18 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i*.18 + .4); o.start(t0 + i*.18); o.stop(t0 + i*.18 + .45); });
+  } catch {}
+}
+function checkReminders(){
+  for (const t of of("task")){
+    if (t.remind && !t.done && t.due && t.due <= now() && !t.notified){
+      put({...t, notified: now()});
+      chime();
+      toast("Reminder: " + t.title, true, t.id);
+      showSystemNotification(t);
+    }
+  }
+}
+async function showSystemNotification(t){
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const reg = swReg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
+    if (reg) await reg.showNotification("Task reminder", {body: t.title, tag: t.id, icon: "icon-192.png", badge: "icon-192.png", requireInteraction: true, data: {id: t.id}});
+    else new Notification("Task reminder", {body: t.title});
+  } catch {}
+}
+function toast(text, alert = false, taskId = null){
+  const el = document.createElement("div");
+  el.className = "toast" + (alert ? " alert" : "");
+  el.innerHTML = `<span>${esc(text)}</span>${taskId ? `<button data-toggle="${taskId}">Done</button>` : ""}<button aria-label="Dismiss">✕</button>`;
+  el.addEventListener("click", e => { if (e.target.tagName === "BUTTON") el.remove(); });
+  $("#toasts").append(el);
+  if (!alert) setTimeout(() => el.remove(), 4000);
+}
+
+/* Calendar export: a real alarm on the phone even when Task is closed */
+async function exportIcs(t){
+  if (!t?.due) return;
+  const z = ms => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const clean = s => String(s || "").replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Task//EN","BEGIN:VEVENT",`UID:${t.id}@jarvis`,`DTSTAMP:${z(now())}`,`DTSTART:${z(t.due)}`,`DTEND:${z(t.due + 18e5)}`,
+    `SUMMARY:${clean(t.title)}`, t.notes ? `DESCRIPTION:${clean(t.notes)}` : "", "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${clean(t.title)}`,"TRIGGER:-PT10M","END:VALARM","BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${clean(t.title)}`,"TRIGGER:PT0M","END:VALARM","END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n");
+  try {
+    const dl = await cap("downloads");
+    if (!dl){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([ics], {type: "text/calendar"})); a.download = "task-reminder.ics"; a.click(); toast("Calendar file saved. Open it to add the alarm to your calendar."); return; }
+    await dl.save({filename: t.title.replace(/[^\w ]+/g, "").slice(0, 40).trim().replace(/ /g, "-") + ".ics", data: ics});
+    toast("Calendar file saved. Open it to add the alarm to your calendar.");
+  } catch (e) { if (e?.code !== "declined") toast("Couldn't save the calendar file here (" + (e?.code || "error") + ")."); }
+}
+
+/* ---------- AI (Claude via the viewer's account) ---------- */
+function snapshot(){
+  const pick = (arr, f) => arr.map(f);
+  return JSON.stringify({
+    now: new Date().toString(),
+    goals: pick(of("task"), t => ({id: t.id, title: t.title, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: items.find(b => b.id === t.bizId)?.name, notes: t.notes})),
+    log: pick(of("log").sort((a,b) => b.at - a.at).slice(0, 40), l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
+    businesses: pick(of("biz"), b => ({id: b.id, name: b.name, status: b.status, url: b.url, notes: b.notes})),
+    projects: pick(of("project"), p => ({id: p.id, name: p.name, status: p.status, url: p.url, repo: p.repo, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()}))
+  });
+}
+const RULES = `You are Task, a sharp, warm personal chief-of-staff inside the user's command-center app. The user runs several businesses and is building apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers, no tables). When the user asks you to add, log, update or complete something, use the tools to do it, then confirm in one line. Convert relative dates and times ("tomorrow at 10am") using the current time in the data. Never invent facts about their businesses or projects; if information is missing, say what to add.`;
+
+const tools = [
+  {name: "add_goal", description: "Add a goal/task. Optional due time as an ISO 8601 local datetime like 2026-10-04T10:00. Returns the new goal id.",
+   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, business: {type: "string", description: "business name, if it belongs to one"}}, required: ["title"]},
+   execute: async i => { const due = i.due ? new Date(String(i.due)).getTime() : null; if (i.due && isNaN(due)) throw new Error("Unreadable due time");
+     const biz = i.business ? of("biz").find(b => b.name.toLowerCase() === String(i.business).toLowerCase()) : null;
+     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: biz?.id || null, done: false}); return {id: r.id, due: due ? new Date(due).toString() : null}; }},
+  {name: "complete_goal", description: "Mark a goal done by its id.", inputSchema: {type: "object", properties: {id: {type: "string"}}, required: ["id"]},
+   execute: async i => { const r = items.find(x => x.id === String(i.id) && x.kind === "task"); if (!r) throw new Error("No goal with that id"); await put({...r, done: true, doneAt: now()}); return "done"; }},
+  {name: "log_update", description: "Add an entry to the activity log.", inputSchema: {type: "object", properties: {text: {type: "string"}, about: {type: "string"}}, required: ["text"]},
+   execute: async i => { await add("log", {text: String(i.text), tag: String(i.about || ""), at: now()}); return "logged"; }},
+  {name: "add_business", description: "Add a business.", inputSchema: {type: "object", properties: {name: {type: "string"}, status: {type: "string", enum: ["active","building","idea","paused"]}, notes: {type: "string"}, url: {type: "string"}}, required: ["name"]},
+   execute: async i => { const r = await add("biz", {name: String(i.name), status: String(i.status || "active"), notes: String(i.notes || ""), url: String(i.url || "")}); return {id: r.id}; }},
+  {name: "update_project", description: "Create or update an app/website project by name: status (live, building, down, paused) and/or notes.", inputSchema: {type: "object", properties: {name: {type: "string"}, status: {type: "string", enum: ["live","building","down","paused"]}, notes: {type: "string"}, url: {type: "string"}}, required: ["name"]},
+   execute: async i => { const ex = of("project").find(p => p.name.toLowerCase() === String(i.name).toLowerCase());
+     const data = {name: String(i.name), ...(i.status ? {status: String(i.status)} : {}), ...(i.notes ? {notes: String(i.notes)} : {}), ...(i.url ? {url: String(i.url)} : {}), checkedAt: now()};
+     ex ? await put({...ex, ...data}) : await add("project", {status: "building", notes: "", url: "", repo: "", ...data}); return "saved"; }}
+];
+
+let aiCtl = null, briefCache = "", projSummary = "";
+const aiOffText = () => inClaude ? "The AI assistant isn't available in this view. Open the app on claude.ai while signed in."
+  : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
+  : "Add your Anthropic API key in the AI settings below the chat to turn on the assistant.";
+async function getSample(){
+  const s = await cap("sample");
+  if (s){ aiState = "ready"; return s; }
+  const key = apiKey();
+  if (key && navigator.onLine){ aiState = "ready"; return apiSample; }
+  aiState = "off"; return null;
+}
+function apiKey(){ try { return localStorage.getItem("task.apiKey") || ""; } catch { return ""; } }
+// Standalone mode: call Claude with the user's own key, running the same page tools.
+async function apiSample(input, opts = {}){
+  const {default: Anthropic} = await import("https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0/+esm");
+  const client = new Anthropic({apiKey: apiKey(), dangerouslyAllowBrowser: true});
+  const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: m.content}));
+  const apiTools = (opts.tools || []).map(t => ({name: t.name, description: t.description, input_schema: t.inputSchema || {type: "object", properties: {}}}));
+  let all = "";
+  for (let round = 0; round < 8; round++){
+    if (opts.signal?.aborted) throw {code: "cancelled"};
+    let res;
+    try {
+      res = await client.beta.messages.create({model: "claude-opus-5-5", max_tokens: 16000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+        messages, ...(apiTools.length ? {tools: apiTools} : {})}, {signal: opts.signal});
+    } catch (e){
+      if (opts.signal?.aborted) throw {code: "cancelled", text: all};
+      throw {code: e instanceof Anthropic.AuthenticationError ? "bad_key" : e instanceof Anthropic.RateLimitError ? "rate_limited" : "upstream_error", text: all};
+    }
+    if (res.stop_reason === "refusal") throw {code: "refused", text: all};
+    const text = res.content.filter(b => b.type === "text").map(b => b.text).join("");
+    if (text) { all += (all ? "\n\n" : "") + text; opts.onText?.({text: all}); }
+    messages.push({role: "assistant", content: res.content});
+    const uses = res.content.filter(b => b.type === "tool_use");
+    if (res.stop_reason !== "tool_use" || !uses.length) return {text: all, truncated: res.stop_reason === "max_tokens"};
+    const results = await Promise.all(uses.map(async u => {
+      const tool = opts.tools.find(t => t.name === u.name);
+      try { const out = await tool.execute(u.input || {}, {signal: opts.signal}); return {type: "tool_result", tool_use_id: u.id, content: typeof out === "string" ? out : JSON.stringify(out)}; }
+      catch (e){ return {type: "tool_result", tool_use_id: u.id, content: "Error: " + (e.message || e), is_error: true}; }
+    }));
+    messages.push({role: "user", content: results});
+  }
+  return {text: all, truncated: false};
+}
+apiSample.limits = async () => ({tools: {}});
+const errCopy = e => ({bad_key: "That API key didn't work. Check it in the AI settings below the chat.", refused: "Claude declined that request. Try rephrasing it.", not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Give it a moment, then try again.", cancelled: "Stopped."}[e?.code] || "Task couldn't answer that (" + (e?.code || "error") + "). Try again.");
+
+async function sendChat(){
+  const box = $("#chat-in"); if (!box) return;
+  const text = box.value.trim(); if (!text || aiCtl) return;
+  box.value = "";
+  chat.push({role: "user", content: text}); saveChat();
+  const log = $("#chat-log");
+  log.querySelector(".msg.sys")?.remove();
+  log.insertAdjacentHTML("beforeend", `<div class="msg me">${esc(text)}</div><div class="msg ai" id="pending">Thinking...</div>`);
+  log.scrollTop = log.scrollHeight;
+  const sample = await getSample();
+  const bubble = () => $("#pending");
+  if (!sample){ bubble().textContent = aiOffText(); bubble().removeAttribute("id"); return; }
+  aiCtl = new AbortController(); $("#chat-send").disabled = true; $("#chat-stop").hidden = false;
+  const lim = await sample.limits().catch(() => null);
+  const input = [{role: "user", content: RULES + "\n\nCurrent data (JSON):\n" + snapshot()}, ...chat.slice(-16)];
+  try {
+    const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, modelTier: "default", ...(lim?.tools ? {tools} : {}),
+      onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; log.scrollTop = log.scrollHeight; } }});
+    const final = answer;
+    chat.push({role: "assistant", content: final}); saveChat();
+    if (bubble()) bubble().textContent = final;
+  } catch (e){
+    if (bubble()) bubble().textContent = (e.text ? e.text + "\n\n" : "") + errCopy(e);
+    if (e.text) { chat.push({role: "assistant", content: e.text}); saveChat(); }
+  } finally {
+    aiCtl = null; bubble()?.removeAttribute("id");
+    if ($("#chat-send")) { $("#chat-send").disabled = false; $("#chat-stop").hidden = true; }
+  }
+}
+function saveChat(){ try { localStorage.setItem("jarvis.chat", JSON.stringify(chat.slice(-30))); } catch {} }
+
+async function briefing(btn){
+  const out = $("#brief-out"); btn.disabled = true; out.textContent = "Thinking...";
+  const sample = await getSample();
+  if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
+  try {
+    const {text} = await sample(`${RULES}\n\nWrite my daily briefing: what's on today and overdue, what I got done recently, anything about my businesses and projects that needs attention, and the 3 things I should focus on next. Under 180 words.\n\nData:\n${snapshot()}`,
+      {onText: ({text}) => { out.textContent = text; }});
+    briefCache = text; out.textContent = text;
+  } catch (e){ out.textContent = errCopy(e); }
+  btn.disabled = false;
+}
+async function summarizeProjects(btn){
+  const out = $("#proj-summary-out"); out.hidden = false; btn.disabled = true; out.textContent = "Thinking...";
+  const sample = await getSample();
+  if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
+  try {
+    const {text} = await sample(`${RULES}\n\nSummarize the state of my apps and websites: one line per project (status, what changed, risk), then the single most important next action across all of them. Flag any project not checked in over 3 days.\n\nData:\n${snapshot()}`,
+      {onText: ({text}) => { out.textContent = text; }});
+    projSummary = text; out.textContent = text;
+  } catch (e){ out.textContent = errCopy(e); }
+  btn.disabled = false;
+}
+
+/* ---------- Examples ---------- */
+async function loadExamples(){
+  const h = 36e5, base = new Date(); base.setMinutes(0,0,0);
+  const b1 = await add("biz", {name: "Example: Coffee Kiosk", status: "active", url: "", notes: "Example entry. Two locations, weekly revenue around $3,400. Next: hire a weekend barista."});
+  await add("biz", {name: "Example: Online Store", status: "building", url: "", notes: "Example entry. Launching in November."});
+  await add("task", {title: "Example: Review kiosk sales numbers", due: base.getTime() + 2*h, remind: true, notes: "", bizId: b1.id, done: false});
+  await add("task", {title: "Example: Reply to supplier emails", due: base.getTime() + 5*h, remind: true, notes: "", bizId: null, done: false});
+  await add("task", {title: "Example: Sketch the store homepage", due: null, remind: false, notes: "", bizId: null, done: false});
+  await add("log", {text: "Example: Met with the accountant about Q4 taxes", tag: "Personal", at: now() - 3*h});
+  await add("project", {name: "Example: Booking app", status: "building", url: "", repo: "", notes: "Example entry. Login done, payments in progress.", checkedAt: now() - 26*h});
+  await add("project", {name: "Example: Company website", status: "live", url: "", repo: "", notes: "Example entry. 1,200 visits last week.", checkedAt: now() - 2*h});
+  toast("Examples loaded. Delete them anytime with ✕.");
+}
+
+/* ---------- Boot ---------- */
+let swReg = null;
+async function setupOffline(){
+  if (inClaude || !("serviceWorker" in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register("sw.js");
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified") { const r = items.find(x => x.id === e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
+    try { const db = await idb(); const req = db.transaction("kv").objectStore("kv").get("sent");
+      req.onsuccess = () => (req.result || []).forEach(id => { const r = items.find(x => x.id === id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
+    if ("periodicSync" in swReg) { try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * 60 * 1000}); } catch {} }
+  } catch {}
+}
+function netState(){ if (inClaude) return; $("#sync-state").textContent = navigator.onLine ? "Online · saved on this device" : "Offline · everything still works"; }
+addEventListener("online", () => { netState(); if (view === "ai") render(); });
+addEventListener("offline", () => { netState(); if (view === "ai") render(); });
+loadLocal(); render(); netState(); setupOffline(); mirrorToIdb();
+setInterval(() => { updateHud(); checkReminders(); }, 15000);
+setTimeout(checkReminders, 1500);
+document.addEventListener("pointerdown", unlockAudio, {once: true});
+connectCloud();
+})();
+</script>
+
+</body>
+</html>
