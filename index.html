@@ -235,6 +235,9 @@ textarea{resize:vertical;min-height:80px}
 .set-row:first-of-type{border-top:0;padding-top:4px}
 .set-row .t{min-width:0;flex:1 1 220px}.set-row .t b{display:block;font-size:14.5px}.set-row .t span{font-size:13px;color:var(--muted)}
 .result-kind{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px}
+.steps{margin:0 0 14px;padding-left:20px;display:grid;gap:6px;font-size:14px}
+.calc-out{margin-top:12px;background:var(--sunk);border-radius:var(--r-sm);padding:12px 14px;min-height:46px}
+.calc-out.placeholder{color:var(--muted)}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
@@ -366,9 +369,10 @@ const apptEnd = a => a.start + (a.duration || 30) * MIN;
 function remindAt(x){
   if (x.kind === "task" && x.remind && !x.done && x.due) return x.due;
   if (x.kind === "appt" && x.status === "scheduled" && x.start && x.lead != null && x.lead >= 0) return x.start - x.lead * MIN;
+  if (x.kind === "stock" && !x.cleared && x.expiry) return x.expiry - (x.alertDays ?? 30) * DAY;
   return null;
 }
-const reminderText = x => x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${fmtTime(x.start)}` : x.title;
+const reminderText = x => x.kind === "stock" ? `${x.name}${x.batch ? " (batch " + x.batch + ")" : ""} expires ${fmtDay(x.expiry)}` : x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${fmtTime(x.start)}` : x.title;
 const LEARN_META = "learn-meta";
 const learnMeta = () => byId(LEARN_META) || {id: LEARN_META, kind: "meta", days: []};
 const BOX_DAYS = [0, 0, 1, 3, 7, 16];
@@ -378,6 +382,24 @@ function streak(){
   if (!days.has(d.toDateString())) d.setDate(d.getDate() - 1);
   while (days.has(d.toDateString())) { s++; d.setDate(d.getDate() - 1); }
   return s;
+}
+
+const REPEAT_LABEL = {daily: "Every day", weekdays: "Weekdays", weekly: "Every week", monthly: "Every month"};
+function nextDue(due, repeat){
+  const d = new Date(due);
+  const step = () => { if (repeat === "daily") d.setDate(d.getDate() + 1); else if (repeat === "weekly") d.setDate(d.getDate() + 7); else if (repeat === "monthly") d.setMonth(d.getMonth() + 1);
+    else if (repeat === "weekdays"){ do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); } };
+  step(); let guard = 0; while (d.getTime() <= now() && guard++ < 400) step();
+  return d.getTime();
+}
+async function toggleTask(r){
+  if (!r.done && r.repeat && r.due){
+    const nx = await add("task", {title: r.title, due: nextDue(r.due, r.repeat), remind: r.remind, notes: r.notes, bizId: r.bizId, repeat: r.repeat, done: false});
+    await put({...r, done: true, doneAt: now(), nextId: nx.id});
+    toast(`Done. Next: ${fmtWhen(nx.due)}`); return;
+  }
+  if (r.done && r.nextId){ const nx = byId(r.nextId); if (nx && !nx.done) await remove(nx.id); }
+  put({...r, done: !r.done, doneAt: !r.done ? now() : null, nextId: null});
 }
 
 /* ---------- Icons ---------- */
@@ -399,6 +421,8 @@ const IC = {
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   copy: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
+  tools: I('<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14.5h1M11.5 14.5h1M14.5 14.5h1M8.5 18h1M11.5 18h4"/>'),
+  stock: I('<path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/>'),
   insights: I('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   download: I('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
@@ -412,7 +436,9 @@ const SECTIONS = {
   tasks: {label: "Goals", icon: "tasks", group: "Plan"},
   appts: {label: "Appointments", short: "Clients", icon: "appts", group: "Plan"},
   learn: {label: "Pharmacy learning", short: "Learn", icon: "learn", group: "Grow"},
+  tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Grow"},
   log: {label: "Activity log", short: "Log", icon: "log", group: "Grow"},
+  stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Work"},
   biz: {label: "Businesses", icon: "biz", group: "Work"},
   projects: {label: "Apps & websites", short: "Projects", icon: "projects", group: "Work"},
   ai: {label: "Task AI", icon: "ai", group: "Assist"},
@@ -429,7 +455,7 @@ let syncLabel = inClaude ? "Saved on this device" : "";
 function counts(){
   return { tasks: of("task").filter(t => !t.done).length,
     appts: of("appt").filter(a => a.status === "scheduled" && apptEnd(a) >= now()).length,
-    learn: cardsDue().length, biz: of("biz").length, projects: of("project").length };
+    learn: cardsDue().length, biz: of("biz").length, projects: of("project").length, stock: stockAlerts().length };
 }
 function renderChrome(){
   const c = counts();
@@ -446,7 +472,7 @@ function renderChrome(){
     `<button data-sheet="open" aria-current="${inMore}">${IC.more}<span>${inMore ? (SECTIONS[view].short || SECTIONS[view].label) : "More"}</span></button>`;
   $("#sheet-grid").innerHTML = Object.keys(SECTIONS).filter(k => !TAB_KEYS.includes(k)).map(k =>
     `<button data-nav="${k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span></button>`).join("");
-  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["appt","appts","Client appointment"],["card","learn","Drug card"],["log","log","Log an update"]]
+  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["appt","appts","Client appointment"],["card","learn","Drug card"],["log","log","Log an update"],["stock","stock","Stock expiry"]]
     .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
 }
 function go(k, opts = {}){
@@ -454,6 +480,7 @@ function go(k, opts = {}){
   try { localStorage.setItem("jarvis.view", k); } catch {}
   if (opts.open) openForm = opts.open;
   render(); window.scrollTo(0, 0);
+  if (opts.open === "key"){ openForm = null; setTimeout(() => { $("#ai-settings")?.scrollIntoView({block: "start"}); $("#api-key")?.focus({preventScroll: true}); }, 40); return; }
   if (opts.open) setTimeout(() => { const f = document.querySelector(`details[data-form="${opts.open}"]`); if (f){ f.open = true; f.querySelector("input,textarea")?.focus(); } }, 30);
 }
 let openForm = null;
@@ -481,7 +508,7 @@ function taskRow(t){
     <div class="row-main"><div class="row-title">${esc(t.title)}</div>
       <div class="row-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : `<span>No time set</span>`}
         ${st === "overdue" ? `<span class="pill s-bad">Overdue</span>` : st === "soon" ? `<span class="pill s-warn">Due soon</span>` : ""}
-        ${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+        ${t.repeat ? `<span class="pill">${esc(REPEAT_LABEL[t.repeat] || t.repeat)}</span>` : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
       ${t.notes ? `<div class="row-notes">${esc(t.notes)}</div>` : ""}</div>
     <div class="row-actions">${t.due && !t.done ? calBtn(t.id) : ""}${editBtn(t.id)}${delBtn(t.id)}</div></li>`;
 }
@@ -512,7 +539,7 @@ function viewToday(){
   const schedule = [...apptsToday.map(a => ({t: a.start, html: apptRow(a, false)})), ...tasksToday.map(t => ({t: t.due, html: taskRow(t)}))].sort((a, b) => a.t - b.t);
   const unscheduled = sortTasks(of("task").filter(t => !t.done && !t.due)).slice(0, 3);
   const due = cardsDue().length, projs = of("project");
-  const attention = projs.filter(p => p.status === "down" || p.status === "building");
+  const attention = projs.filter(p => p.status === "down" || p.status === "building"), expiring = stockAlerts().sort((a, b) => a.expiry - b.expiry);
   const logs = of("log").sort((a, b) => b.at - a.at).slice(0, 4);
   const nextAppt = of("appt").filter(a => a.status === "scheduled" && a.start > now()).sort((a, b) => a.start - b.start)[0];
   const nextTask = sortTasks(of("task").filter(t => !t.done && t.due && t.due > now()))[0];
@@ -524,7 +551,7 @@ function viewToday(){
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your first goal, appointment or drug card to get started."}</p>
     <div class="btn-row"><button class="btn" data-go="appts" data-open="appt">${IC.appts}New appointment</button><button class="btn" data-go="learn">${IC.learn}${due ? `Review ${due} card${due > 1 ? "s" : ""}` : "Study"}</button></div>
   </section>
-  ${notifBanner()}${!inClaude && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
+  ${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Appointments today</div></button>
@@ -543,9 +570,10 @@ function viewToday(){
         <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: appointments, goals, study, businesses and projects.")}</div>
       </section>
       <section class="card">
-        <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="projects">Projects</button></div>
+        <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="${expiring.length ? "stock" : "projects"}">${expiring.length ? "Expiry" : "Projects"}</button></div>
+        ${expiring.length ? `<ul class="list">${expiring.slice(0, 4).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
         ${attention.length ? `<ul class="list">${attention.map(p => `<li class="row"><div class="row-main"><div class="row-title">${esc(p.name)}</div><div class="row-meta">${projPill(p.status)}<span>checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div></div></li>`).join("")}</ul>`
-          : empty(projs.length ? "All projects are live." : "No projects yet.", projs.length ? "No site is down or in progress." : "Add your apps and websites under Projects.")}
+          : expiring.length ? "" : empty(projs.length ? "All projects are live." : "No projects yet.", projs.length ? "No site is down or in progress." : "Add your apps and websites under Projects.")}
       </section>
       <section class="card">
         <div class="card-head"><h2>Latest updates</h2><button class="btn sm ghost" data-go="log" data-open="log">Log</button></div>
@@ -562,6 +590,7 @@ function taskForm(e){
     <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Restock the pharmacy shelves" autocomplete="off"></label>
     <label class="field">When<input id="t-due" type="datetime-local" value="${toInput(e?.due)}"></label>
     <label class="field">Business<select id="t-biz">${bizOptions(e?.bizId)}</select></label>
+    <label class="field">Repeat<select id="t-repeat">${[["", "Doesn't repeat"], ["daily", "Every day"], ["weekdays", "Weekdays (Mon to Fri)"], ["weekly", "Every week"], ["monthly", "Every month"]].map(([k, l]) => `<option value="${k}" ${(e?.repeat || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="check"><input id="t-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
     <label class="field wide">Notes<textarea id="t-notes" placeholder="Optional details">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add goal"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
@@ -737,6 +766,20 @@ function viewProjects(){
 let chat = [];
 try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30); } catch {}
 let aiState = "unknown";
+function keyCard(){
+  const k = apiKey();
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${k ? `Task AI is on. Key ending in <b style="font-family:var(--f-mono)">…${esc(k.slice(-4))}</b> is saved on this device only.` : "Task AI needs your own Anthropic API key. It's saved only on this device and is never put in backups."}</p></div>${k ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+    ${k ? "" : `<ol class="steps"><li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a> and sign in.</li><li>Add a little credit under Billing if you haven't.</li><li>Tap <b>Create Key</b>, name it "Task", and copy it. It starts with sk-ant-.</li><li>Paste it below and tap Save. Task checks that it works.</li></ol>`}
+    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${k ? "Paste a new key to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button>${k ? `<button class="btn" type="button" id="key-test">Test</button><button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form>
+    <p class="caution" style="margin-top:12px">Never share your key or post it anywhere. Anyone who has it can spend your credit. If it leaks, delete it in the console and make a new one.</p></section>`;
+}
+async function testKey(btn){
+  if (btn){ btn.disabled = true; btn.textContent = "Checking..."; }
+  try { await apiSample("Reply with the single word OK."); aiState = "ready"; toast("Your key works. Task AI is on."); }
+  catch (e){ toast(errCopy(e)); }
+  if (btn?.isConnected){ btn.disabled = false; btn.textContent = btn.id === "key-test" ? "Test" : "Save key"; }
+  render();
+}
 function viewAI(){
   return `<section class="card chat">
     <div class="chips">${["Plan my day", "Book Mary for a BP check tomorrow at 10am", "Quiz me on antibiotics", "Explain metformin counselling points", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
@@ -744,8 +787,7 @@ function viewAI(){
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
   <div class="btn-row" style="justify-content:flex-end">${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
-  ${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>AI settings</h2><p class="sub">Task AI uses your own Anthropic API key from console.anthropic.com. It's stored only on this device.</p></div></div>
-    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" placeholder="${apiKey() ? "Key saved. Paste a new one to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit">Save key</button>${apiKey() ? `<button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form></section>`}`;
+  ${inClaude ? "" : keyCard()}`;
 }
 
 /* ---------- Insights: patterns learned from the user's own data (on device, works offline) ---------- */
@@ -833,10 +875,10 @@ const insightAI = btn => { const P = learnPatterns();
 let globalQ = "";
 function viewSearch(){
   const q = globalQ.trim().toLowerCase();
-  const text = x => [x.title, x.client, x.purpose, x.phone, x.notes, x.drug, x.cls, x.indication, x.text, x.tag, x.name, x.url, x.location].filter(Boolean).join(" ").toLowerCase();
+  const text = x => [x.title, x.client, x.purpose, x.phone, x.notes, x.drug, x.cls, x.indication, x.text, x.tag, x.name, x.url, x.location, x.batch].filter(Boolean).join(" ").toLowerCase();
   const res = q ? items.filter(x => x.kind !== "meta" && text(x).includes(q)) : [];
   const groups = [["appt", "Appointments", a => [a.client + (a.purpose ? " · " + a.purpose : ""), fmtWhen(a.start)]], ["task", "Goals", t => [t.title, t.done ? "Done" : t.due ? fmtWhen(t.due) : "No time set"]],
-    ["card", "Drug cards", c => [c.drug, c.cls]], ["log", "Log", l => [l.text, fmtWhen(l.at)]], ["biz", "Businesses", b => [b.name, b.status]], ["project", "Apps & websites", p => [p.name, p.status]]];
+    ["card", "Drug cards", c => [c.drug, c.cls]], ["log", "Log", l => [l.text, fmtWhen(l.at)]], ["biz", "Businesses", b => [b.name, b.status]], ["stock", "Stock", x => [x.name, "Expires " + fmtDay(x.expiry)]], ["project", "Apps & websites", p => [p.name, p.status]]];
   return `<section class="card"><label class="search" style="max-width:none">${IC.search}<input id="global-search" placeholder="Search clients, goals, drugs, notes..." value="${esc(globalQ)}" aria-label="Search everything" autocomplete="off"></label>
     ${!q ? `<p class="sub" style="color:var(--muted);margin:12px 0 0">Search across everything: client names and phone numbers, goals, drug cards, your log, businesses and projects.</p>`
       : !res.length ? empty("Nothing found.", "Try a shorter word.")
@@ -895,9 +937,112 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 
-const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, insights: viewInsights, search: viewSearch, settings: viewSettings};
+/* ---------- Expiry tracker ---------- */
+const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
+const stockAlerts = () => of("stock").filter(x => !x.cleared && x.expiry && stockLeft(x) <= (x.alertDays ?? 30));
+function stockPill(x){
+  if (x.cleared) return `<span class="pill s-mute">Cleared</span>`;
+  const d = stockLeft(x);
+  if (d < 0) return `<span class="pill s-bad">Expired</span>`;
+  if (d <= 30) return `<span class="pill s-bad">${d} day${d === 1 ? "" : "s"} left</span>`;
+  if (d <= (x.alertDays ?? 30)) return `<span class="pill s-warn">${d} days left</span>`;
+  return `<span class="pill s-good">${d > 60 ? Math.round(d / 30) + " months" : d + " days"} left</span>`;
+}
+const stockRow = x => `<li class="row ${x.cleared ? "done" : ""}"><div class="row-main"><div class="row-title">${esc(x.name)}</div>
+  <div class="row-meta"><span>Expires ${esc(new Date(x.expiry).toLocaleDateString([], {day: "numeric", month: "short", year: "numeric"}))}</span>${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}${x.qty ? `<span>Qty ${esc(x.qty)}</span>` : ""}${x.location ? `<span>${esc(x.location)}</span>` : ""}</div>
+  ${x.notes ? `<div class="row-notes">${esc(x.notes)}</div>` : ""}
+  ${!x.cleared && stockLeft(x) <= (x.alertDays ?? 30) ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-clear="${x.id}">${IC.check}Sold, returned or disposed</button></div>` : ""}</div>
+  <div class="row-actions">${editBtn(x.id)}${delBtn(x.id)}</div></li>`;
+let stockFilter = "active";
+function viewStock(){
+  const e = editing?.kind === "stock" ? editing : null;
+  const all = of("stock").sort((a, b) => a.expiry - b.expiry);
+  const list = all.filter(x => stockFilter === "all" ? true : stockFilter === "soon" ? !x.cleared && stockLeft(x) <= (x.alertDays ?? 30) : !x.cleared);
+  const expired = all.filter(x => !x.cleared && stockLeft(x) < 0).length, in30 = all.filter(x => !x.cleared && stockLeft(x) >= 0 && stockLeft(x) <= 30).length, in90 = all.filter(x => !x.cleared && stockLeft(x) > 30 && stockLeft(x) <= 90).length;
+  return `${notifBanner()}
+  ${adder("stock", e ? "Edit stock item" : "Add stock item", `<form class="form" id="stock-form">
+    <label class="field wide">Medicine or product<input id="s-name" required value="${esc(e?.name)}" placeholder="Amoxicillin 500 mg capsules" autocomplete="off"></label>
+    <label class="field">Expiry date<input id="s-exp" type="date" required value="${e?.expiry ? toInput(e.expiry).slice(0, 10) : ""}"></label>
+    <label class="field">Alert me<select id="s-alert">${[[30, "30 days before"], [60, "60 days before"], [90, "90 days before"], [180, "6 months before"]].map(([n, l]) => `<option value="${n}" ${(e?.alertDays ?? 90) === n ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label class="field">Batch number<input id="s-batch" value="${esc(e?.batch)}" placeholder="Optional"></label>
+    <label class="field">Quantity<input id="s-qty" value="${esc(e?.qty)}" placeholder="e.g. 3 packs of 21"></label>
+    <label class="field">Where<input id="s-loc" value="${esc(e?.location)}" placeholder="Shelf B, fridge"></label>
+    <label class="field">Business<select id="s-biz">${bizOptions(e?.bizId)}</select></label>
+    <label class="field wide">Notes<textarea id="s-notes" placeholder="Supplier, return policy">${esc(e?.notes)}</textarea></label>
+    <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add item"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
+  <div class="stats">
+    <div class="stat"><div class="n" ${expired ? 'style="color:var(--bad)"' : ""}>${expired}</div><div class="l">Expired</div></div>
+    <div class="stat"><div class="n">${in30}</div><div class="l">Within 30 days</div></div>
+    <div class="stat"><div class="n">${in90}</div><div class="l">Within 31 to 90 days</div></div>
+    <div class="stat"><div class="n">${all.filter(x => !x.cleared).length}</div><div class="l">Items tracked</div></div></div>
+  <section class="card"><div class="card-head"><h2>Stock by expiry</h2><div class="seg">${[["active", "Active"], ["soon", "Alerts"], ["all", "All"]].map(([k, l]) => `<button data-sfilter="${k}" aria-pressed="${stockFilter === k}">${l}</button>`).join("")}</div></div>
+    ${list.length ? `<ul class="list">${list.map(stockRow).join("")}</ul>` : empty(all.length ? "Nothing here." : "No stock tracked yet.", all.length ? "Try another filter." : "Add short-dated items and Task will alert you before they expire.")}</section>`;
+}
+
+/* ---------- Pharmacy tools ---------- */
+const num = id => { const v = parseFloat(($(id)?.value || "").replace(",", ".")); return isFinite(v) ? v : null; };
+const r1 = n => Math.round(n * 10) / 10;
+let ixText = "";
+function viewTools(){
+  return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
+  <div class="grid2">
+    <section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
+      <div class="form" style="padding:0">
+        <label class="field">Weight (kg)<input id="d-wt" inputmode="decimal" placeholder="18"></label>
+        <label class="field">Dose (mg/kg per dose)<input id="d-mgkg" inputmode="decimal" placeholder="15"></label>
+        <label class="field">Doses per day<input id="d-freq" inputmode="decimal" placeholder="3"></label>
+        <label class="field">Max single dose (mg)<input id="d-max" inputmode="decimal" placeholder="Optional"></label>
+        <label class="field">Strength: mg<input id="d-mg" inputmode="decimal" placeholder="250"></label>
+        <label class="field">per mL<input id="d-ml" inputmode="decimal" placeholder="5"></label></div>
+      <div class="brief placeholder calc-out" id="dose-out">Enter weight and mg/kg.</div></section>
+    <section class="card calc" data-calc="crcl"><div class="card-head"><div><h2>Creatinine clearance</h2><p class="sub">Cockcroft-Gault, for renal dose adjustment</p></div></div>
+      <div class="form" style="padding:0">
+        <label class="field">Age (years)<input id="c-age" inputmode="decimal" placeholder="68"></label>
+        <label class="field">Weight (kg)<input id="c-wt" inputmode="decimal" placeholder="70"></label>
+        <label class="field">Sex<select id="c-sex"><option value="m">Male</option><option value="f">Female</option></select></label>
+        <label class="field">Serum creatinine<input id="c-scr" inputmode="decimal" placeholder="110"></label>
+        <label class="field">Unit<select id="c-unit"><option value="umol">µmol/L</option><option value="mg">mg/dL</option></select></label></div>
+      <div class="brief placeholder calc-out" id="crcl-out">Enter age, weight and creatinine.</div></section>
+    <section class="card calc" data-calc="bmi"><div class="card-head"><div><h2>BMI and body surface area</h2><p class="sub">BSA by the Mosteller formula</p></div></div>
+      <div class="form" style="padding:0">
+        <label class="field">Weight (kg)<input id="b-wt" inputmode="decimal" placeholder="72"></label>
+        <label class="field">Height (cm)<input id="b-ht" inputmode="decimal" placeholder="170"></label></div>
+      <div class="brief placeholder calc-out" id="bmi-out">Enter weight and height.</div></section>
+    <section class="card"><div class="card-head"><div><h2>Interaction check</h2><p class="sub">AI reviews a list of medicines for interactions</p></div></div>
+      <form class="form" id="ix-form" style="padding:0"><label class="field wide">Medicines (one per line or separated by commas)<textarea id="ix-in" placeholder="warfarin, clarithromycin, omeprazole"></textarea></label>
+        <div class="btn-row"><button class="btn primary" type="submit" id="ix-go">${IC.ai}Check interactions</button></div></form>
+      <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>
+  </div>`;
+}
+function calc(){
+  const set = (id, html) => { const o = $(id); if (!o) return; o.classList.toggle("placeholder", !html); if (html) o.innerHTML = html; };
+  const wt = num("#d-wt"), mgkg = num("#d-mgkg");
+  if (wt && mgkg){
+    let dose = wt * mgkg; const max = num("#d-max"), capped = max && dose > max; if (capped) dose = max;
+    const freq = num("#d-freq"), mg = num("#d-mg"), ml = num("#d-ml");
+    set("#dose-out", `<b>${r1(dose)} mg per dose</b>${capped ? " (capped at the max single dose)" : ""}${mg && ml ? `<br>= <b>${r1(dose / mg * ml)} mL</b> of ${mg} mg/${ml} mL` : ""}${freq ? `<br>${r1(dose * freq)} mg per day (${freq} doses)` : ""}`);
+  } else set("#dose-out", "");
+  const age = num("#c-age"), cw = num("#c-wt"), scr = num("#c-scr");
+  if (age && cw && scr){
+    const mgdl = $("#c-unit").value === "umol" ? scr / 88.4 : scr;
+    const v = (140 - age) * cw / (72 * mgdl) * ($("#c-sex").value === "f" ? 0.85 : 1);
+    const band = v >= 90 ? "normal or high" : v >= 60 ? "mildly reduced" : v >= 30 ? "moderately reduced" : v >= 15 ? "severely reduced" : "kidney failure range";
+    set("#crcl-out", `<b>${Math.round(v)} mL/min</b> (${band})<br><span style="color:var(--muted);font-size:13px">Uses actual body weight. In obesity consider ideal or adjusted body weight.</span>`);
+  } else set("#crcl-out", "");
+  const bw = num("#b-wt"), bh = num("#b-ht");
+  if (bw && bh){
+    const bmi = bw / ((bh / 100) ** 2), bsa = Math.sqrt(bh * bw / 3600);
+    const cat = bmi < 18.5 ? "underweight" : bmi < 25 ? "healthy range" : bmi < 30 ? "overweight" : "obese";
+    set("#bmi-out", `<b>BMI ${r1(bmi)}</b> (${cat})<br><b>BSA ${Math.round(bsa * 100) / 100} m²</b>`);
+  } else set("#bmi-out", "");
+}
+const checkInteractions = () => { const list = ($("#ix-in")?.value || "").trim(); if (!list){ toast("Type at least two medicines."); return; }
+  return runInto($("#ix-go"), "#ix-out", `You are a clinical pharmacist assistant. Check these medicines for clinically important drug-drug interactions: ${list}.
+For each interacting pair give: the pair, severity (major, moderate or minor), what happens and why (one line), and what to do (one line). Then list any important drug-disease or duplication concerns. If none are significant, say so. Plain text, no markdown headers, under 220 words. End with: Confirm with an interaction reference before acting.`, t => ixText = t); };
+
+const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
@@ -919,7 +1064,7 @@ function updateTitle(){
     tasks: `${c.tasks} open`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
-    insights: "Learned from your own data, on this device", search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
+    insights: "Learned from your own data, on this device", tools: "Dose, kidney function, BMI and interactions", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -932,11 +1077,11 @@ document.addEventListener("click", async ev => {
   if (t.id === "scrim"){ document.body.classList.remove("sheet-open"); return; }
   const d = t.dataset;
   if (t.id === "new-btn"){ const m = $("#new-menu"); m.hidden = !m.hidden; t.setAttribute("aria-expanded", String(!m.hidden)); return; }
-  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
+  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.nav){ editing = null; return go(d.nav); }
   if (d.go){ editing = null; return go(d.go, {open: d.open}); }
-  if (d.toggle){ const r = byId(d.toggle); if (r) put({...r, done: !r.done, doneAt: !r.done ? now() : null}); return; }
+  if (d.toggle){ const r = byId(d.toggle); if (r) toggleTask(r); return; }
   if (d.del){
     if (t.classList.contains("armed")){ if (editing?.id === d.del) editing = null; remove(d.del); return; }
     t.classList.add("armed"); t.textContent = "Delete?";
@@ -955,11 +1100,13 @@ document.addEventListener("click", async ev => {
   if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
+  if (d.sfilter){ stockFilter = d.sfilter; render(); return; }
+  if (d.clear){ const r = byId(d.clear); if (r){ put({...r, cleared: now()}); toast(`${r.name} cleared.`); } return; }
   if (d.theme){ setTheme(d.theme); render(); return; }
   if (d.find){ const r = byId(d.find); if (!r) return;
     if (r.kind === "card"){ learnTab = "library"; cardSearch = r.drug; }
-    editing = ["task", "appt", "biz", "project"].includes(r.kind) ? r : null;
-    go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects"}[r.kind] || "today");
+    editing = ["task", "appt", "biz", "project", "stock"].includes(r.kind) ? r : null;
+    go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects", stock: "stock"}[r.kind] || "today");
     if (editing) setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 30); return; }
   if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
   switch (t.id){
@@ -981,6 +1128,7 @@ document.addEventListener("click", async ev => {
     case "ai-card-btn": aiFillCard(t); break;
     case "chat-clear": chat = []; saveChat(); render(); break;
     case "chat-stop": aiCtl?.abort(); break;
+    case "key-test": testKey(t); break;
     case "key-clear": try { localStorage.removeItem("task.apiKey"); } catch {} toast("API key removed."); render(); break;
     case "notif-btn":
       unlockAudio();
@@ -991,16 +1139,19 @@ document.addEventListener("click", async ev => {
 });
 document.addEventListener("input", ev => {
   if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); }
+  if (ev.target.closest?.(".calc")) calc();
   if (ev.target.id === "global-search"){ globalQ = ev.target.value; render(); }
 });
-document.addEventListener("change", ev => { if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
+document.addEventListener("change", ev => { if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
   const f = ev.target.id, v = id => ($(id)?.value || "").trim();
   if (f === "task-form"){
     const due = fromInput($("#t-due").value);
-    const data = {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null};
+    const repeat = $("#t-repeat").value;
+    if (repeat && !due){ toast("Pick a time for a repeating goal."); $("#t-due").focus(); return; }
+    const data = {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null, repeat};
     if (editing?.kind === "task") put({...editing, ...data, notified: editing.due === due ? editing.notified : null}); else add("task", {...data, done: false});
     toast((editing ? "Goal updated" : "Goal added") + (due ? `, reminder at ${fmtWhen(due)}` : "")); editing = null; openForm = null;
   } else if (f === "appt-form"){
@@ -1020,9 +1171,17 @@ document.addEventListener("submit", ev => {
   } else if (f === "proj-form"){
     const data = {name: v("#p-name"), status: $("#p-status").value, url: v("#p-url"), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
     editing?.kind === "project" ? put({...editing, ...data}) : add("project", data); editing = null; toast("Project saved");
-  } else if (f === "quiz-form") makeQuiz();
+  } else if (f === "stock-form"){
+    const exp = $("#s-exp").value; const expiry = exp ? new Date(exp + "T09:00").getTime() : null; const alertDays = +$("#s-alert").value;
+    const data = {name: v("#s-name"), expiry, alertDays, batch: v("#s-batch"), qty: v("#s-qty"), location: v("#s-loc"), bizId: $("#s-biz").value || null, notes: v("#s-notes")};
+    if (editing?.kind === "stock") put({...editing, ...data, notified: editing.expiry === expiry && editing.alertDays === alertDays ? editing.notified : null}); else add("stock", data);
+    toast(`Saved. Task will alert you ${alertDays} days before ${fmtDay(expiry)}.`); editing = null; openForm = null;
+  } else if (f === "ix-form") checkInteractions();
+  else if (f === "quiz-form") makeQuiz();
   else if (f === "chat-form") sendChat();
-  else if (f === "key-form"){ const k = v("#api-key"); if (k){ try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; toast("API key saved on this device."); render(); } }
+  else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
+    if (!k) return; if (!/^sk-ant-/.test(k)){ toast("That doesn't look like an Anthropic key. It should start with sk-ant-."); return; }
+    try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; $("#api-key").value = ""; testKey($("#key-save")); }
 });
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
@@ -1053,9 +1212,9 @@ function chime(){
 function checkReminders(){
   for (const x of items){
     const at = remindAt(x);
-    if (at && at <= now() && !x.notified && now() - at < DAY){
+    if (at && at <= now() && !x.notified && (now() - at < DAY || x.kind === "stock")){
       put({...x, notified: now()}); chime();
-      toast((x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
+      toast((x.kind === "stock" ? "Expiry: " : x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
       showSystemNotification(x);
     }
   }
@@ -1063,7 +1222,7 @@ function checkReminders(){
 async function showSystemNotification(x){
   try {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const title = x.kind === "appt" ? "Appointment" : "Task reminder", body = reminderText(x);
+    const title = x.kind === "stock" ? "Stock expiry" : x.kind === "appt" ? "Appointment" : "Task reminder", body = reminderText(x);
     const reg = swReg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
     if (reg) await reg.showNotification(title, {body, tag: x.id, icon: "icon-192.png", badge: "icon-192.png", requireInteraction: true, data: {id: x.id}});
     else new Notification(title, {body});
@@ -1103,21 +1262,26 @@ function snapshot(){
   return JSON.stringify({
     now: new Date().toString(),
     user: "A pharmacist who runs businesses and builds apps and websites.",
-    goals: of("task").map(t => ({id: t.id, title: t.title, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: byId(t.bizId)?.name, notes: t.notes})),
+    goals: of("task").map(t => ({id: t.id, title: t.title, repeat: t.repeat || undefined, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: byId(t.bizId)?.name, notes: t.notes})),
     appointments: of("appt").filter(a => a.start > now() - 14 * DAY).map(a => ({id: a.id, client: a.client, purpose: a.purpose, start: new Date(a.start).toString(), minutes: a.duration, status: a.status, location: a.location, notes: a.notes})),
     drugCards: of("card").map(c => ({drug: c.drug, cls: c.cls, memoryLevel: c.box || 1})),
     log: of("log").sort((a, b) => b.at - a.at).slice(0, 30).map(l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
     businesses: of("biz").map(b => ({name: b.name, status: b.status, url: b.url, notes: b.notes})),
     projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()})),
+    stockExpiry: of("stock").filter(x => !x.cleared).map(x => ({name: x.name, batch: x.batch, expires: new Date(x.expiry).toDateString(), daysLeft: stockLeft(x)})),
     learnedPatterns: learnPatterns().tips
   });
 }
 const RULES = `You are Task AI, a sharp, warm personal assistant inside the user's command-center app. The user is a pharmacist who also runs businesses and builds apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
 const tools = [
-  {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00.",
-   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}}, required: ["title"]},
+  {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00. Optional repeat (needs a due time): daily, weekdays, weekly, monthly.",
+   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},
    execute: async i => { const due = i.due ? new Date(String(i.due)).getTime() : null; if (i.due && isNaN(due)) throw new Error("Unreadable due time");
-     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false}); return {id: r.id}; }},
+     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false, repeat: due && i.repeat ? String(i.repeat) : ""}); return {id: r.id}; }},
+  {name: "add_stock_item", description: "Track a stock item's expiry date. expiry is YYYY-MM-DD. alertDays defaults to 90.",
+   inputSchema: {type: "object", properties: {name: {type: "string"}, expiry: {type: "string"}, batch: {type: "string"}, qty: {type: "string"}, location: {type: "string"}, alertDays: {type: "number"}}, required: ["name", "expiry"]},
+   execute: async i => { const expiry = new Date(String(i.expiry).slice(0, 10) + "T09:00").getTime(); if (isNaN(expiry)) throw new Error("Unreadable expiry date");
+     await add("stock", {name: String(i.name), expiry, alertDays: Number(i.alertDays) || 90, batch: String(i.batch || ""), qty: String(i.qty || ""), location: String(i.location || ""), notes: "", bizId: null}); return "saved"; }},
   {name: "complete_goal", description: "Mark a goal done by its id.", inputSchema: {type: "object", properties: {id: {type: "string"}}, required: ["id"]},
    execute: async i => { const r = byId(String(i.id)); if (!r || r.kind !== "task") throw new Error("No goal with that id"); await put({...r, done: true, doneAt: now()}); return "done"; }},
   {name: "book_appointment", description: "Book a client appointment. start is ISO 8601 local datetime. remindMinutesBefore defaults to 30.",
@@ -1145,7 +1309,7 @@ const tools = [
 let aiCtl = null, briefCache = "";
 const aiOffText = () => inClaude ? "Task AI isn't available in this view. Open the app on claude.ai while signed in."
   : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
-  : "Add your Anthropic API key in AI settings (open Task AI and scroll down) to turn on the assistant.";
+  : "Add your Anthropic API key under AI settings at the bottom of Task AI to turn on the assistant.";
 async function getSample(){
   const s = await cap("sample");
   if (s){ aiState = "ready"; return s; }
