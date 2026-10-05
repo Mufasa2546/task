@@ -291,6 +291,17 @@ body.is-locked{overflow:hidden}
 .auth-msg{background:rgba(139,14,47,.55);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 12px;font-size:13.5px}
 .code{font-family:var(--f-mono);font-size:20px;font-weight:600;letter-spacing:.12em;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:8px 14px}
 .by{font-size:12px;color:var(--muted)}
+.vh{position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0}
+label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
+.linkmenu{position:fixed;inset:0;z-index:90;display:grid;align-items:end;justify-items:center;background:rgba(0,0,0,.4);padding:16px}
+.linkmenu[hidden]{display:none}
+.linkmenu-box{width:100%;max-width:420px;background:var(--panel);border-radius:20px;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);display:grid;gap:8px}
+@media (min-width:901px){.linkmenu{align-items:center}}
+.linkmenu-box h3{margin:0;font-size:16px;font-weight:800}
+.linkmenu-box .url{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:6px}
+.linkmenu-box .btn{width:100%;justify-content:flex-start;min-height:48px;font-size:15px}
+.linkmenu-box .btn svg{width:18px;height:18px}
+.link-btn{border:0;background:none;padding:0;color:var(--accent);font-family:var(--f-mono);font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
@@ -322,6 +333,9 @@ body.is-locked{overflow:hidden}
 </style>
 
 <div class="wm" id="wm" aria-hidden="true"></div>
+<!-- File pickers live outside the views so a re-render while the picker is open can't drop the chosen file. -->
+<div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"></div>
+<div class="linkmenu" id="linkmenu" role="dialog" aria-label="Open link" hidden></div>
 <div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
 <div class="lock auth" id="auth" role="dialog" aria-label="Sign in" hidden></div>
 <div class="shell">
@@ -618,15 +632,21 @@ function applyLook(){
 }
 function readImage(file, max, type = "image/jpeg", q = .82){
   return new Promise((res, rej) => {
-    if (!file || !/^image\//.test(file.type)) return rej(new Error("not an image"));
-    const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas");
-      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url); res(c.toDataURL(type, q)); };
-    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("unreadable image")); };
+    if (!file) return rej(new Error("none"));
+    if (file.type && !/^image\//.test(file.type)) return rej(new Error("not_image"));
+    const draw = (src, w, h) => { const k = Math.min(1, max / Math.max(w, h)); const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      const g = c.getContext("2d"); if (type === "image/jpeg"){ g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
+      g.drawImage(src, 0, 0, c.width, c.height); return c.toDataURL(type, q); };
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { try { res(draw(img, img.naturalWidth, img.naturalHeight)); } catch (e) { rej(e); } URL.revokeObjectURL(url); };
+    img.onerror = async () => { URL.revokeObjectURL(url);
+      try { const bmp = await createImageBitmap(file); res(draw(bmp, bmp.width, bmp.height)); }
+      catch { rej(new Error(/heic|heif/i.test(file.type + file.name) ? "heic" : "unreadable")); } };
     img.src = url;
   });
 }
+const imgErr = e => e?.message === "heic" ? "This phone can't read HEIC photos here. Pick a JPG or PNG, or take a screenshot of the photo and use that." : e?.message === "not_image" ? "That file isn't a picture." : "Couldn't read that picture. Try a different one.";
 async function pinHash(pin, salt){ const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + ":" + pin)); return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, "0")).join(""); }
 const hasPin = () => !inClaude && !!profile.pinHash;
 let locked = false, pinEntry = "", lockMode = "pin", hiddenAt = 0;
@@ -655,6 +675,45 @@ async function pressKey(k){
   }
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) hiddenAt = now(); else if (hasPin() && hiddenAt && now() - hiddenAt > 2 * MIN) lockNow(); });
+
+/* ---------- Links ---------- */
+// People type "mysite.com"; without a scheme the browser treats it as a page inside Task (blank page).
+function fixUrl(u){
+  u = String(u || "").trim(); if (!u) return "";
+  if (/^https?:\/\//i.test(u)) return u;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u) && !/^[a-z0-9-]+(\.[a-z0-9-]+)+:\d/i.test(u)) return ""; // other schemes (javascript:, data:) are not allowed
+  return "https://" + u.replace(/^\/+/, "");
+}
+const showUrl = u => fixUrl(u).replace(/^https?:\/\//, "").replace(/\/$/, "");
+const linkBtn = u => fixUrl(u) ? `<button class="link-btn" data-link="${esc(fixUrl(u))}">${esc(showUrl(u))}</button>` : "";
+const isAndroid = () => /android/i.test(navigator.userAgent);
+function openLinkMenu(url){
+  const el = $("#linkmenu"), host = showUrl(url).split("/")[0], ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const opts = ios ? [["safari", "Open in Safari"], ["chrome", "Open in Chrome"], ["share", "Choose another app or browser"], ["copy", "Copy link"]]
+    : isAndroid() ? [["default", "Open in my browser"], ["chrome", "Open in Chrome"], ["choose", "Choose a browser"], ["copy", "Copy link"]]
+    : [["tab", "Open in a new tab"], ["copy", "Copy link"]];
+  if (!navigator.share) for (let i = opts.length - 1; i >= 0; i--) if (opts[i][0] === "share") opts.splice(i, 1);
+  el.innerHTML = `<div class="linkmenu-box"><h3>Open ${esc(host)}</h3><div class="url">${esc(url)}</div>
+    ${opts.map(([k, l]) => `<button class="btn ${k === opts[0][0] ? "primary" : ""}" data-linkgo="${k}" data-url="${esc(url)}">${k === "copy" ? IC.copy : IC.projects}${esc(l)}</button>`).join("")}
+    <button class="btn ghost" data-linkgo="close">Cancel</button></div>`;
+  el.hidden = false;
+}
+function closeLinkMenu(){ const el = $("#linkmenu"); el.hidden = true; el.innerHTML = ""; }
+async function linkGo(how, url){
+  const u = new URL(url), rest = u.host + u.pathname + u.search + u.hash;
+  const intent = pkg => `intent://${rest}#Intent;scheme=${u.protocol.slice(0, -1)};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;${pkg ? "package=" + pkg + ";" : ""}S.browser_fallback_url=${encodeURIComponent(url)};end`;
+  closeLinkMenu();
+  if (how === "copy"){ try { await navigator.clipboard.writeText(url); toast("Link copied."); } catch { toast(url); } return; }
+  if (how === "share"){ try { await navigator.share({url}); } catch {} return; }
+  if (how === "chrome"){
+    if (isAndroid()) location.href = intent("com.android.chrome");
+    else { location.href = (u.protocol === "http:" ? "googlechrome://" : "googlechromes://") + rest; setTimeout(() => { if (!document.hidden){ toast("Chrome isn't installed, so it opened in Safari."); location.href = url; } }, 1500); }
+    return;
+  }
+  if (how === "choose"){ location.href = intent(""); return; }
+  // safari / default / tab: a normal new window; installed apps hand it to the system browser
+  const w = window.open(url, "_blank", "noopener,noreferrer"); if (!w && !isAndroid()) location.href = url;
+}
 
 /* ---------- Icons ---------- */
 const I = (p, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
@@ -997,14 +1056,14 @@ function viewBiz(){
   return `${adder("biz", e ? "Edit business" : "New business", `<form class="form" id="biz-form">
       <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Brandbridge Ltd"></label>
       <label class="field">Status<select id="b-status">${["active", "building", "idea", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label class="field">Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
+      <label class="field">Website<input id="b-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}" placeholder="brandbridgeacademy.site"></label>
       ${signedIn() && session.members?.length > 1 ? `<label class="check"><input id="b-shared" type="checkbox" ${e?.shared ? "checked" : ""}> Share with ${esc(partner())}</label>` : ""}
       <label class="field wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
     ${list.length ? `<div class="tiles">${list.map(b => {
       const open = of("task").filter(t => t.bizId === b.id && !t.done).length, appts = of("appt").filter(a => a.bizId === b.id && a.status === "scheduled" && a.start > now()).length;
       return `<article class="tile"><div class="tile-top"><span class="pill ${({active: "s-good", building: "s-warn"})[b.status] || "s-mute"}">${esc(b.status)}</span><span>${open} goal${open === 1 ? "" : "s"} · ${appts} appt${appts === 1 ? "" : "s"}</span></div>
-        <h3>${esc(b.name)}</h3>${b.url ? `<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url.replace(/^https?:\/\//, ""))}</a>` : ""}
+        <h3>${esc(b.name)}</h3>${linkBtn(b.url)}
         ${b.notes ? `<div class="row-notes">${esc(b.notes)}</div>` : ""}
         <div class="tile-foot"><span>Updated ${esc(ago(b.updatedAt))}</span><span class="row-actions">${editBtn(b.id)}${delBtn(b.id)}</span></div></article>`; }).join("")}</div>` : ""}`;
 }
@@ -1014,14 +1073,14 @@ function viewProjects(){
   return `${adder("project", e ? "Update project" : "New project", `<form class="form" id="proj-form">
       <label class="field">Name<input id="p-name" required value="${esc(e?.name)}" placeholder="brandbridgeacademy.site"></label>
       <label class="field">Status<select id="p-status">${["live", "building", "down", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label class="field">URL<input id="p-url" value="${esc(e?.url)}" placeholder="https://"></label>
+      <label class="field">Website address<input id="p-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}" placeholder="brandbridgeacademy.site"></label>
       <label class="field">Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
       <label class="field wide">Latest status notes<textarea id="p-notes" placeholder="What shipped, signups this week, open bugs">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add project"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
     ${list.length ? `<section class="card"><div class="card-head"><div><h2>Status summary</h2><p class="sub">AI turns your notes into one report.</p></div><button class="btn sm primary" id="proj-summary">${IC.ai}Summarize all</button></div>
       <div class="brief ${projSummary ? "" : "placeholder"}" id="proj-summary-out">${esc(projSummary || "Press Summarize all for a one-line status per project and the most important next step.")}</div></section>
     <div class="tiles">${list.map(p => `<article class="tile"><div class="tile-top">${projPill(p.status)}<span>Checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div>
-      <h3>${esc(p.name)}</h3>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace(/^https?:\/\//, ""))}</a>` : ""}${p.repo ? `<span class="row-meta">${esc(p.repo)}</span>` : ""}
+      <h3>${esc(p.name)}</h3>${linkBtn(p.url)}${p.repo ? `<span class="row-meta">${esc(p.repo)}</span>` : ""}
       ${p.notes ? `<div class="row-notes">${esc(p.notes)}</div>` : ""}
       <div class="tile-foot"><button class="btn sm" data-checked="${p.id}">${IC.check}Mark checked</button><span class="row-actions">${editBtn(p.id)}${delBtn(p.id)}</span></div></article>`).join("")}</div>` : ""}`;
 }
@@ -1199,7 +1258,7 @@ function viewSettings(){
     ${acct}
     <section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">Shown in the menu, the greeting and the lock screen. Saved on this device.</p></div></div>
       <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-founder", profile.company].filter(Boolean).join(", "))}</span></div></div>
-        <div class="btn-row"><button class="btn" id="photo-btn">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</button>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div><input type="file" id="photo-file" accept="image/*" hidden></div>
+        <div class="btn-row"><label class="btn" for="photo-file" role="button">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</label>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div></div>
       <div class="form" style="padding:0">
         <label class="field">Your name<input id="pf-name" value="${esc(profile.name)}" placeholder="Mufasa" autocomplete="name"></label>
         <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-founder"></label>
@@ -1209,15 +1268,15 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>Look</h2><p class="sub">Background and logo watermark</p></div></div>
       <div class="set-row"><div class="t"><b>Background</b><span>Soft, so text stays easy to read</span></div>
         <div class="bg-pick">${[["none", "Plain", ""], ["navy", "Navy", "sw-navy"], ["gold", "Gold", "sw-gold"], ["grid", "Grid", "sw-grid"], ["photo", profile.bgPhoto ? "" : "Photo", "sw-photo"]].map(([k, l, c]) => `<button data-bg="${k}" class="${c}" aria-pressed="${(profile.bg || "none") === k}" aria-label="${k} background">${l}</button>`).join("")}</div></div>
-      <div class="set-row"><div class="t"><b>Your own background photo</b><span>${profile.bgPhoto ? "Photo saved" : "Any photo from your phone"}</span></div><button class="btn" id="bg-upload">${IC.upload}${profile.bgPhoto ? "Change photo" : "Upload photo"}</button><input type="file" id="bg-file" accept="image/*" hidden></div>
+      <div class="set-row"><div class="t"><b>Your own background photo</b><span>${profile.bgPhoto ? "Photo saved" : "Any photo from your phone"}</span></div><label class="btn" for="bg-file" role="button">${IC.upload}${profile.bgPhoto ? "Change photo" : "Upload photo"}</label></div>
       <div class="set-row"><div class="t"><b>Logo watermark</b><span>${profile.logo ? "Using your uploaded logo" : "Using a Brandbridge wordmark until you upload your logo"}</span></div>
-        <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><button class="btn" id="logo-btn">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</button>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div><input type="file" id="logo-file" accept="image/png,image/svg+xml,image/*" hidden></div></section>
+        <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><label class="btn" for="logo-file" role="button">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</label>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div></div></section>
     ${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>${IC.lock.replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')}PIN lock</h2><p class="sub">${hasPin() ? "On. Task asks for your PIN when it opens and after 2 minutes away." : "Ask for a PIN when Task opens, so client details stay private if someone picks up your phone."}</p></div>${hasPin() ? `<span class="pill s-good">On</span>` : ""}</div>
       ${hasPin() ? `<div class="btn-row"><button class="btn" id="lock-now">${IC.lock}Lock now</button><button class="btn ghost danger" id="pin-remove">Remove PIN</button></div>`
         : `<form class="form" id="pin-form" style="padding:0"><label class="field">New PIN (4 to 6 digits)<input id="pin-new" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><label class="field">Type it again<input id="pin-confirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><div class="btn-row"><button class="btn primary" type="submit">${IC.lock}Set PIN</button></div></form>`}</section>`}
     <section class="card"><div class="card-head"><div><h2>Backup and restore</h2><p class="sub">${inClaude ? "Your data syncs with your Claude account." : "Your data lives on this device. Save a backup so you never lose it, and use it to move to a new phone."}</p></div></div>
       <div class="set-row"><div class="t"><b>Save a backup</b><span>${n} items · ${lb ? "last backup " + esc(ago(lb)) : "no backup yet"}</span></div><button class="btn primary" id="backup-btn">${IC.download}Download backup</button></div>
-      <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><button class="btn" id="restore-btn">${IC.upload}Choose file</button><input type="file" id="restore-file" accept="application/json,.json" hidden></div></section>
+      <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><label class="btn" for="restore-file" role="button">${IC.upload}Choose file</label></div></section>
     <section class="card"><div class="card-head"><div><h2>App</h2><p class="sub">${isInstalled() ? "Installed on this device." : "Install Task so it opens like a normal app, works offline and can send reminders."}</p></div></div>
       ${inClaude ? `<div class="set-row"><div class="t"><b>Install on your phone</b><span>Open task.brandbridgeacademy.workers.dev in your phone's browser to install it.</span></div></div>`
         : isInstalled() ? "" : installPrompt ? `<div class="set-row"><div class="t"><b>Install Task</b><span>Adds Task to your home screen.</span></div><button class="btn primary" id="install-btn">${IC.download}Install</button></div>`
@@ -1230,7 +1289,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1423,6 +1482,7 @@ function updateTitle(){
 /* ---------- Events ---------- */
 function closeMenu(){ $("#new-menu").hidden = true; $("#new-btn").setAttribute("aria-expanded", "false"); }
 document.addEventListener("click", async ev => {
+  if (ev.target.id === "linkmenu"){ closeLinkMenu(); return; }
   const t = ev.target.closest("button, input.tick, #scrim");
   if (!ev.target.closest(".top-actions")) closeMenu();
   if (!t) return;
@@ -1453,10 +1513,12 @@ document.addEventListener("click", async ev => {
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
   if (d.acct){ authMode = d.acct; authMsg = ""; authOpen = true; renderAuth(); return; }
+  if (d.link){ ev.preventDefault(); openLinkMenu(d.link); return; }
+  if (d.linkgo){ if (d.linkgo === "close") closeLinkMenu(); else linkGo(d.linkgo, d.url); return; }
   if (d.dfilter){ dealFilter = d.dfilter; render(); return; }
   if (d.stage){ const r = byId(d.stage); if (r){ put({...r, stage: d.to, ...(d.to === "done" ? {doneAt: now()} : {})}); toast(`${r.client}: ${stageLabel(d.to)}`); } return; }
   if (d.key){ pressKey(d.key); return; }
-  if (d.bg){ if (d.bg === "photo" && !profile.bgPhoto){ $("#bg-file")?.click(); return; } saveProfile({bg: d.bg}); applyLook(); render(); return; }
+  if (d.bg){ if (d.bg === "photo" && !profile.bgPhoto){ $("#bg-file").click(); return; } saveProfile({bg: d.bg}); applyLook(); render(); return; }
   if (d.sfilter){ stockFilter = d.sfilter; render(); return; }
   if (d.clear){ const r = byId(d.clear); if (r){ put({...r, cleared: now()}); toast(`${r.name} cleared.`); } return; }
   if (d.theme){ setTheme(d.theme); render(); return; }
@@ -1469,10 +1531,7 @@ document.addEventListener("click", async ev => {
   switch (t.id){
     case "load-examples": loadExamples(); break;
     case "backup-btn": downloadBackup(); break;
-    case "photo-btn": $("#photo-file")?.click(); break;
     case "photo-clear": saveProfile({photo: ""}); render(); break;
-    case "bg-upload": $("#bg-file")?.click(); break;
-    case "logo-btn": $("#logo-file")?.click(); break;
     case "logo-clear": saveProfile({logo: ""}); applyLook(); render(); break;
     case "lock-now": lockNow(); break;
     case "au-switch": authMode = authMode === "signup" ? "signin" : "signup"; authMsg = ""; renderAuth(); break;
@@ -1488,7 +1547,6 @@ document.addEventListener("click", async ev => {
       if (signedIn()){ items = []; saveLocal(); signOut(); } else for (const x of items.slice()) await remove(x.id);
       chat = []; saveChat(); saveProfile({pinHash: "", pinSalt: ""}); locked = false; renderLock(); toast("Task was reset. Restore your backup in Settings."); go("settings"); break;
     case "pin-remove": saveProfile({pinHash: "", pinSalt: "", pinLen: 0}); toast("PIN removed."); render(); break;
-    case "restore-btn": $("#restore-file")?.click(); break;
     case "install-btn": if (installPrompt){ installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; render(); }); } break;
     case "insight-ai": insightAI(t); break;
     case "reload-app": location.reload(); break;
@@ -1521,11 +1579,11 @@ document.addEventListener("input", ev => {
 });
 document.addEventListener("change", async ev => {
   const id = ev.target.id, f = ev.target.files?.[0];
-  if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch { toast("Couldn't read that image."); } render(); }
-  if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1600, "image/jpeg", .78), bg: "photo"})) toast("Background saved."); } catch { toast("Couldn't read that image."); } applyLook(); render(); }
-  if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch { toast("Couldn't read that image."); } applyLook(); render(); }
+  if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
+  if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
+  if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "wm-toggle"){ saveProfile({watermark: ev.target.checked}); applyLook(); }
-  if (["pf-name", "pf-role", "pf-company", "pf-partner", "pf-currency"].includes(id)){ saveProfile({[id.slice(3) === "currency" ? "currency" : id.slice(3)]: ev.target.value.trim()}); render(); } if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
+  if (["pf-name", "pf-role", "pf-company", "pf-partner", "pf-currency"].includes(id)){ saveProfile({[id.slice(3)]: ev.target.value.trim()}); renderChrome(); updateTitle(); } if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
@@ -1549,10 +1607,10 @@ document.addEventListener("submit", ev => {
   } else if (f === "log-form"){
     add("log", {text: v("#l-text"), tag: $("#l-tag").value, at: now()}); toast("Logged");
   } else if (f === "biz-form"){
-    const data = {name: v("#b-name"), status: $("#b-status").value, url: v("#b-url"), notes: v("#b-notes"), shared: !!$("#b-shared")?.checked};
+    const data = {name: v("#b-name"), status: $("#b-status").value, url: fixUrl(v("#b-url")), notes: v("#b-notes"), shared: !!$("#b-shared")?.checked};
     editing?.kind === "biz" ? put({...editing, ...data}) : add("biz", data); editing = null; toast("Business saved");
   } else if (f === "proj-form"){
-    const data = {name: v("#p-name"), status: $("#p-status").value, url: v("#p-url"), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
+    const data = {name: v("#p-name"), status: $("#p-status").value, url: fixUrl(v("#p-url")), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
     editing?.kind === "project" ? put({...editing, ...data}) : add("project", data); editing = null; toast("Project saved");
   } else if (f === "stock-form"){
     const exp = $("#s-exp").value; const expiry = exp ? new Date(exp + "T09:00").getTime() : null; const alertDays = +$("#s-alert").value;
@@ -1584,6 +1642,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
   if (locked){ if (/^\d$/.test(ev.key)) pressKey(ev.key); else if (ev.key === "Backspace") pressKey("del"); return; }
+  if (ev.key === "Escape") closeLinkMenu();
   if (ev.key === "Escape"){ closeMenu(); document.body.classList.remove("sheet-open"); }
 });
 
