@@ -107,7 +107,7 @@ a.btn.ghost{color:var(--muted)}
 .card-head h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.005em}
 .card-head .sub{font-size:13px;color:var(--muted);margin:2px 0 0}
 .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start}
-.hero{background:linear-gradient(135deg,#0b2340 0%,#14345c 55%,#8b0e2f 130%);border-bottom:3px solid var(--gold)!important;color:#fff;border:0;padding:22px}
+.hero{background:linear-gradient(135deg,#0b2340 0%,#14345c 55%,#8b0e2f 130%);border-bottom:3px solid var(--gold)!important;color:#fff;border:0;padding:18px 22px}
 .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
 .hero-top > div{min-width:0}
 .hero .avatar{box-shadow:0 0 0 2px rgba(255,255,255,.25),0 0 0 3.5px var(--gold)}
@@ -116,7 +116,7 @@ a.btn.ghost{color:var(--muted)}
 .hero p{margin:6px 0 0;opacity:.92;max-width:60ch}
 .hero .btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);color:#fff}
 .hero .btn:hover{background:rgba(255,255,255,.26)}
-.hero .btn-row{margin-top:16px}
+.hero .btn-row{display:none}
 .stat-money{font-size:clamp(17px,2.4vw,22px)!important;overflow-wrap:anywhere}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;min-width:0}
@@ -321,8 +321,8 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .link-btn{border:0;background:none;padding:0;color:var(--accent);font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
 /* Website visits */
 .vchart{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;margin-top:4px}
-.vc-y{display:flex;flex-direction:column;justify-content:space-between;height:180px;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);text-align:right;margin:-7px 0}
-.vc-plot{position:relative;height:180px;border-bottom:1px solid var(--line-strong);background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 50%}
+.vc-y{display:flex;flex-direction:column;justify-content:space-between;height:150px;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);text-align:right;margin:-7px 0}
+.vc-plot{position:relative;height:150px;border-bottom:1px solid var(--line-strong);background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 50%}
 .vc-cols{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px}
 .vc-col{flex:1 1 0;height:100%;display:flex;align-items:flex-end;justify-content:center;border:0;background:none;padding:0;min-width:0;cursor:pointer}
 .vc-col span{display:block;width:100%;max-width:26px;background:var(--accent);border-radius:4px 4px 0 0}
@@ -332,7 +332,36 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .vc-tip b{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600}
 .snippet{display:block;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;overflow-wrap:anywhere;white-space:pre-wrap;margin:0 0 10px;user-select:all}
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
-.copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
+/* Panels: extra detail opens in a pop-up so pages fit the screen */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
+.pbtn{display:flex;align-items:center;gap:12px;width:100%;min-width:0;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;color:var(--fg)}
+.pbtn:hover{border-color:var(--accent)}
+.pbtn > svg:first-child{width:20px;height:20px;flex:none;color:var(--accent)}
+.pbtn span{flex:1;min-width:0;display:grid;gap:1px}
+.pbtn b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbtn small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbtn > svg:last-child{width:16px;height:16px;flex:none;color:var(--muted)}
+.today-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
+.today-grid .pgrid{grid-template-columns:minmax(0,1fr)}
+.see-all{margin-top:8px;width:100%;justify-content:center}
+.content .list .row-notes,.content .list .row .btn-row,.content .list .by,.content .list .row-meta:has(> .btn){display:none}
+.content .list .row{padding:9px 0}
+.content .list .row-title{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.content .list .row-main > .row-meta ~ .row-meta{display:none}
+.content .list .row-meta{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+.pop{position:fixed;inset:0;z-index:80;display:grid;align-items:end;justify-items:center;background:rgba(4,12,24,.45)}
+.pop[hidden]{display:none}
+.pop-box{width:100%;max-width:640px;max-height:88dvh;display:flex;flex-direction:column;background:var(--bg);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);overflow:hidden}
+.pop-head{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+.pop-head div{flex:1;min-width:0}
+.pop-head h3{margin:0;font-size:17px;font-weight:800}
+.pop-head p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.pop-body{overflow-y:auto;padding:16px;display:grid;gap:14px;align-content:start;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+@media (min-width:901px){.pop{align-items:center;padding:24px}.pop-box{border-radius:20px;max-height:84vh}}
+body.pop-open{overflow:hidden}
+.pop-body > .card:first-child > .card-head:first-child > div:first-child:has(h2){display:none}
+.pop-body > .card:first-child > .card-head:first-child:not(:has(button,.pill,.seg)){display:none}
+.copyright{margin-top:auto;text-align:center;font-size:12px;color:var(--muted);padding:8px 16px 12px}
 
 @media (max-width:900px){
   .shell{grid-template-columns:minmax(0,1fr)}
@@ -340,8 +369,32 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
   .topbar .m-brand{display:block}
   .page-title h1{font-size:18px}
   .content{padding-block:16px 20px}
-  .copyright{padding-bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom,0px))}
-  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .stat{padding:10px 10px 9px;border-radius:12px}
+  .stat .n{font-size:22px;min-height:25px}
+  .stat .n.stat-money{font-size:13px!important}
+  .stat .l{font-size:11px;line-height:1.25;margin-top:3px}
+  .hero{padding:16px}
+  .notice{padding:10px 12px;font-size:13px;gap:8px}
+  .content .card:not(.hero) .card-head .sub{display:none}
+  .hero .avatar{display:none}
+  .hero p{font-size:14px;margin-top:4px}
+  .notice p{flex:1 1 150px}
+  .today-grid{grid-template-columns:minmax(0,1fr)!important}
+  .today-grid .list > .row:nth-child(n+3){display:none}
+  .today-grid .pgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .copyright{padding:8px 16px calc(var(--nav-h) + 10px + env(safe-area-inset-bottom,0px));font-size:11px;border-top:0}
+  .card-head{margin-bottom:8px}
+  .hero .btn-row{display:none}
+  .hero h2{font-size:20px}
+  .card{padding:14px}
+  .content{gap:12px}
+  .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .pbtn{padding:10px 11px;gap:9px}
+  .pbtn > svg:last-child{display:none}
+  .pbtn b{font-size:13.5px}.pbtn small{font-size:12px}
+  .vc-plot,.vc-y{height:130px}
+  .chat{height:calc(100dvh - 255px);min-height:300px}
   .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
   .tabbar button{border:0;background:none;display:grid;justify-items:center;gap:3px;padding:6px 2px;font-size:11px;font-weight:600;color:var(--muted);border-radius:10px;min-width:0}
   .tabbar button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -366,6 +419,7 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 <!-- File pickers live outside the views so a re-render while the picker is open can't drop the chosen file. -->
 <div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"></div>
 <div class="linkmenu" id="linkmenu" role="dialog" aria-label="Open link" hidden></div>
+<div class="pop" id="pop" role="dialog" aria-modal="true" hidden><div class="pop-box"><div class="pop-head"><div><h3 id="pop-title"></h3><p id="pop-sub"></p></div><button class="icon-btn" data-popclose="1" aria-label="Close"></button></div><div class="pop-body" id="pop-body"></div></div></div>
 <div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
 <div class="lock auth" id="auth" role="dialog" aria-label="Sign in" hidden></div>
 <div class="shell">
@@ -643,21 +697,29 @@ profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", b
 // v2.3.1: the Brandbridge watermark is off for everyone (it can be turned back on in Settings).
 if (!profile._wmOff){ profile.watermark = false; profile._wmOff = 1; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {} }
 function saveProfile(patch, quiet){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; }
-  if (!quiet && Object.keys(patch).some(k => PROFILE_SYNC.includes(k))) queueProfileSync();
+  if (!quiet && Object.keys(patch).some(k => PROFILE_SYNC.includes(k))){ profile._editedAt = now(); try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {} queueProfileSync(); }
   return true; }
 // Signed in, your name, photo, logo and background follow you to every device (the PIN and API key stay on each device).
 const PROFILE_SYNC = ["name", "role", "company", "partner", "currency", "photo", "bg", "bgPhoto", "logo"];
+function profileSyncNote(){
+  if (inClaude) return "Shown in the menu, the greeting and the lock screen.";
+  if (!signedIn()) return "Saved on this device. Sign in to show it on your laptop and phone too.";
+  const x = byId(profileItemId());
+  if (x && pending[x.id]) return "Sending to your other devices…";
+  return x ? `Same on all your devices signed in as ${session.user.email} · updated ${ago(x.updatedAt)}` : "Will show on all your devices once synced.";
+}
 const profileItemId = () => (typeof session !== "undefined" && session?.user?.id) ? "profile-" + session.user.id : null;
 function queueProfileSync(first){
   const id = profileItemId(); if (!id) return;
   const p = {}; PROFILE_SYNC.forEach(k => { if (profile[k] !== undefined && !(first && profile[k] === "")) p[k] = profile[k]; });
-  if (JSON.stringify(p).length > 190000) delete p.bgPhoto; // a very large background photo stays on this device
-  const rec = {id, kind: "meta", sub: "profile", profile: p, updatedAt: now()};
+  if (JSON.stringify(p).length > 180000) delete p.bgPhoto; // a very large background photo stays on this device
+  // A device's first upload is dated by its last real edit (or "long ago"), so it never beats a newer change made on another device.
+  const rec = {id, kind: "meta", sub: "profile", profile: p, updatedAt: first ? (profile._editedAt || 1) : now()};
   const i = items.findIndex(x => x.id === id); if (i >= 0) items[i] = rec; else items.push(rec);
   saveLocal(); saveProfile({_at: rec.updatedAt}, true); markDirty(id);
 }
 function applyRemoteProfile(){
-  const x = byId(profileItemId()); if (!x?.profile || (x.updatedAt || 0) <= (profile._at || 0)) return false;
+  const x = byId(profileItemId()); if (!x?.profile || (x.updatedAt || 0) <= Math.max(profile._at || 0, profile._editedAt || 0)) return false;
   saveProfile({...x.profile, _at: x.updatedAt}, true); applyLook(); return true;
 }
 const firstName = () => (profile.name || "").trim().split(/\s+/)[0] || "";
@@ -780,6 +842,8 @@ const IC = {
   more: I('<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>'),
   trash: I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   edit: I('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+  chev: I('<path d="M9 6l6 6-6 6"/>'),
+  close: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   cal: I('<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v3M16 2.5v3M12 12v6M9 15h6"/>'),
   check: I('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
@@ -849,11 +913,11 @@ function renderChrome(){
     .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
 }
 function go(k, opts = {}){
-  view = k; document.body.classList.remove("sheet-open");
+  view = k; document.body.classList.remove("sheet-open"); closePop();
   try { localStorage.setItem("jarvis.view", k); } catch {}
   if (opts.open) openForm = opts.open;
   render(); window.scrollTo(0, 0);
-  if (opts.open === "key"){ openForm = null; setTimeout(() => { $("#ai-settings")?.scrollIntoView({block: "start"}); $("#api-key")?.focus({preventScroll: true}); }, 40); return; }
+  if (opts.open === "key"){ openForm = null; openPop("ai-key"); setTimeout(() => $("#api-key")?.focus({preventScroll: true}), 60); return; }
   if (opts.open) setTimeout(() => { const f = document.querySelector(`details[data-form="${opts.open}"]`); if (f){ f.open = true; f.querySelector("input,textarea")?.focus(); } }, 30);
 }
 let openForm = null;
@@ -865,11 +929,11 @@ const calBtn = id => `<button class="icon-btn" data-ics="${id}" aria-label="Add 
 const bizOptions = sel => `<option value="">None</option>` + of("biz").map(b => `<option value="${b.id}" ${sel === b.id ? "selected" : ""}>${esc(b.name)}</option>`).join("");
 const empty = (t, s) => `<div class="empty"><b>${esc(t)}</b>${esc(s)}</div>`;
 function adder(key, title, body, open){
-  return `<details class="adder" data-form="${key}" ${open || openForm === key ? "open" : ""}><summary><span class="plus">${IC.plus}</span>${esc(title)}</summary>${body}</details>`;
+  return `<details class="adder" data-form="${key}" ${(open && editing) || openForm === key ? "open" : ""}><summary><span class="plus">${IC.plus}</span>${esc(title)}</summary>${body}</details>`;
 }
 function notifBanner(){
   if (!("Notification" in window) || Notification.permission === "granted") return "";
-  if (!inClaude) return `<div class="notice"><p>Turn on notifications so Task can alert you before appointments and when goals are due.</p><button class="btn sm primary" id="notif-btn">Turn on notifications</button></div>`;
+  if (!inClaude) return `<div class="notice"><p>Turn on alerts so Task can remind you before meetings and goals.</p><button class="btn sm primary" id="notif-btn">Turn on</button></div>`;
   return `<div class="notice"><p>Reminders pop up inside Task while it's open. For alerts when it's closed, tap the calendar icon on a goal or appointment to add an alarm to your phone's calendar.</p></div>`;
 }
 
@@ -924,36 +988,28 @@ function viewToday(){
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
     <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
-  ${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
+  ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Meetings today</div></button>
     <button class="stat" data-nav="deals"><div class="n" ${followUps().some(d => d.nextAt < now()) ? 'style="color:var(--bad)"' : ""}>${followUps().length}</div><div class="l">Client follow-ups</div></button>
     <button class="stat" data-nav="learn"><div class="n">${due}</div><div class="l">Cards to review${streak() ? ` · ${streak()}-day streak` : ""}</div></button>
   </div>
-  <div class="grid-2">
-    <section class="card">
-      <div class="card-head"><div><h2>Today's schedule</h2><p class="sub">Meetings, follow-ups and goals, in time order</p></div><button class="btn sm" data-go="tasks" data-open="task">${IC.plus}Goal</button></div>
-      ${schedule.length ? `<ul class="list">${schedule.map(s => s.html).join("")}</ul>` : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
-      ${unscheduled.length ? `<div class="group-head">Anytime</div><ul class="list">${unscheduled.map(taskRow).join("")}</ul>` : ""}
-    </section>
-    <div style="display:grid;gap:18px">
-      <section class="card">
-        <div class="card-head"><h2>Daily briefing</h2><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div>
-        <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: meetings, Brandbridge clients, goals, pharmacy and study.")}</div>
-      </section>
-      ${siteTodayCard()}
-      <section class="card">
-        <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="${expiring.length ? "stock" : "projects"}">${expiring.length ? "Expiry" : "Projects"}</button></div>
-        ${expiring.length ? `<ul class="list">${expiring.slice(0, 4).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
+  <div class="today-grid">
+  <section class="card">
+    <div class="card-head"><div><h2>Today's schedule</h2><p class="sub">Meetings, follow-ups and goals, in time order</p></div><button class="btn sm" data-go="tasks" data-open="task">${IC.plus}Goal</button></div>
+    ${schedule.length || unscheduled.length ? shortList("today-all", "Today's schedule", [...schedule.map(s => s.html), ...unscheduled.map(taskRow)], 3, "Meetings, follow-ups and goals") : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
+  </section>
+  <div class="pgrid">
+    ${panel("brief", "ai", "Daily briefing", briefCache ? "Ready to read" : "Summary of your day", `<section class="card"><div class="card-head"><p class="sub" style="margin:0">Meetings, Brandbridge clients, goals, pharmacy and study.</p><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div><div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Tap Brief me for a short summary of your day.")}</div></section>`)}
+    ${panel("attention", "stock", "Needs attention", expiring.length + attention.length ? `${expiring.length + attention.length} item${expiring.length + attention.length === 1 ? "" : "s"}` : "All clear", `<section class="card">
+        ${expiring.length ? `<ul class="list">${expiring.slice(0, 6).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
         ${attention.length ? `<ul class="list">${attention.map(p => `<li class="row"><div class="row-main"><div class="row-title">${esc(p.name)}</div><div class="row-meta">${projPill(p.status)}<span>checked ${esc(ago(p.checkedAt || p.updatedAt))}</span></div></div></li>`).join("")}</ul>`
           : expiring.length ? "" : empty(projs.length ? "All projects are live." : "No projects yet.", projs.length ? "No site is down or in progress." : "Add your apps and websites under Projects.")}
-      </section>
-      <section class="card">
-        <div class="card-head"><h2>Latest updates</h2><button class="btn sm ghost" data-go="log" data-open="log">Log</button></div>
-        ${logs.length ? `<ul class="list">${logs.map(l => `<li class="row"><div class="row-main"><div class="row-title">${esc(l.text)}</div><div class="row-meta"><span>${esc(ago(l.at))}</span>${l.tag ? `<span>${esc(l.tag)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No updates yet.", "Log what you did and it shows up here.")}
-      </section>
-    </div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn sm" data-nav="stock">Expiry tracker</button><button class="btn sm" data-nav="projects">Projects</button></div></section>`)}
+    ${panel("updates", "log", "Latest updates", logs.length ? ago(logs[0].at) : "Nothing logged yet", `<section class="card">${logs.length ? `<ul class="list">${logs.map(l => `<li class="row"><div class="row-main"><div class="row-title">${esc(l.text)}</div><div class="row-meta"><span>${esc(ago(l.at))}</span>${l.tag ? `<span>${esc(l.tag)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No updates yet.", "Log what you did and it shows up here.")}<div class="btn-row" style="margin-top:10px"><button class="btn sm primary" data-go="log" data-open="log">${IC.plus}Log an update</button></div></section>`)}
+    ${siteTodayPanel()}
+  </div>
   </div>
   ${items.filter(x => x.kind !== "meta").length ? "" : `<section class="card"><div class="card-head"><div><h2>Try it with examples</h2><p class="sub">Load a few sample goals, appointments and drug cards. You can delete them anytime.</p></div><button class="btn" id="load-examples">Load examples</button></div></section>`}`;
 }
@@ -1004,16 +1060,15 @@ function viewAppts(){
   let list, groups = "";
   if (apptFilter === "upcoming"){
     list = all.filter(a => a.status === "scheduled" && apptEnd(a) >= now() - 12 * HOUR || (a.status === "scheduled" && apptEnd(a) < now())).sort((a, b) => a.start - b.start);
-    let last = "";
-    for (const a of list){ const d = fmtDay(a.start); if (d !== last){ if (last) groups += "</ul>"; groups += `<div class="group-head">${esc(d)}</div><ul class="list">`; last = d; } groups += apptRow(a, false); }
-    if (last) groups += "</ul>";
+    const byDay = arr => { let out = "", last = ""; for (const a of arr){ const d = fmtDay(a.start); if (d !== last){ if (last) out += "</ul>"; out += `<div class="group-head">${esc(d)}</div><ul class="list">`; last = d; } out += apptRow(a, false); } return last ? out + "</ul>" : out; };
+    groups = byDay(list.slice(0, 3));
+    if (list.length){ POPS["appts-all"] = {title: "Upcoming", sub: list.length + " appointment" + (list.length === 1 ? "" : "s"), html: `<section class="card">${byDay(list)}</section>`}; groups += `<button class="btn see-all" data-pop="appts-all">${list.length > 3 ? "See all " + list.length : "Open with details"}${IC.chev}</button>`; }
   } else {
     list = all.filter(a => a.status !== "scheduled").sort((a, b) => b.start - a.start);
-    groups = list.length ? `<ul class="list">${list.map(a => apptRow(a)).join("")}</ul>` : "";
+    groups = list.length ? shortList("appts-all", "History", list.map(a => apptRow(a)), 3) : "";
   }
   const clients = new Set(all.map(a => a.client.trim().toLowerCase())).size;
-  return `${notifBanner()}
-  ${adder("appt", e ? "Edit appointment" : "New appointment", apptForm(e), !!e)}
+  return `${adder("appt", e ? "Edit appointment" : "New appointment", apptForm(e), !!e)}
   <section class="card">
     <div class="card-head"><div><h2>${apptFilter === "upcoming" ? "Upcoming" : "History"}</h2><p class="sub">${clients} client${clients === 1 ? "" : "s"} · ${all.filter(a => a.status === "done").length} completed</p></div>
       <div class="seg">${[["upcoming", "Upcoming"], ["past", "History"]].map(([f, l]) => `<button data-afilter="${f}" aria-pressed="${apptFilter === f}">${l}</button>`).join("")}</div></div>
@@ -1163,8 +1218,8 @@ function viewAI(){
     <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
-  <div class="btn-row" style="justify-content:flex-end">${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
-  ${inClaude ? "" : keyCard()}`;
+  <div class="btn-row" style="justify-content:flex-end">${inClaude ? "" : `<button class="btn sm" data-pop="ai-key">${IC.settings}AI settings${apiKey() ? "" : ` <span class="pill s-warn">Off</span>`}</button>`}${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
+  ${inClaude ? "" : (POPS["ai-key"] = {title: "AI settings", sub: apiKey() ? "Task AI is on" : "Add your API key", html: keyCard()}, "")}`;
 }
 
 /* ---------- Insights: patterns learned from the user's own data (on device, works offline) ---------- */
@@ -1224,23 +1279,24 @@ let insightText = "";
 function viewInsights(){
   const P = learnPatterns();
   const enough = P.tasks.length + P.clientList.length + P.reviewed.length + P.logs.length >= 3;
+  POPS["ins-tips"] = {title: "What Task has learned", sub: P.tips.length + " tips", html: `<section class="card"><ul class="tips">${P.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul></section>`};
   return `<div class="stats">
       <div class="stat"><div class="n">${P.recentTasks.length ? pct(P.recentTasks.filter(t => t.done).length, P.recentTasks.length) + "%" : "–"}</div><div class="l">Goals done (30 days)</div></div>
       <div class="stat"><div class="n">${P.attended + P.noshow ? pct(P.attended, P.attended + P.noshow) + "%" : "–"}</div><div class="l">Client attendance</div></div>
       <div class="stat"><div class="n">${P.right + P.wrong ? pct(P.right, P.right + P.wrong) + "%" : "–"}</div><div class="l">Drug recall accuracy</div></div>
       <div class="stat"><div class="n">${P.forecast7 ?? "–"}</div><div class="l">Expected clients next 7 days</div></div></div>
     <section class="card"><div class="card-head"><div><h2>What Task has learned</h2><p class="sub">Patterns from your goals, clients, study and log. Worked out on this device, even offline.</p></div></div>
-      ${P.tips.length ? `<ul class="tips">${P.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : empty(enough ? "Nothing needs your attention right now." : "Not enough data yet.", enough ? "Keep using Task and new patterns will show up here." : "Add goals, appointments and review some drug cards. Insights get sharper the more you use Task.")}</section>
-    <div class="grid2">
-      <section class="card"><div class="card-head"><div><h2>Busiest days</h2><p class="sub">Appointments, last 8 weeks and next 2</p></div></div>${barList(WD.map((d, i) => [d, P.byDay[i]]))}</section>
-      <section class="card"><div class="card-head"><div><h2>When you get things done</h2><p class="sub">Goals completed by time of day</p></div></div>${barList(Object.entries(P.doneByBin))}</section>
-      <section class="card"><div class="card-head"><div><h2>Clients</h2><p class="sub">${P.clientList.length} client${P.clientList.length === 1 ? "" : "s"} · ${P.repeat} came back more than once</p></div></div>
-        ${P.clientList.length ? barList(P.clientList.sort((a, b) => b.n - a.n).slice(0, 5).map(c => [c.name.replace(/^Example: /, ""), c.n])) : empty("No clients yet.", "Book an appointment to start.")}</section>
-      <section class="card"><div class="card-head"><div><h2>Drugs to focus on</h2><p class="sub">The cards you miss most</p></div></div>
-        ${P.weakCards.length ? `<ul class="list">${P.weakCards.map(c => `<li class="row"><div class="row-main"><div class="row-title">${esc(c.drug)}</div><div class="row-meta"><span>${c.right || 0} right · ${c.wrong || 0} missed</span>${c.cls ? `<span>${esc(c.cls)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No weak spots yet.", "Review cards in Pharmacy learning and the ones you miss will show here.")}</section>
-    </div>
-    <section class="card"><div class="card-head"><div><h2>Deeper analysis</h2><p class="sub">Claude reads these patterns and gives you a plan for the week.</p></div><button class="btn sm primary" id="insight-ai">${IC.ai}Analyse with AI</button></div>
-      <div class="brief ${insightText ? "" : "placeholder"}" id="insight-out">${esc(insightText || "Press Analyse with AI for a short plan based on your patterns.")}</div></section>`;
+      ${P.tips.length ? `<ul class="tips">${P.tips.slice(0, 3).map(t => `<li>${esc(t)}</li>`).join("")}</ul>${P.tips.length > 3 ? `<button class="btn see-all" data-pop="ins-tips">See all ${P.tips.length} tips${IC.chev}</button>` : ""}` : empty(enough ? "Nothing needs your attention right now." : "Not enough data yet.", enough ? "Keep using Task and new patterns will show up here." : "Add goals, appointments and review some drug cards. Insights get sharper the more you use Task.")}</section>
+    <div class="pgrid">
+      ${panel("ins-days", "appts", "Busiest days", "Appointments by weekday", `<section class="card"><div class="card-head"><div><h2>Busiest days</h2><p class="sub">Appointments, last 8 weeks and next 2</p></div></div>${barList(WD.map((d, i) => [d, P.byDay[i]]))}</section>`, "")}
+      ${panel("ins-time", "tasks", "When you get things done", "Goals by time of day", `<section class="card"><div class="card-head"><div><h2>When you get things done</h2><p class="sub">Goals completed by time of day</p></div></div>${barList(Object.entries(P.doneByBin))}</section>`, "")}
+      ${panel("ins-clients", "deals", "Clients", "Top clients", `<section class="card"><div class="card-head"><div><h2>Clients</h2><p class="sub">${P.clientList.length} client${P.clientList.length === 1 ? "" : "s"} · ${P.repeat} came back more than once</p></div></div>
+        ${P.clientList.length ? barList(P.clientList.sort((a, b) => b.n - a.n).slice(0, 5).map(c => [c.name.replace(/^Example: /, ""), c.n])) : empty("No clients yet.", "Book an appointment to start.")}</section>`, "")}
+      ${panel("ins-drugs", "learn", "Drugs to focus on", "Cards you miss most", `<section class="card"><div class="card-head"><div><h2>Drugs to focus on</h2><p class="sub">The cards you miss most</p></div></div>
+        ${P.weakCards.length ? `<ul class="list">${P.weakCards.map(c => `<li class="row"><div class="row-main"><div class="row-title">${esc(c.drug)}</div><div class="row-meta"><span>${c.right || 0} right · ${c.wrong || 0} missed</span>${c.cls ? `<span>${esc(c.cls)}</span>` : ""}</div></div></li>`).join("")}</ul>` : empty("No weak spots yet.", "Review cards in Pharmacy learning and the ones you miss will show here.")}</section>`, "")}
+      ${panel("ins-ai", "ai", "Deeper analysis", insightText ? "Plan ready" : "AI plan for your week", `<section class="card"><div class="card-head"><div><h2>Deeper analysis</h2><p class="sub">Claude reads these patterns and gives you a plan for the week.</p></div><button class="btn sm primary" id="insight-ai">${IC.ai}Analyse with AI</button></div>
+      <div class="brief ${insightText ? "" : "placeholder"}" id="insight-out">${esc(insightText || "Press Analyse with AI for a short plan based on your patterns.")}</div></section>`, "")}
+    </div>`;
 }
 const insightAI = btn => { const P = learnPatterns();
   const facts = {goalsDone30d: P.recentTasks.filter(t => t.done).length + "/" + P.recentTasks.length, onTimeRate: P.withDue ? pct(P.onTime, P.withDue) + "%" : null, goalsByTimeOfDay: P.doneByBin, overdue: P.overdue,
@@ -1310,9 +1366,7 @@ function viewSettings(){
       <p class="sub" style="color:var(--muted);margin:10px 0 0">Shared with your team: clients and deals, projects, goals for ${esc(partner())} or both, Brandbridge log entries, and anything you tick "Share". Everything else stays private to you.</p></section>`
     : `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Sign in to back up online, use Task on more than one device, and share Brandbridge work with ${esc(partner())}.</p></div><span class="pill s-warn">Not signed in</span></div>
       <div class="btn-row"><button class="btn primary" data-acct="signup">${IC.user}Create account</button><button class="btn" data-acct="signin">Sign in</button></div></section>`;
-  return `<div class="grid2">
-    ${acct}
-    <section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">Shown in the menu, the greeting and the lock screen. Saved on this device.</p></div></div>
+  const profSec = `<section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">${esc(profileSyncNote())}</p></div></div>
       <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-owner", profile.company].filter(Boolean).join(", "))}</span></div></div>
         <div class="btn-row"><label class="btn" for="photo-file" role="button">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</label>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div></div>
       <div class="form" style="padding:0">
@@ -1320,32 +1374,45 @@ function viewSettings(){
         <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-owner"></label>
         <label class="field">Company<input id="pf-company" value="${esc(profile.company)}" placeholder="Brandbridge"></label>
         <label class="field">Business partner<input id="pf-partner" value="${esc(profile.partner)}" placeholder="Paul"></label>
-        <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" placeholder="KES" maxlength="5"></label></div></section>
-    <section class="card"><div class="card-head"><div><h2>Look</h2><p class="sub">Background and logo watermark</p></div></div>
+        <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" placeholder="KES" maxlength="5"></label></div></section>`;
+  const lookSec = `<section class="card"><div class="card-head"><div><h2>Look</h2><p class="sub">Background and logo watermark</p></div></div>
       <div class="set-row"><div class="t"><b>Background</b><span>Soft, so text stays easy to read</span></div>
         <div class="bg-pick">${[["none", "Plain", ""], ["navy", "Navy", "sw-navy"], ["gold", "Gold", "sw-gold"], ["grid", "Grid", "sw-grid"], ["photo", profile.bgPhoto ? "" : "Photo", "sw-photo"]].map(([k, l, c]) => `<button data-bg="${k}" class="${c}" aria-pressed="${(profile.bg || "none") === k}" aria-label="${k} background">${l}</button>`).join("")}</div></div>
       <div class="set-row"><div class="t"><b>Your own background photo</b><span>${profile.bgPhoto ? "Photo saved" : "Any photo from your phone"}</span></div><label class="btn" for="bg-file" role="button">${IC.upload}${profile.bgPhoto ? "Change photo" : "Upload photo"}</label></div>
       <div class="set-row"><div class="t"><b>Logo watermark</b><span>${profile.logo ? "Using your uploaded logo" : "Using a Brandbridge wordmark until you upload your logo"}</span></div>
-        <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><label class="btn" for="logo-file" role="button">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</label>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div></div></section>
-    ${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>${IC.lock.replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')}PIN lock</h2><p class="sub">${hasPin() ? "On. Task asks for your PIN when it opens and after 2 minutes away." : "Ask for a PIN when Task opens, so client details stay private if someone picks up your phone."}</p></div>${hasPin() ? `<span class="pill s-good">On</span>` : ""}</div>
+        <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><label class="btn" for="logo-file" role="button">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</label>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div></div></section>`;
+  const pinSec = `${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>${IC.lock.replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')}PIN lock</h2><p class="sub">${hasPin() ? "On. Task asks for your PIN when it opens and after 2 minutes away." : "Ask for a PIN when Task opens, so client details stay private if someone picks up your phone."}</p></div>${hasPin() ? `<span class="pill s-good">On</span>` : ""}</div>
       ${hasPin() ? `<div class="btn-row"><button class="btn" id="lock-now">${IC.lock}Lock now</button><button class="btn ghost danger" id="pin-remove">Remove PIN</button></div>`
-        : `<form class="form" id="pin-form" style="padding:0"><label class="field">New PIN (4 to 6 digits)<input id="pin-new" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><label class="field">Type it again<input id="pin-confirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><div class="btn-row"><button class="btn primary" type="submit">${IC.lock}Set PIN</button></div></form>`}</section>`}
-    <section class="card"><div class="card-head"><div><h2>Backup and restore</h2><p class="sub">${inClaude ? "Your data syncs with your Claude account." : "Your data lives on this device. Save a backup so you never lose it, and use it to move to a new phone."}</p></div></div>
+        : `<form class="form" id="pin-form" style="padding:0"><label class="field">New PIN (4 to 6 digits)<input id="pin-new" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><label class="field">Type it again<input id="pin-confirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><div class="btn-row"><button class="btn primary" type="submit">${IC.lock}Set PIN</button></div></form>`}</section>`}`;
+  const backupSec = `<section class="card"><div class="card-head"><div><h2>Backup and restore</h2><p class="sub">${inClaude ? "Your data syncs with your Claude account." : "Your data lives on this device. Save a backup so you never lose it, and use it to move to a new phone."}</p></div></div>
       <div class="set-row"><div class="t"><b>Save a backup</b><span>${n} items · ${lb ? "last backup " + esc(ago(lb)) : "no backup yet"}</span></div><button class="btn primary" id="backup-btn">${IC.download}Download backup</button></div>
-      <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><label class="btn" for="restore-file" role="button">${IC.upload}Choose file</label></div></section>
-    <section class="card"><div class="card-head"><div><h2>App</h2><p class="sub">${isInstalled() ? "Installed on this device." : "Install Task so it opens like a normal app, works offline and can send reminders."}</p></div></div>
+      <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><label class="btn" for="restore-file" role="button">${IC.upload}Choose file</label></div></section>`;
+  const appSec = `<section class="card"><div class="card-head"><div><h2>App</h2><p class="sub">${isInstalled() ? "Installed on this device." : "Install Task so it opens like a normal app, works offline and can send reminders."}</p></div></div>
       ${inClaude ? `<div class="set-row"><div class="t"><b>Install on your phone</b><span>Open task.brandbridgeacademy.workers.dev in your phone's browser to install it.</span></div></div>`
         : isInstalled() ? "" : installPrompt ? `<div class="set-row"><div class="t"><b>Install Task</b><span>Adds Task to your home screen.</span></div><button class="btn primary" id="install-btn">${IC.download}Install</button></div>`
         : `<div class="set-row"><div class="t"><b>Install Task</b><span>${isIOS() ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu (⋮), then Install app or Add to Home screen."}</span></div></div>`}
       <div class="set-row"><div class="t"><b>Appearance</b><span>Brandbridge light or dark</span></div><div class="seg">${[["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div></div>
       <div class="set-row"><div class="t"><b>Notifications</b><span>${esc(notif)}</span></div>${!inClaude && "Notification" in window && Notification.permission === "default" ? `<button class="btn" id="notif-btn">Turn on</button>` : ""}</div>
-      <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? "API key saved on this device" : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>
-    <section class="card"><div class="card-head"><div><h2>Danger zone</h2><p class="sub">Download a backup first. This can't be undone.</p></div></div>
-      <div class="set-row"><div class="t"><b>Erase all data</b><span>Removes every goal, client, card and note from this device.</span></div><button class="btn danger" id="wipe-btn">Erase all data</button></div></section>
-    <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
-  </div>`;
+      <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? "API key saved on this device" : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>`;
+  const dangerSec = `<section class="card"><div class="card-head"><div><h2>Danger zone</h2><p class="sub">Download a backup first. This can't be undone.</p></div></div>
+      <div class="set-row"><div class="t"><b>Erase all data</b><span>Removes every goal, client, card and note from this device.</span></div><button class="btn danger" id="wipe-btn">Erase all data</button></div></section>`;
+  const aboutSec = `<section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>`;
+  const bgName = ({none: "Plain", navy: "Navy", gold: "Gold", grid: "Grid", photo: "Your photo"})[profile.bg || "none"] || "Plain";
+  return `<section class="card"><div class="set-row" style="padding:0;border:0">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-owner", profile.company].filter(Boolean).join(", "))}</span></div></div>
+      <button class="btn" data-pop="set-profile">${IC.edit}Edit profile</button></div></section>
+    <div class="pgrid">
+      ${panel("set-profile", "user", "Profile", "Name, photo and role", profSec, profileSyncNote())}
+      ${inClaude ? "" : panel("set-account", "user", "Account and sync", signedIn() ? session.user.email : "Not signed in", acct, signedIn() ? "Signed in as " + session.user.email : "")}
+      ${panel("set-look", "settings", "Look", bgName + " background · " + ({auto: "auto", light: "light", dark: "dark"})[theme] + " mode", lookSec, "")}
+      ${inClaude ? "" : panel("set-pin", "lock", "PIN lock", hasPin() ? "On" : "Off", pinSec, "")}
+      ${panel("set-app", "download", "App and alerts", "Notifications " + notif.toLowerCase(), appSec, "")}
+      ${panel("set-backup", "download", "Backup", lb ? "Last backup " + ago(lb) : "No backup yet", backupSec, "")}
+      ${panel("set-danger", "trash", "Erase data", "Remove everything", dangerSec, "")}
+      ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
+    </div>`;
 }
-const APP_VERSION = "2.3.1";
+const APP_VERSION = "2.4";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1369,8 +1436,7 @@ function viewStock(){
   const all = of("stock").sort((a, b) => a.expiry - b.expiry);
   const list = all.filter(x => stockFilter === "all" ? true : stockFilter === "soon" ? !x.cleared && stockLeft(x) <= (x.alertDays ?? 30) : !x.cleared);
   const expired = all.filter(x => !x.cleared && stockLeft(x) < 0).length, in30 = all.filter(x => !x.cleared && stockLeft(x) >= 0 && stockLeft(x) <= 30).length, in90 = all.filter(x => !x.cleared && stockLeft(x) > 30 && stockLeft(x) <= 90).length;
-  return `${notifBanner()}
-  ${adder("stock", e ? "Edit stock item" : "Add stock item", `<form class="form" id="stock-form">
+  return `${adder("stock", e ? "Edit stock item" : "Add stock item", `<form class="form" id="stock-form">
     <label class="field wide">Medicine or product<input id="s-name" required value="${esc(e?.name)}" placeholder="Amoxicillin 500 mg capsules" autocomplete="off"></label>
     <label class="field">Expiry date<input id="s-exp" type="date" required value="${e?.expiry ? toInput(e.expiry).slice(0, 10) : ""}"></label>
     <label class="field">Alert me<select id="s-alert">${[[30, "30 days before"], [60, "60 days before"], [90, "90 days before"], [180, "6 months before"]].map(([n, l]) => `<option value="${n}" ${(e?.alertDays ?? 90) === n ? "selected" : ""}>${l}</option>`).join("")}</select></label>
@@ -1386,7 +1452,7 @@ function viewStock(){
     <div class="stat"><div class="n">${in90}</div><div class="l">Within 31 to 90 days</div></div>
     <div class="stat"><div class="n">${all.filter(x => !x.cleared).length}</div><div class="l">Items tracked</div></div></div>
   <section class="card"><div class="card-head"><h2>Stock by expiry</h2><div class="seg">${[["active", "Active"], ["soon", "Alerts"], ["all", "All"]].map(([k, l]) => `<button data-sfilter="${k}" aria-pressed="${stockFilter === k}">${l}</button>`).join("")}</div></div>
-    ${list.length ? `<ul class="list">${list.map(stockRow).join("")}</ul>` : empty(all.length ? "Nothing here." : "No stock tracked yet.", all.length ? "Try another filter." : "Add short-dated items and Task will alert you before they expire.")}</section>`;
+    ${list.length ? shortList("stock-all", "Stock by expiry", list.map(stockRow), 3) : empty(all.length ? "Nothing here." : "No stock tracked yet.", all.length ? "Try another filter." : "Add short-dated items and Task will alert you before they expire.")}</section>`;
 }
 
 /* ---------- Pharmacy tools ---------- */
@@ -1394,9 +1460,7 @@ const num = id => { const v = parseFloat(($(id)?.value || "").replace(",", "."))
 const r1 = n => Math.round(n * 10) / 10;
 let ixText = "";
 function viewTools(){
-  return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
-  <div class="grid2">
-    <section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
+  const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
       <div class="form" style="padding:0">
         <label class="field">Weight (kg)<input id="d-wt" inputmode="decimal" placeholder="18"></label>
         <label class="field">Dose (mg/kg per dose)<input id="d-mgkg" inputmode="decimal" placeholder="15"></label>
@@ -1404,24 +1468,30 @@ function viewTools(){
         <label class="field">Max single dose (mg)<input id="d-max" inputmode="decimal" placeholder="Optional"></label>
         <label class="field">Strength: mg<input id="d-mg" inputmode="decimal" placeholder="250"></label>
         <label class="field">per mL<input id="d-ml" inputmode="decimal" placeholder="5"></label></div>
-      <div class="brief placeholder calc-out" id="dose-out">Enter weight and mg/kg.</div></section>
-    <section class="card calc" data-calc="crcl"><div class="card-head"><div><h2>Creatinine clearance</h2><p class="sub">Cockcroft-Gault, for renal dose adjustment</p></div></div>
+      <div class="brief placeholder calc-out" id="dose-out">Enter weight and mg/kg.</div></section>`;
+  const t1 = `<section class="card calc" data-calc="crcl"><div class="card-head"><div><h2>Creatinine clearance</h2><p class="sub">Cockcroft-Gault, for renal dose adjustment</p></div></div>
       <div class="form" style="padding:0">
         <label class="field">Age (years)<input id="c-age" inputmode="decimal" placeholder="68"></label>
         <label class="field">Weight (kg)<input id="c-wt" inputmode="decimal" placeholder="70"></label>
         <label class="field">Sex<select id="c-sex"><option value="m">Male</option><option value="f">Female</option></select></label>
         <label class="field">Serum creatinine<input id="c-scr" inputmode="decimal" placeholder="110"></label>
         <label class="field">Unit<select id="c-unit"><option value="umol">µmol/L</option><option value="mg">mg/dL</option></select></label></div>
-      <div class="brief placeholder calc-out" id="crcl-out">Enter age, weight and creatinine.</div></section>
-    <section class="card calc" data-calc="bmi"><div class="card-head"><div><h2>BMI and body surface area</h2><p class="sub">BSA by the Mosteller formula</p></div></div>
+      <div class="brief placeholder calc-out" id="crcl-out">Enter age, weight and creatinine.</div></section>`;
+  const t2 = `<section class="card calc" data-calc="bmi"><div class="card-head"><div><h2>BMI and body surface area</h2><p class="sub">BSA by the Mosteller formula</p></div></div>
       <div class="form" style="padding:0">
         <label class="field">Weight (kg)<input id="b-wt" inputmode="decimal" placeholder="72"></label>
         <label class="field">Height (cm)<input id="b-ht" inputmode="decimal" placeholder="170"></label></div>
-      <div class="brief placeholder calc-out" id="bmi-out">Enter weight and height.</div></section>
-    <section class="card"><div class="card-head"><div><h2>Interaction check</h2><p class="sub">AI reviews a list of medicines for interactions</p></div></div>
+      <div class="brief placeholder calc-out" id="bmi-out">Enter weight and height.</div></section>`;
+  const t3 = `<section class="card"><div class="card-head"><div><h2>Interaction check</h2><p class="sub">AI reviews a list of medicines for interactions</p></div></div>
       <form class="form" id="ix-form" style="padding:0"><label class="field wide">Medicines (one per line or separated by commas)<textarea id="ix-in" placeholder="warfarin, clarithromycin, omeprazole"></textarea></label>
         <div class="btn-row"><button class="btn primary" type="submit" id="ix-go">${IC.ai}Check interactions</button></div></form>
-      <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>
+      <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>`;
+  return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
+  <div class="pgrid">
+    ${panel("tool-dose", "tools", "Weight-based dose", "mg/kg dosing", t0)}
+    ${panel("tool-crcl", "tools", "Creatinine clearance", "Cockcroft-Gault", t1)}
+    ${panel("tool-bmi", "tools", "BMI and BSA", "Mosteller formula", t2)}
+    ${panel("tool-ix", "ai", "Interaction check", "AI reviews medicines", t3)}
   </div>`;
 }
 function calc(){
@@ -1480,10 +1550,11 @@ function viewDeals(){
   const n = dealDefaultNext();
   let body = "";
   if (dealFilter === "open"){
-    for (const [k, l] of STAGES.slice(0, 3)){ const r = open.filter(d => d.stage === k).sort((a, b) => (a.nextAt || 9e15) - (b.nextAt || 9e15)); if (r.length) body += `<div class="group-head">${esc(l)} · ${r.length}</div><ul class="list">${r.map(d => dealRow(d)).join("")}</ul>`; }
+    const r = STAGES.slice(0, 3).flatMap(([k]) => open.filter(d => d.stage === k).sort((a, b) => (a.nextAt || 9e15) - (b.nextAt || 9e15)));
+    if (r.length) body = shortList("deals-all", "Open deals", r.map(d => dealRow(d)), 3);
   } else {
     const r = all.filter(d => dealFilter === "all" || d.stage === dealFilter).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    if (r.length) body = `<ul class="list">${r.map(d => dealRow(d)).join("")}</ul>`;
+    if (r.length) body = shortList("deals-all", ({done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter], r.map(d => dealRow(d)), 3);
   }
   return `${adder("deal", e ? "Edit client" : "New client or deal", `<form class="form" id="deal-form">
       <label class="field">Client or contact<input id="dl-client" required value="${esc(e?.client)}" placeholder="John Kamau" autocomplete="off"></label>
@@ -1602,24 +1673,33 @@ function viewSite(){
   return `<section class="card"><div class="card-head"><div><h2 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(web.site)}${(web.sites || []).length > 1 ? `<span class="seg">${web.sites.map(x => `<button data-vsite="${esc(x.domain)}" aria-pressed="${x.domain === web.site}">${esc(x.domain)}</button>`).join("")}</span>` : ""}</h2>
       <div class="row-meta">${status}${up}${linkBtn("https://" + web.site)}</div></div>
       <div class="btn-row"><button class="btn sm" id="web-refresh" ${web.loading ? "disabled" : ""}>${IC.refresh}${web.loading ? "Refreshing…" : "Refresh"}</button><button class="btn sm" id="web-check">${IC.check}Check site</button></div></div>
-      ${web.err ? `<p class="sub" style="color:var(--bad);margin:0">${esc(web.err)} Showing the last numbers saved on this device.</p>` : ""}</section>
+      ${web.err ? `<p class="sub" style="color:var(--bad);margin:0">${esc(web.err)} Showing the last numbers saved on this device.</p>` : ""}
+      ${installed ? "" : `<div class="notice" style="margin-top:10px"><p>Visits start once the counter line is on ${esc(web.site)}.</p><button class="btn sm primary" data-pop="v-code">See how</button></div>`}</section>
     <div class="stats">
       <div class="stat"><div class="n">${S ? S.today.uv : "–"}</div><div class="l">Visitors today</div></div>
       <div class="stat"><div class="n">${S ? S.today.pv : "–"}</div><div class="l">Page views today</div></div>
       <div class="stat"><div class="n">${S ? (S.live ? `<span class="live-dot"></span>` : "") + S.live : "–"}</div><div class="l">On the site now</div></div>
       <div class="stat"><div class="n">${S ? S.uv7 : "–"}</div><div class="l">Visitors, last 7 days</div></div></div>
     ${st ? `<section class="card"><div class="card-head"><div><h2>Visitors per day</h2><p class="sub">${range} · ${S.uvAll} visitors · ${S.pvAll} page views · Kenya time</p></div>
-        <div class="seg">${[7, 30, 90].map(n => `<button data-vdays="${n}" aria-pressed="${web.days === n}">${n} days</button>`).join("")}</div></div>
+        <div class="seg">${[7, 30, 90].map(n => `<button data-vdays="${n}" aria-pressed="${web.days === n}" aria-label="${n} days">${n}d</button>`).join("")}</div></div>
         ${visitsChart(st.days)}</section>
-      <div class="grid2">
-        ${listCard("Top pages", range, rows(top.path, k => k === "/" ? "Home page" : k), "No page views yet.")}
-        ${listCard("Where visitors come from", range + " · Direct means typed in or from an app", rows(top.ref), "No visitors yet.")}
-        ${listCard("Countries", range, rows(top.country, countryName), "No visitors yet.")}
-        ${listCard("Devices", range, rows(top.device), "No visitors yet.")}
-      </div>` : ""}
-    ${siteInstallCard(installed)}
-    <section class="card"><div class="card-head"><div><h2>Your own visits</h2><p class="sub">Stop counting yourself: open the site once with this link on each phone or computer you use.</p></div></div>
-      <div class="btn-row"><button class="btn" data-link="https://${esc(web.site)}/?task_ignore=1">${IC.site}Don't count this device</button><button class="btn ghost" id="web-remove">Disconnect ${esc(web.site)}</button></div></section>`;
+      ` : ""}
+    <div class="pgrid">
+      ${st ? panel("v-pages", "projects", "Top pages", top.path?.[0] ? (top.path[0][0] === "/" ? "Home page" : top.path[0][0]) + " leads" : "No views yet", listCard("Top pages", range, rows(top.path, k => k === "/" ? "Home page" : k), "No page views yet."), range) : ""}
+      ${st ? panel("v-ref", "insights", "Where they come from", top.ref?.[0] ? top.ref[0][0] + " leads" : "No visitors yet", listCard("Sources", "Direct means typed in or from an app", rows(top.ref), "No visitors yet."), range) : ""}
+      ${st ? panel("v-country", "site", "Countries", top.country?.[0] ? countryName(top.country[0][0]) + " leads" : "No visitors yet", listCard("Countries", range, rows(top.country, countryName), "No visitors yet."), range) : ""}
+      ${st ? panel("v-device", "user", "Devices", top.device?.[0] ? top.device[0][0] + " leads" : "No visitors yet", listCard("Devices", range, rows(top.device), "No visitors yet."), range) : ""}
+      ${panel("v-code", "copy", installed ? "Counter code" : "Add the counter", installed ? "Installed" : "One line for the site", siteInstallCard(installed), "")}
+      ${panel("v-own", "settings", "Your own visits", "Don't count yourself", `<section class="card"><p class="sub" style="margin:0 0 12px">Open the site once with this link on each phone or computer you use, and those visits stop counting.</p>
+        <div class="btn-row"><button class="btn" data-link="https://${esc(web.site)}/?task_ignore=1">${IC.site}Don't count this device</button><button class="btn ghost" id="web-remove">Disconnect ${esc(web.site)}</button></div></section>`, "")}
+    </div>`;
+}
+const oneNotice = html => (html.match(/<div class="notice">[\s\S]*?<\/div>/) || [""])[0];
+function siteTodayPanel(){
+  if (inClaude || !signedIn()) return "";
+  const S = webSummary();
+  if (!web.site) return `<button class="pbtn" data-nav="site">${IC.site}<span><b>Website visits</b><small>Connect brandbridge.site</small></span>${IC.chev}</button>`;
+  return `<button class="pbtn" data-nav="site">${IC.site}<span><b>${esc(web.site)}</b><small>${S ? `${S.today.uv} visitor${S.today.uv === 1 ? "" : "s"} today${S.live ? ` · ${S.live} on now` : ""}` : "Loading visits…"}</small></span>${IC.chev}</button>`;
 }
 function siteTodayCard(){
   if (inClaude || !signedIn() || !web.site) return "";
@@ -1630,13 +1710,33 @@ function siteTodayCard(){
 
 function dealDefaultNext(){ const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); }
 
+/* ---------- Pop-up panels ---------- */
+// Views register their extra detail here while rendering; a panel button opens it in a pop-up.
+let POPS = {}, popKey = null;
+function panel(key, icon, title, meta, html, sub){ POPS[key] = {title, sub: sub ?? meta, html}; return `<button class="pbtn" data-pop="${key}">${IC[icon] || IC.more}<span><b>${esc(title)}</b><small>${esc(meta)}</small></span>${IC.chev}</button>`; }
+// Shows the first few rows; the rest open in a pop-up.
+// Pages show a short summary of each row; the pop-up has the full rows with notes and actions.
+function shortList(key, title, rows, n = 3, sub = ""){
+  if (!rows.length) return "";
+  POPS[key] = {title, sub: sub || rows.length + (rows.length === 1 ? " item" : " items"), html: `<section class="card"><ul class="list">${rows.join("")}</ul></section>`};
+  return `<ul class="list">${rows.slice(0, n).join("")}</ul><button class="btn see-all" data-pop="${key}">${rows.length > n ? "See all " + rows.length : "Open with details"}${IC.chev}</button>`;
+}
+function openPop(k){ if (!POPS[k]) return; popKey = k; fillPop(); $("#pop").hidden = false; document.body.classList.add("pop-open"); }
+function fillPop(){ const p = POPS[popKey]; if (!p) return closePop(); $("#pop-title").textContent = p.title; $("#pop-sub").textContent = p.sub || ""; $("#pop-sub").hidden = !p.sub; $("#pop-body").innerHTML = p.html; }
+function closePop(){ popKey = null; const el = $("#pop"); if (!el || el.hidden) return; el.hidden = true; $("#pop-body").innerHTML = ""; document.body.classList.remove("pop-open"); }
+document.querySelector("#pop [data-popclose]").innerHTML = IC.close;
+document.getElementById("pop").addEventListener("click", e => { if (e.target.id === "pop") closePop(); });
+
 const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
   const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   const openStates = [...document.querySelectorAll("details.adder")].map(d => [d.dataset.form, d.open]);
+  POPS = {};
   $("#views").innerHTML = VIEWS[view]();
+  // Keep an open pop-up current, unless you're typing in it.
+  if (popKey){ const a = document.activeElement; if (!POPS[popKey]) closePop(); else if (!($("#pop").contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) fillPop(); }
   openStates.forEach(([k, o]) => { const d = document.querySelector(`details.adder[data-form="${k}"]`); if (d && o) d.open = true; });
   if (focusId === "global-search"){ const el = $("#global-search"); el?.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} }
   if (focusId === "card-search"){ const el = $("#card-search"); el?.focus(); try { el.setSelectionRange(selStart, selStart); } catch {} }
@@ -1668,6 +1768,8 @@ document.addEventListener("click", async ev => {
   if (t.id === "new-btn"){ const m = $("#new-menu"); m.hidden = !m.hidden; t.setAttribute("aria-expanded", String(!m.hidden)); return; }
   if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
+  if (d.pop){ openPop(d.pop); return; }
+  if (d.popclose){ closePop(); return; }
   if (d.nav){ editing = null; return go(d.nav); }
   if (d.go){ editing = null; return go(d.go, {open: d.open}); }
   if (d.toggle){ const r = byId(d.toggle); if (r) toggleTask(r); return; }
@@ -1677,7 +1779,7 @@ document.addEventListener("click", async ev => {
     setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.innerHTML = IC.trash; t.setAttribute("aria-label", "Delete"); } }, 3000);
     return;
   }
-  if (d.edit){ editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library"; render(); window.scrollTo(0, 0);
+  if (d.edit){ closePop(); editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library"; render(); window.scrollTo(0, 0);
     setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 0); return; }
   if (t.hasAttribute("data-cancel")){ editing = null; draftCard = null; openForm = null; render(); return; }
   if (d.checked){ const r = byId(d.checked); if (r) put({...r, checkedAt: now()}); return; }
@@ -1827,7 +1929,7 @@ document.addEventListener("submit", ev => {
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
   if (locked){ if (/^\d$/.test(ev.key)) pressKey(ev.key); else if (ev.key === "Backspace") pressKey("del"); return; }
-  if (ev.key === "Escape") closeLinkMenu();
+  if (ev.key === "Escape"){ closeLinkMenu(); closePop(); }
   if (ev.key === "Escape"){ closeMenu(); document.body.classList.remove("sheet-open"); }
 });
 
