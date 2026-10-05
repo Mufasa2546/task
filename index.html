@@ -230,6 +230,7 @@ textarea{resize:vertical;min-height:80px}
 .msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
 .msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:5px}
 .msg.sys{align-self:center;font-size:13px;color:var(--muted);text-align:center;background:none}
+.ai-keys .row{flex-wrap:wrap}.ai-model{flex:1 1 100%}.ai-model:empty{display:none}.ai-model>span{font-size:13px;color:var(--muted)}.ai-model select{width:100%;font-size:13px;min-height:34px;padding:4px 28px 4px 10px}
 .ai-pick{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 12px 0;font-size:13px;color:var(--muted)}.ai-pick select{width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px}
 .chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
 .chat-form textarea{min-height:44px;height:44px;max-height:140px}
@@ -1315,12 +1316,12 @@ function keyCard(){
   const ks = aiKeys(), order = aiOrder(), models = lsGet("task.aiModels", {});
   const rows = Object.entries(AI_PROV).filter(([p]) => ks[p]).map(([p, P]) => { const main = order[0] === p, list = models[p] || [], m = aiModel(p);
     return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${main ? `<span class="pill s-good">Main</span>` : ""}</div>
-      <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span>${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></div>
-      <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div></li>`; }).join("");
-  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini or OpenRouter. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+      <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span></div></div>
+      <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div><div class="ai-model">${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></li>`; }).join("");
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini, Groq, Mistral or another AI. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
     ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
-    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button></form>
-    <p class="sub" style="margin:8px 0 0">Get a key: ${Object.values(AI_PROV).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells which one it is.</p>
+    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 200px"><select id="api-prov" aria-label="Which AI is this key from" style="flex:0 1 150px;width:auto"><option value="">Detect AI</option>${Object.entries(AI_PROV).map(([p, P]) => `<option value="${p}">${esc(P.short)}</option>`).join("")}</select><button class="btn primary" type="submit" id="key-save">Save key</button></form>
+    <p class="sub" style="margin:8px 0 0">Free keys: ${Object.values(AI_PROV).filter(P => P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Paid: ${Object.values(AI_PROV).filter(P => !P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells most keys apart; for Mistral or Cohere, pick it in the list.</p>
     <p class="caution" style="margin-top:12px">Never share a key or post it anywhere. Anyone who has it can spend your credit. If one leaks, delete it where you made it and make a new one.</p></section>`;
 }
 async function testKey(btn, p){
@@ -1532,7 +1533,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.12";
+const APP_VERSION = "2.13";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2654,8 +2655,8 @@ document.addEventListener("submit", ev => {
   else if (f === "quiz-form") makeQuiz();
   else if (f === "chat-form") sendChat();
   else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
-    if (!k) return; const p = provOfKey(k);
-    if (!p){ toast("That doesn't look like a Claude, ChatGPT, Gemini or OpenRouter key. Copy the whole key and try again."); return; }
+    if (!k) return; const p = v("#api-prov") || provOfKey(k);
+    if (!p){ toast("Task can't tell which AI this key is from. Pick it in the list next to the box, then save."); return; }
     aiSet("task.aiKeys", {...aiKeys(), [p]: k}); if (!aiOrder().length || aiOrder().length === 1) aiSet("task.aiMain", p);
     aiState = "unknown"; $("#api-key").value = ""; document.activeElement?.blur(); render(); testKey($("#key-save"), p); }
 });
@@ -2800,7 +2801,7 @@ const tools = [
 let aiCtl = null, briefCache = "";
 const aiOffText = () => inClaude ? "Task AI isn't available in this view. Open the app on claude.ai while signed in."
   : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
-  : "Add an AI key (Claude, ChatGPT, Gemini or OpenRouter) under AI settings at the bottom of Task AI to turn on the assistant.";
+  : "Add an AI key (Claude, ChatGPT, Gemini, Groq and more; several are free) under AI settings at the bottom of Task AI to turn on the assistant.";
 async function getSample(){
   const s = await cap("sample");
   if (s){ aiState = "ready"; return s; }
@@ -2812,8 +2813,16 @@ const AI_PROV = {
   anthropic: {name: "Anthropic (Claude)", short: "Claude", link: "https://console.anthropic.com/settings/keys"},
   openai: {name: "OpenAI (ChatGPT)", short: "ChatGPT", link: "https://platform.openai.com/api-keys", base: "https://api.openai.com/v1"},
   gemini: {name: "Google Gemini", short: "Gemini", link: "https://aistudio.google.com/apikey", base: "https://generativelanguage.googleapis.com/v1beta/openai"},
-  openrouter: {name: "OpenRouter", short: "OpenRouter", link: "https://openrouter.ai/keys", base: "https://openrouter.ai/api/v1", model: "openrouter/auto"}};
-const provOfKey = k => /^sk-ant-/.test(k) ? "anthropic" : /^sk-or-/.test(k) ? "openrouter" : /^AIza/.test(k) ? "gemini" : /^sk-/.test(k) ? "openai" : "";
+  openrouter: {name: "OpenRouter", short: "OpenRouter", link: "https://openrouter.ai/keys", base: "https://openrouter.ai/api/v1", model: "openrouter/auto", free: 1},
+  // Free tiers (rate-limited, no card needed). All speak the OpenAI chat format.
+  groq: {name: "Groq", short: "Groq", link: "https://console.groq.com/keys", base: "https://api.groq.com/openai/v1", free: 1, prefer: [/gpt-oss-120b/, /llama-4-maverick/, /llama-3\.3-70b/, /qwen/]},
+  cerebras: {name: "Cerebras", short: "Cerebras", link: "https://cloud.cerebras.ai", base: "https://api.cerebras.ai/v1", free: 1, prefer: [/gpt-oss-120b/, /qwen-3.*235b/, /llama-3\.3-70b/, /llama/]},
+  mistral: {name: "Mistral", short: "Mistral", link: "https://console.mistral.ai/api-keys", base: "https://api.mistral.ai/v1", free: 1, prefer: [/^mistral-medium-latest$/, /^mistral-large-latest$/, /^mistral-small-latest$/]},
+  huggingface: {name: "Hugging Face", short: "Hugging Face", link: "https://huggingface.co/settings/tokens", base: "https://router.huggingface.co/v1", free: 1, prefer: [/^deepseek-ai\/DeepSeek-V\d/, /^openai\/gpt-oss-120b/, /^Qwen\/Qwen3/, /llama/i]},
+  cohere: {name: "Cohere", short: "Cohere", link: "https://dashboard.cohere.com/api-keys", base: "https://api.cohere.ai/compatibility/v1", free: 1, prefer: [/^command-a-\d/, /^command-r-plus/, /^command/]}};
+AI_PROV.gemini.free = 1;
+// Most keys show where they're from; Mistral and Cohere keys don't, so those are picked from the list when saving.
+const provOfKey = k => /^sk-ant-/.test(k) ? "anthropic" : /^sk-or-/.test(k) ? "openrouter" : /^AIza/.test(k) ? "gemini" : /^gsk_/.test(k) ? "groq" : /^csk-/.test(k) ? "cerebras" : /^hf_/.test(k) ? "huggingface" : /^sk-/.test(k) ? "openai" : "";
 function aiKeys(){
   const ks = lsGet("task.aiKeys", {});
   try { const old = localStorage.getItem("task.apiKey"); if (old && !ks.anthropic){ ks.anthropic = old; lsSet("task.aiKeys", ks); } } catch {}
@@ -2861,15 +2870,18 @@ async function aiPickModel(p){
   if (!res.ok) throw {code: "upstream_error"};
   const ids = ((await res.json()).data || []).map(m => ({id: String(m.id).replace(/^models\//, ""), at: m.created || 0}));
   const ver = id => parseFloat((id.match(/(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+  const pref = AI_PROV[p].prefer, rank = id => { const i = pref.findIndex(re => re.test(id)); return i < 0 ? 99 : i; };
   const ok = p === "openai" ? ids.filter(m => /^gpt-\d/.test(m.id) && !/audio|realtime|image|tts|transcri|search|codex|instruct|batch|nano|-pro|\d{4}-\d\d-\d\d/.test(m.id))
-    : ids.filter(m => /^gemini-[\d.]+-(flash|pro)(-latest)?$/.test(m.id));
-  ok.sort((a, b) => ver(b.id) - ver(a.id) || b.at - a.at || /mini|flash/.test(a.id) - /mini|flash/.test(b.id));
+    : p === "gemini" ? ids.filter(m => /^gemini-[\d.]+-(flash|pro)(-latest)?$/.test(m.id))
+    : ids.filter(m => !/embed|whisper|tts|guard|vision|-vl\b|audio|moderation|ocr|rerank|transcri|image|realtime|playai|compound|codestral|devstral/i.test(m.id));
+  if (pref) ok.sort((a, b) => rank(a.id) - rank(b.id) || b.at - a.at);
+  else ok.sort((a, b) => ver(b.id) - ver(a.id) || b.at - a.at || /mini|flash/.test(a.id) - /mini|flash/.test(b.id));
   lsSet("task.aiModels", {...lsGet("task.aiModels", {}), [p]: ok.map(m => m.id).slice(0, 12)});
   const cur = aiModel(p); if (cur && ok.some(m => m.id === cur)) return cur;
-  const pick = ok[0]?.id || (p === "openai" ? "gpt-4.1-mini" : "gemini-2.5-flash");
+  const pick = ok[0]?.id || {openai: "gpt-4.1-mini", gemini: "gemini-2.5-flash", groq: "llama-3.3-70b-versatile", cerebras: "llama-3.3-70b", mistral: "mistral-small-latest", huggingface: "openai/gpt-oss-120b", cohere: "command-a-03-2025"}[p];
   aiSet("task.aiModel", {...lsGet("task.aiModel", {}), [p]: pick}); return pick;
 }
-// OpenAI-style chat (OpenAI, Gemini and OpenRouter all speak it), with the same page tools.
+// OpenAI-style chat (every provider except Anthropic speaks it), with the same page tools.
 async function openaiSample(p, input, opts = {}){
   const P = AI_PROV[p]; let model = aiModel(p) || await aiPickModel(p);
   const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: String(m.content)}));
