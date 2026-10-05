@@ -348,6 +348,7 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .pbtn > svg:last-child{width:16px;height:16px;flex:none;color:var(--muted)}
 .today-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
 .today-grid .pgrid{grid-template-columns:minmax(0,1fr)}
+.today-grid .pgrid{gap:8px}.today-grid .pbtn{padding:9px 12px}
 .see-all{margin-top:8px;width:100%;justify-content:center}
 .content .list .row-notes,.content .list .row .btn-row,.content .list .by,.content .list .row-meta:has(> .btn){display:none}
 .content .list .row{padding:9px 0}
@@ -389,6 +390,15 @@ body.pop-open{overflow:hidden}
 .pop-body:has(.ext){padding:12px}
 .pop-body > .card:first-child > .card-head:first-child > div:first-child:has(h2){display:none}
 .pop-body > .card:first-child > .card-head:first-child:not(:has(button,.pill,.seg)){display:none}
+/* Daily practice */
+.daily-tip{background:color-mix(in srgb,var(--gold) 14%,var(--panel));border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);border-radius:var(--r-sm);padding:10px 12px;display:grid;gap:4px}
+.daily-tip b{display:flex;align-items:center;gap:6px;font-size:13px}.daily-tip b svg{width:15px;height:15px}
+.daily-tip p{margin:0;font-size:14px;line-height:1.45}.daily-tip small,.daily-q small{color:var(--muted);font-size:12px}
+.daily-done{display:grid;gap:2px;text-align:center;padding:14px;background:var(--sunk);border-radius:var(--r-sm)}.daily-done b{font-size:18px;font-family:var(--f-num)}.daily-done span{color:var(--muted);font-size:13px}
+.daily{display:grid;gap:12px}.daily-q{margin:0}.daily-q .row-meta{justify-content:space-between;margin-bottom:6px}
+.linkish{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+.pop-body > .card.daily{border:0;padding:0;background:none;box-shadow:none}
+@media (min-width:600px){.daily-q .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
 /* Library */
 .lib-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lib-form .search{flex:1 1 220px;min-width:0}.lib-form .search input{width:100%}
@@ -417,7 +427,7 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .stat .n{font-size:22px;min-height:25px}
   .stat .n.stat-money{font-size:13px!important}
   .stat .l{font-size:11px;line-height:1.25;margin-top:3px}
-  .hero{padding:16px}
+  .hero{padding:13px 16px}
   .notice{padding:10px 12px;font-size:13px;gap:8px}
   .content .card:not(.hero) .card-head .sub{display:none}
   .hero .avatar{display:none}
@@ -425,11 +435,13 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .notice p{flex:1 1 150px}
   .today-grid{grid-template-columns:minmax(0,1fr)!important}
   .today-grid .list > .row:nth-child(n+3){display:none}
-  .today-grid .pgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .today-grid .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}
+  .today-grid .pbtn{flex-direction:column;align-items:flex-start;gap:5px;padding:9px 10px}
+  .today-grid .pbtn b{font-size:12.5px}.today-grid .pbtn small{font-size:11px}
   .copyright{padding:8px 16px calc(var(--nav-h) + 10px + env(safe-area-inset-bottom,0px));font-size:11px;border-top:0}
   .card-head{margin-bottom:8px}
   .hero .btn-row{display:none}
-  .hero h2{font-size:20px}
+  .hero h2{font-size:19px}
   .card{padding:14px}
   .content{gap:12px}
   .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -1046,6 +1058,7 @@ function viewToday(){
     ${schedule.length || unscheduled.length ? shortList("today-all", "Today's schedule", [...schedule.map(s => s.html), ...unscheduled.map(taskRow)], 3, "Meetings, follow-ups and goals") : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
   </section>
   <div class="pgrid">
+    ${(dailyAuto(), panel("daily", "learn", "Daily practice", dailyMeta(), `<section class="card daily">${dailyHTML()}</section>`, "From your books, works offline"))}
     ${panel("brief", "ai", "Daily briefing", briefCache ? "Ready to read" : "Summary of your day", `<section class="card"><div class="card-head"><p class="sub" style="margin:0">Meetings, Brandbridge clients, goals, pharmacy and study.</p><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div><div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Tap Brief me for a short summary of your day.")}</div></section>`)}
     ${panel("attention", "stock", "Needs attention", expiring.length + attention.length ? `${expiring.length + attention.length} item${expiring.length + attention.length === 1 ? "" : "s"}` : "All clear", `<section class="card">
         ${expiring.length ? `<ul class="list">${expiring.slice(0, 6).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
@@ -1137,7 +1150,7 @@ function cardFacts(c){ return `<dl class="facts">${FIELDS.filter(([k]) => c[k]).
 const boxDots = b => `<span class="box-dots" title="Memory level ${b || 1} of 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= (b || 1) ? "on" : ""}"></i>`).join("")}</span>`;
 function viewLearn(){
   const cards = of("card"), due = cardsDue();
-  const tabs = `<div class="seg">${[["review", `Review${due.length ? ` (${due.length})` : ""}`], ["library", `Drug cards (${cards.length})`], ["quiz", "AI quiz"]].map(([k, l]) => `<button data-ltab="${k}" aria-pressed="${learnTab === k}">${l}</button>`).join("")}</div>`;
+  const tabs = `<div class="seg">${[["daily", "Daily"], ["review", `Review${due.length ? ` (${due.length})` : ""}`], ["library", `Drug cards (${cards.length})`], ["quiz", "AI quiz"]].map(([k, l]) => `<button data-ltab="${k}" aria-pressed="${learnTab === k}">${l}</button>`).join("")}</div>`;
   const mastered = cards.filter(c => (c.box || 1) >= 4).length;
   const head = `<div class="stats">
     <div class="stat"><div class="n">${cards.length}</div><div class="l">Drug cards</div></div>
@@ -1146,7 +1159,8 @@ function viewLearn(){
     <div class="stat"><div class="n">${streak()}</div><div class="l">Day streak</div></div></div>
     <div class="btn-row" style="justify-content:space-between">${tabs}</div>`;
   let body = "";
-  if (learnTab === "review"){
+  if (learnTab === "daily"){ dailyAuto(); body = `<section class="card daily">${dailyHTML()}</section>`; }
+  else if (learnTab === "review"){
     if (!reviewQueue || !reviewQueue.length){
       body = `<section class="card"><div class="card-head"><div><h2>${due.length ? `${due.length} card${due.length > 1 ? "s" : ""} ready` : "You're all caught up"}</h2><p class="sub">Cards you know come back less often. Missed cards come back soon.</p></div>
         ${due.length ? `<button class="btn primary" id="start-review">Start review</button>` : `<button class="btn" data-ltab="library">Add drug cards</button>`}</div>
@@ -1457,7 +1471,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.7.2";
+const APP_VERSION = "2.8";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1804,7 +1818,7 @@ async function libImport(files){
       if (m.startsWith("convert:")){ toast(`${title} is a .${m.slice(8)} file. Save or convert it to PDF, then add it.`); continue; }
       toast(e?.message === "unsupported" ? `${file.name}: use PDF, Word (.docx) or text files.` : e?.name === "QuotaExceededError" ? "Your device is out of space for more books." : `Couldn't read ${file.name}. Try saving it as a PDF again.`); }
   }
-  libBusy = false; if (added) toast(`${added} book${added > 1 ? "s" : ""} added to your library.`); libUsageCheck(); render();
+  libBusy = false; if (added) dailyTried = ""; if (added) toast(`${added} book${added > 1 ? "s" : ""} added to your library.`); libUsageCheck(); render();
 }
 async function libUsageCheck(){ try { const e = await navigator.storage.estimate(); libUsage = e.usage; if (view === "books") render(); } catch {} }
 async function libRun(q){
@@ -1905,6 +1919,73 @@ function viewBooks(){
   return ask + `<div class="pgrid">${panel("lib-books", "book", "My books", libBooks.length ? `${libBooks.length} on this device` : "Add PDFs or Word files", libBooksHTML(), "On this device only")}
     ${panel("lib-zim", "tools", "Suggested books", "Zimbabwe law, EDLIZ, textbooks", libShelf(), "What to add")}</div>`;
 }
+
+/* ---------- Daily practice: questions and a tip every day, ready offline ---------- */
+// Claude writes a pack from your books while you're online; Task hands out 5 questions and a tip a day from it.
+// With no pack left, questions and tips come straight from your books.
+const DAILY_N = 5;
+let daily = {pack: [], tips: [], day: "", set: [], tip: null, i: 0, refilledAt: 0, streak: 0, lastDone: "", ...lsGet("task.daily", {})};
+const saveDaily = () => lsSet("task.daily", daily);
+let dailyBusy = false;
+async function libRandomChunks(n){
+  const mem = await libLoad(), good = mem.filter(c => c.t.length > 500 && libBook(c.b)?.cat !== "other" || c.t.length > 800);
+  const pool = good.length ? good : mem, out = [];
+  for (let k = 0; k < n * 4 && out.length < n && pool.length; k++){ const c = pool[Math.floor(Math.random() * pool.length)]; if (!out.includes(c)) out.push(c); }
+  return out;
+}
+const TIP_CUE = /\b(should|must|always|never|avoid|do not|don't|counsel|monitor|caution|refer|check|ensure|advise)\b/i;
+async function dailyOffline(){
+  const qs = [], chunks = await libRandomChunks(6);
+  for (const c of chunks){ if (qs.length >= DAILY_N) break; const terms = libTok(c.t.slice(0, 200)).slice(0, 3);
+    qs.push(...libQuiz(terms.join(" "), [{c, terms, hit: 1, score: 1}], 2).map(q => ({...q, why: "", src: libWhere(c)}))); }
+  let tip = null;
+  for (const c of await libRandomChunks(12)){ const s = c.t.replace(/\s+/g, " ").split(/(?<=[.;])\s+(?=[A-Z])/).find(x => TIP_CUE.test(x) && x.length > 50 && x.length < 240 && /^[A-Z][a-z]/.test(x) && !/[?|{}<>@#_~]|\s[a-z]\s[A-Z|]/.test(x) && (x.match(/[a-z]/g) || []).length > x.length * .6); if (s){ tip = {text: s, src: libWhere(c)}; break; } }
+  return {qs: qs.slice(0, DAILY_N), tip};
+}
+async function dailyEnsure(){
+  if (daily.day === dayKey(now())) return;
+  let qs = daily.pack.splice(0, DAILY_N), tip = daily.tips.shift() || null;
+  if ((qs.length < DAILY_N || !tip) && libBooks.length){ try { const off = await dailyOffline(); qs = qs.concat(off.qs).slice(0, DAILY_N); tip ||= off.tip; } catch {} }
+  if (!qs.length && !tip) return;
+  Object.assign(daily, {day: dayKey(now()), set: qs.map(q => ({...q, picked: null})), tip, i: 0}); saveDaily();
+}
+async function dailyRefill(force){
+  if (dailyBusy || !libBooks.length || !navigator.onLine) return;
+  if (!force && (daily.pack.length >= 20 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
+  const sample = await getSample(); if (!sample) return;
+  dailyBusy = true; if (force) render();
+  try {
+    const chunks = await libRandomChunks(6);
+    const cards = of("card").map(c => c.drug).slice(0, 30).join(", ");
+    const r = await askJson(sample, `You are preparing daily study material for a practising pharmacist in Zimbabwe, from his own books. Use ONLY facts stated in these passages:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n${cards ? "Drugs he is studying: " + cards + "\n\n" : ""}Return JSON {"questions": [...], "tips": [...]}. Write 12 multiple-choice questions: practical scenarios, doses, first-line choices, monitoring, counselling, legal duties. Each: {"q": question, "options": [4 short options], "answer": index 0-3, "why": one sentence, "src": the passage label exactly as given, e.g. "${libWhere(chunks[0])}"}. Vary the correct position. Then 4 practical tips, each {"text": one or two sentences a pharmacist can use today, "src": passage label}. If a passage has nothing useful, skip it.`);
+    const qs = (r?.questions || []).filter(q => q?.q && Array.isArray(q.options) && q.options.length >= 2 && Number.isInteger(+q.answer)).map(q => ({q: String(q.q), options: q.options.map(String), answer: +q.answer, why: String(q.why || ""), src: String(q.src || "")}));
+    const tips = (r?.tips || []).filter(t => t?.text).map(t => ({text: String(t.text), src: String(t.src || "")}));
+    daily.pack.push(...qs); daily.tips.push(...tips); daily.refilledAt = now(); saveDaily();
+    if (force) toast(`Added ${qs.length} questions and ${tips.length} tips for offline days.`);
+  } catch (e){ if (force) toast(errCopy(e)); }
+  dailyBusy = false; if (force || view === "learn" || view === "today") render();
+}
+function dailyHTML(){
+  const set = daily.set || [], done = set.filter(q => q.picked != null).length, right = set.filter(q => q.picked === q.answer).length;
+  const canAI = inClaude || !!apiKey();
+  const tip = daily.tip ? `<div class="daily-tip"><b>${IC.ai}Tip of the day</b><p>${esc(daily.tip.text)}</p>${daily.tip.src ? `<small>${esc(daily.tip.src)}</small>` : ""}</div>` : "";
+  const status = `<p class="sub" style="margin:0">${daily.pack.length ? `${daily.pack.length} questions saved for offline days.` : libBooks.length ? "No saved questions yet. Questions come straight from your books." : "Add books to your Library for daily questions."}${canAI && libBooks.length ? ` <button class="linkish" data-dailymore="1" ${dailyBusy ? "disabled" : ""}>${dailyBusy ? "Preparing…" : "Prepare more"}</button>` : ""}</p>`;
+  if (!set.length) return tip + (libBooks.length ? `<div class="btn-row"><button class="btn primary" data-dailystart="1">Start today's questions</button></div>` : `<div class="btn-row"><button class="btn primary" data-nav="books">${IC.book}Open Library</button></div>`) + status;
+  if (daily.i >= set.length) return tip + `<div class="daily-done"><b>${right} of ${set.length} correct today</b><span>${daily.streak > 1 ? daily.streak + "-day streak. " : ""}New questions tomorrow.</span></div><div class="btn-row"><button class="btn sm" data-dailyi="0">Go over them again</button></div>` + status;
+  const q = set[daily.i], ans = q.picked != null;
+  return `<div class="quiz-q daily-q"><div class="row-meta"><span>Question ${daily.i + 1} of ${set.length}</span><span>${right} correct</span></div><div class="q">${esc(q.q)}</div>
+    <div class="opts">${q.options.map((o, j) => `<button class="opt ${ans ? (j === q.answer ? "right" : j === q.picked ? "wrong" : "") : ""}" data-dpick="${j}" ${ans ? "disabled" : ""}>${String.fromCharCode(65 + j)}. ${esc(o)}</button>`).join("")}</div>
+    ${ans ? `<div class="why">${esc(q.why || "")}${q.src ? `<br><small>${esc(q.src)}</small>` : ""}</div>` : ""}</div>
+    <div class="btn-row" style="justify-content:space-between">${daily.i ? `<button class="btn sm" data-dailyi="${daily.i - 1}">Back</button>` : "<span></span>"}${ans ? `<button class="btn sm primary" data-dailyi="${daily.i + 1}">${daily.i + 1 < set.length ? "Next" : "Finish"}${IC.chev}</button>` : ""}</div>`;
+}
+function dailyMeta(){ const set = daily.set || []; if (daily.day !== dayKey(now()) || !set.length) return libBooks.length ? "5 questions and a tip" : "Add books first"; const left = set.filter(q => q.picked == null).length; return left ? `${left} of ${set.length} left today` : "Done for today"; }
+function dailyPick(j){
+  const q = daily.set[daily.i]; if (!q || q.picked != null) return; q.picked = j;
+  if (daily.set.every(x => x.picked != null) && daily.lastDone !== dayKey(now())){ daily.streak = daily.lastDone === dayKey(now() - DAY) ? (daily.streak || 0) + 1 : 1; daily.lastDone = dayKey(now()); }
+  saveDaily(); render();
+}
+let dailyTried = "";
+const dailyAuto = () => { if (daily.day !== dayKey(now()) && dailyTried !== dayKey(now()) && (daily.pack.length || libBooks.length)){ dailyTried = dayKey(now()); dailyEnsure().then(() => { if (view === "today" || view === "learn") render(); }).catch(() => {}); } };
 
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
@@ -2218,6 +2299,10 @@ document.addEventListener("click", async ev => {
   if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.pop){ openPop(d.pop); return; }
+  if (d.dpick != null){ dailyPick(+d.dpick); return; }
+  if (d.dailyi != null){ daily.i = +d.dailyi; saveDaily(); render(); return; }
+  if (d.dailystart){ dailyTried = dayKey(now()); await dailyEnsure(); if (!daily.set?.length) toast("Couldn't make questions yet. Add a book with readable text."); render(); return; }
+  if (d.dailymore){ dailyRefill(true); return; }
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
@@ -2719,6 +2804,8 @@ addEventListener("online", () => syncNow());
 document.addEventListener("visibilitychange", () => { if (!document.hidden) syncNow(); });
 setInterval(() => { updateTitle(); checkReminders(); }, 15000);
 setTimeout(checkReminders, 1500);
+setTimeout(() => dailyRefill(), 20000);
+addEventListener("online", () => setTimeout(() => dailyRefill(), 5000));
 document.addEventListener("pointerdown", unlockAudio, {once: true});
 connectCloud();
 })();
