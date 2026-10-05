@@ -221,7 +221,7 @@ textarea{resize:vertical;min-height:80px}
 .pop-box{position:relative}
 .pop-box .more-arrow{position:absolute;bottom:12px}
 @keyframes nudge{50%{transform:translate(-50%,3px)}}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 4px;scrollbar-width:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px 4px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:1px solid var(--line-strong);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}
 .chip:hover{border-color:var(--accent);color:var(--accent)}
@@ -231,7 +231,7 @@ textarea{resize:vertical;min-height:80px}
 .msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:5px}
 .msg.sys{align-self:center;font-size:13px;color:var(--muted);text-align:center;background:none}
 .ai-keys .row{flex-wrap:wrap}.ai-model{flex:1 1 100%}.ai-model:empty{display:none}.ai-model>span{font-size:13px;color:var(--muted)}.ai-model select{width:100%;font-size:13px;min-height:34px;padding:4px 28px 4px 10px}
-.ai-pick{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 12px 0;font-size:13px;color:var(--muted)}.ai-pick select{width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px}
+.ai-pick{display:flex;align-items:center;justify-content:flex-end;gap:8px;white-space:nowrap;padding:8px 12px 0;font-size:13px;color:var(--muted)}.ai-pick select{flex:0 1 220px;min-width:0;width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px}
 .chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
 .chat-form textarea{min-height:44px;height:44px;max-height:140px}
 .brief{white-space:pre-wrap;font-size:14.5px;color:var(--fg)}
@@ -355,8 +355,8 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .pbtn:hover{border-color:var(--accent)}
 .pbtn > svg:first-child{width:20px;height:20px;flex:none;color:var(--accent)}
 .pbtn span{flex:1;min-width:0;display:grid;gap:1px}
-.pbtn b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pbtn small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbtn b{font-size:14px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pbtn small{font-size:12.5px;color:var(--muted);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .pbtn > svg:last-child{width:16px;height:16px;flex:none;color:var(--muted)}
 .today-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
 .today-grid .pgrid{grid-template-columns:minmax(0,1fr)}
@@ -366,7 +366,8 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .content .list .row{padding:9px 0}
 .content .list .row-title{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .content .list .row-main > .row-meta ~ .row-meta{display:none}
-.content .list .row-meta{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+.content .list .row-meta{flex-wrap:wrap;overflow:hidden;max-height:42px;white-space:nowrap}.content .list .row-meta>*{max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis}.content .list .row-meta>.pill{flex:none}
+.today-grid .list .row-meta{flex-wrap:nowrap;max-height:none}.today-grid .list .row-meta>*{flex:none}.today-grid .list .row-meta>:last-child{flex:0 1 auto}
 .pop{position:fixed;inset:0;z-index:80;display:grid;align-items:end;justify-items:center;background:rgba(4,12,24,.4);backdrop-filter:blur(6px) saturate(.9);-webkit-backdrop-filter:blur(6px) saturate(.9)}
 .pop[hidden]{display:none}
 .pop-box{width:100%;max-width:640px;max-height:88dvh;display:flex;flex-direction:column;background:var(--bg);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);overflow:hidden}
@@ -465,6 +466,12 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .pgrid:has(> :nth-child(4)){grid-template-columns:repeat(3,minmax(0,1fr))!important}
   .pgrid:has(> :nth-child(4)) .pbtn{flex-direction:column;align-items:flex-start;gap:5px;padding:9px 10px}
   .pgrid:has(> :nth-child(4)) .pbtn b{font-size:12.5px}.pgrid:has(> :nth-child(4)) .pbtn small{font-size:11px}
+  .pbtn b,.pbtn small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+  .chips .chip:nth-child(n+5){display:none}
+  .today-grid .pbtn,.pgrid:has(> :nth-child(4)) .pbtn{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;column-gap:6px;row-gap:0}
+  .today-grid .pbtn > svg:first-child,.pgrid:has(> :nth-child(4)) .pbtn > svg:first-child{width:16px;height:16px;margin-top:1px}
+  @media (max-width:430px){ .today-grid .pgrid,.pgrid:has(> :nth-child(4)){grid-template-columns:repeat(2,minmax(0,1fr))!important} }
+  @media (max-width:380px){ .pbtn b{font-size:12px!important} }
   /* Phone: the screen itself never scrolls and shows no scroll bar; each page is laid out to fit */
   html,body{height:100%;overflow:hidden}
   .shell{height:100dvh;min-height:0}
@@ -1314,11 +1321,13 @@ try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30);
 let aiState = "unknown";
 function keyCard(){
   const ks = aiKeys(), order = aiOrder(), models = lsGet("task.aiModels", {});
-  const rows = Object.entries(AI_PROV).filter(([p]) => ks[p]).map(([p, P]) => { const main = order[0] === p, list = models[p] || [], m = aiModel(p);
-    return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${main ? `<span class="pill s-good">Main</span>` : ""}</div>
+  const auto = aiAuto(), tops = Object.fromEntries(AI_JOBS.map(([j]) => [j, aiOrder(j)[0]]));
+  const rows = Object.entries(AI_PROV).filter(([p]) => ks[p]).map(([p, P]) => { const main = !auto && order[0] === p, list = models[p] || [], m = aiModel(p);
+    const jobs = auto ? AI_JOBS.filter(([j]) => tops[j] === p).map(([, l]) => `<span class="pill s-good">${l}</span>`).join(" ") : main ? `<span class="pill s-good">Only this</span>` : "";
+    return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${jobs}</div>
       <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span></div></div>
-      <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div><div class="ai-model">${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></li>`; }).join("");
-  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini, Groq, Mistral or another AI. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+      <div class="row-actions">${main || order.length < 2 ? "" : `<button class="btn sm" data-aimain="${p}">Use only</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div><div class="ai-model">${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></li>`; }).join("");
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length < 2 ? "Add another key as a backup if you like." : auto ? "Auto: each job goes to the best AI you have, shown by the tags. If one fails, Task tries the next." : `Using ${esc(AI_PROV[order[0]].short)} only. <button type="button" class="linkish" data-aimain="auto">Switch to Auto</button>`}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini, Groq, Mistral or another AI. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
     ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
     <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 200px"><select id="api-prov" aria-label="Which AI is this key from" style="flex:0 1 150px;width:auto"><option value="">Detect AI</option>${Object.entries(AI_PROV).map(([p, P]) => `<option value="${p}">${esc(P.short)}</option>`).join("")}</select><button class="btn primary" type="submit" id="key-save">Save key</button></form>
     <p class="sub" style="margin:8px 0 0">Free keys: ${Object.values(AI_PROV).filter(P => P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Paid: ${Object.values(AI_PROV).filter(P => !P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells most keys apart; for Mistral or Cohere, pick it in the list.</p>
@@ -1334,9 +1343,9 @@ async function testKey(btn, p){
 }
 function viewAI(){
   return `<section class="card chat">
-    <div class="chips">${["Plan my day", "Book a discovery call with Acme tomorrow at 10am", "Quiz me on antibiotics", "Which clients need a follow-up?", "Draft a proposal outline for an AI automation project", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="chips">${["Plan my day", "Who needs a follow-up?", "Quiz me on antibiotics", "Focus for this week?", "Draft an AI automation proposal", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
     <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.role === "user" ? m.content : plain(m.content))}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
-    ${!inClaude && aiOrder().length > 1 ? `<div class="ai-pick"><label for="ai-pick">Answer with</label><select id="ai-pick" data-aipick="1">${aiOrder().slice().sort((a, b) => Object.keys(AI_PROV).indexOf(a) - Object.keys(AI_PROV).indexOf(b)).map(p => `<option value="${p}" ${p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)}</option>`).join("")}</select></div>` : ""}
+    ${!inClaude && aiOrder().length > 1 ? `<div class="ai-pick"><label for="ai-pick">Answer with</label><select id="ai-pick" data-aipick="1"><option value="auto" ${aiAuto() ? "selected" : ""}>Auto (best for each job)</option>${Object.keys(AI_PROV).filter(p => aiKeys()[p]).map(p => `<option value="${p}" ${!aiAuto() && p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)} only</option>`).join("")}</select></div>` : ""}
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
   <div class="btn-row" style="justify-content:flex-end">${inClaude ? "" : `<button class="btn sm" data-pop="ai-key">${IC.settings}AI settings${apiKey() ? "" : ` <span class="pill s-warn">Off</span>`}</button>`}${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
@@ -1533,7 +1542,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.13";
+const APP_VERSION = "2.14";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2125,7 +2134,7 @@ async function dailyEnsure(){
 async function dailyRefill(force){
   if (dailyBusy || !navigator.onLine) return;
   if (!force && daily.refSig === libSig() && (daily.notes.length >= 30 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
-  const sample = await getSample(); if (!sample) return;
+  const sample = await getSample("study"); if (!sample) return;
   dailyBusy = true; if (force) render();
   try {
     const chunks = libBooks.length ? [...await libRandomChunks(5, SKIN_RE), ...await libRandomChunks(5, PHARM_RE)] : [];
@@ -2454,7 +2463,7 @@ function updateTitle(){
     tasks: `${c.tasks} open`, deals: `${c.deals} open · ${followUps().length} follow-up${followUps().length === 1 ? "" : "s"} due`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
-    insights: "Learned from your own data, on this device", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Dose, kidney function, BMI and interactions", books: libBooks.length ? `${libBooks.length} book${libBooks.length === 1 ? "" : "s"} on this device` : "Your own books, searchable offline", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
+    insights: "Patterns from your own data", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Doses, kidneys, BMI, interactions", books: libBooks.length ? `${libBooks.length} book${libBooks.length === 1 ? "" : "s"} on this device` : "Your own books, searchable offline", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -2478,7 +2487,7 @@ document.addEventListener("click", async ev => {
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
-  if (d.aimain){ aiSet("task.aiMain", d.aimain); toast(`${AI_PROV[d.aimain].short} is now your main AI.`); render(); return; }
+  if (d.aimain){ aiSet("task.aiMain", d.aimain); toast(d.aimain === "auto" ? "Task now picks the best AI for each job." : `Task now uses ${AI_PROV[d.aimain].short} for everything.`); render(); return; }
   if (d.aitest){ testKey(t, d.aitest); return; }
   if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key${signedIn() ? " from all your devices" : " from this device"}?`)){ delete ks[d.aidel]; aiSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
   if (d.libdel){ const b = libBook(d.libdel); if (b && confirm(`Remove ${b.title} from this device?`)){ await libDelBook(d.libdel); toast("Book removed."); render(); } return; }
@@ -2595,7 +2604,7 @@ document.addEventListener("change", async ev => {
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
-  if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(`Task AI now answers with ${AI_PROV[ev.target.value].short}.`); }
+  if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(ev.target.value === "auto" ? "Task now picks the best AI for each job." : `Task AI now answers with ${AI_PROV[ev.target.value].short}.`); render(); }
   if (ev.target.dataset?.aimodel){ aiSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
   if (ev.target.dataset?.libcat){ const b = libBook(ev.target.dataset.libcat); if (b){ b.cat = ev.target.value; saveLib(); } }
   if (id === "lib-filter"){ libFilter = ev.target.value; if (libQ) libRun(libQ); }
@@ -2657,7 +2666,7 @@ document.addEventListener("submit", ev => {
   else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
     if (!k) return; const p = v("#api-prov") || provOfKey(k);
     if (!p){ toast("Task can't tell which AI this key is from. Pick it in the list next to the box, then save."); return; }
-    aiSet("task.aiKeys", {...aiKeys(), [p]: k}); if (!aiOrder().length || aiOrder().length === 1) aiSet("task.aiMain", p);
+    aiSet("task.aiKeys", {...aiKeys(), [p]: k});
     aiState = "unknown"; $("#api-key").value = ""; document.activeElement?.blur(); render(); testKey($("#key-save"), p); }
 });
 document.addEventListener("keydown", ev => {
@@ -2802,10 +2811,10 @@ let aiCtl = null, briefCache = "";
 const aiOffText = () => inClaude ? "Task AI isn't available in this view. Open the app on claude.ai while signed in."
   : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
   : "Add an AI key (Claude, ChatGPT, Gemini, Groq and more; several are free) under AI settings at the bottom of Task AI to turn on the assistant.";
-async function getSample(){
+async function getSample(job){
   const s = await cap("sample");
   if (s){ aiState = "ready"; return s; }
-  if (apiKey() && navigator.onLine){ aiState = "ready"; return apiSample; }
+  if (apiKey() && navigator.onLine){ aiState = "ready"; const f = (i, o = {}) => apiSample(i, {...o, job}); f.limits = apiSample.limits; return f; }
   aiState = "off"; return null;
 }
 // AI keys: one per provider, all on this device only. The main one is used first; if it fails, Task tries the others.
@@ -2845,18 +2854,34 @@ function applyRemoteAi(){
   if (!x.ai["task.aiKeys"]?.anthropic) try { localStorage.removeItem("task.apiKey"); } catch {}
   aiState = "unknown"; return true;
 }
-const aiOrder = () => { const ks = aiKeys(), main = lsGet("task.aiMain", ""), have = Object.keys(AI_PROV).filter(p => ks[p]); return have.includes(main) ? [main, ...have.filter(p => p !== main)] : have; };
+// Which AI suits each job, best first. "Auto" uses the best one you have a key for, and falls back down the list.
+// chat: talking and using Task's tools · study: drug facts, notes, quizzes, library answers · quick: briefings and summaries.
+const AI_RANK = {chat: ["anthropic", "openai", "gemini", "openrouter", "mistral", "groq", "cerebras", "cohere", "huggingface"],
+  study: ["anthropic", "openai", "gemini", "mistral", "openrouter", "cohere", "groq", "cerebras", "huggingface"],
+  quick: ["groq", "cerebras", "gemini", "mistral", "anthropic", "openai", "openrouter", "cohere", "huggingface"]};
+const AI_JOBS = [["chat", "Chat"], ["study", "Study"], ["quick", "Quick jobs"]];
+// He asked for automatic choice, so v2.14 turns Auto on once; picking one AI later still sticks.
+if (!lsGet("task.aiAutoOn", 0)){ lsSet("task.aiMain", "auto"); lsSet("task.aiAutoOn", 1); }
+const aiAuto = () => { const m = lsGet("task.aiMain", "auto"); return !m || m === "auto" || !aiKeys()[m]; };
+function aiOrder(job){
+  const ks = aiKeys(), rank = AI_RANK[job] || AI_RANK.chat;
+  // OpenRouter on its free models is weaker, so it goes last.
+  const r = p => p === "openrouter" && aiModel(p) === "openrouter/free" ? 50 : rank.indexOf(p);
+  const have = Object.keys(AI_PROV).filter(p => ks[p]).sort((a, b) => r(a) - r(b));
+  const main = lsGet("task.aiMain", "auto");
+  return aiAuto() ? have : [main, ...have.filter(p => p !== main)];
+}
 const aiModel = p => lsGet("task.aiModel", {})[p] || AI_PROV[p].model || "";
 function apiKey(){ const p = aiOrder()[0]; return p ? aiKeys()[p] : ""; }
 // Standalone mode: call the main AI with the user's own key, then the other keys if it fails.
 async function apiSample(input, opts = {}){
-  const order = opts.only ? [opts.only] : aiOrder(); let last = {code: "bad_key"};
+  const order = opts.only ? [opts.only] : aiOrder(opts.job); let last = {code: "bad_key"};
   for (const p of order){
     let got = "";
     const o = {...opts, onText: x => { got = x.text; opts.onText?.(x); }};
     try {
       const r = p === "anthropic" ? await claudeSample(input, o) : await openaiSample(p, input, o);
-      if (p !== order[0] && !opts.only) toast(`Used your ${AI_PROV[p].short} key because ${AI_PROV[order[0]].short} didn't answer.`);
+      if (p !== order[0] && !opts.only) toast(`Used ${AI_PROV[p].short} because ${AI_PROV[order[0]].short} didn't answer.`);
       return r;
     } catch (e){ if (e?.code === "cancelled" || e?.code === "refused" || got) throw e; last = e; }
   }
@@ -2964,7 +2989,7 @@ async function sendChat(){
   box.value = ""; chat.push({role: "user", content: text}); saveChat();
   const log = $("#chat-log"); log.querySelector(".msg.sys")?.remove();
   log.insertAdjacentHTML("beforeend", `<div class="msg me">${esc(text)}</div><div class="msg ai" id="pending">Thinking...</div>`); log.scrollTop = log.scrollHeight;
-  const sample = await getSample(), bubble = () => $("#pending");
+  const sample = await getSample("chat"), bubble = () => $("#pending");
   const libHelp = await libContext(text);
   if (!sample){ if (bubble()){ bubble().textContent = libHelp.length ? `${aiOffText()}\n\nFrom your library:\n\n${libHelp.slice(0, 3).map(h => `• ${libWhere(h.c)}: ${libSnip(h.c, h.terms, 320)}`).join("\n\n")}` : aiOffText(); bubble().removeAttribute("id"); } return; }
   aiCtl = new AbortController(); $("#chat-send").disabled = true; $("#chat-stop").hidden = false;
@@ -2985,7 +3010,7 @@ async function sendChat(){
 function saveChat(){ try { localStorage.setItem("jarvis.chat", JSON.stringify(chat.slice(-30))); } catch {} }
 async function runInto(btn, outSel, prompt, store){
   const out = $(outSel); btn.disabled = true; out.classList.remove("placeholder"); out.textContent = "Thinking...";
-  const sample = await getSample();
+  const sample = await getSample(["#ext-out", "#lib-ai", "#ix-out"].includes(outSel) ? "study" : "quick");
   if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
   try { const {text} = await sample(prompt, {onText: ({text}) => { const o = $(outSel); if (o) o.textContent = plain(text); }}); store(plain(text)); const o = $(outSel); if (o) o.textContent = plain(text); }
   catch (e){ const o = $(outSel); if (o) o.textContent = errCopy(e); }
@@ -2996,7 +3021,7 @@ const summarizeProjects = btn => runInto(btn, "#proj-summary-out", `${RULES()}\n
 async function aiFillCard(btn){
   const name = ($("#c-drug")?.value || "").trim(); if (!name){ toast("Type a drug name first."); $("#c-drug")?.focus(); return; }
   btn.disabled = true; btn.textContent = "Filling...";
-  const sample = await getSample();
+  const sample = await getSample("study");
   if (!sample){ toast(aiOffText()); btn.disabled = false; btn.innerHTML = IC.ai + "Fill with AI"; return; }
   try {
     const r = await askJson(sample, `Write a concise pharmacist study card for "${name}" as a JSON object with string fields: drug, cls (drug class), indication, moa (mechanism, one sentence), dosing (usual adult dose for the main indication, note renal/hepatic adjustment if important), adverse (common and serious), interactions (most important), counselling (key patient counselling points). Short lines separated by "; ". If "${name}" is not a real medicine, return {"drug": "", "error": "not a recognised medicine"}.`);
@@ -3010,7 +3035,7 @@ async function makeQuiz(){
   const mine = topic.toLowerCase() === "my drug cards";
   if (mine && !of("card").length){ toast("Add some drug cards first."); return; }
   quiz = {topic, status: "Writing your questions..."}; render();
-  const sample = await getSample(), libHelp = mine ? [] : await libContext(topic, 8);
+  const sample = await getSample("study"), libHelp = mine ? [] : await libContext(topic, 8);
   if (!sample){
     const qs = libHelp.length ? libQuiz(topic, libHelp, n) : [];
     quiz = qs.length ? {topic: topic + " (from your library)", qs} : {topic, status: aiOffText() + (libBooks.length ? " Your library had nothing on this topic for an offline quiz." : " Add books to the Library to get offline quizzes.")};
