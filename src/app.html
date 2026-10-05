@@ -1295,17 +1295,23 @@ let chat = [];
 try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30); } catch {}
 let aiState = "unknown";
 function keyCard(){
-  const k = apiKey();
-  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${k ? `Task AI is on. Key ending in <b style="font-family:var(--f-num);font-variant-numeric:tabular-nums">…${esc(k.slice(-4))}</b> is saved on this device only.` : "Task AI needs your own Anthropic API key. It's saved only on this device and is never put in backups."}</p></div>${k ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
-    ${k ? "" : `<ol class="steps"><li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a> and sign in.</li><li>Add a little credit under Billing if you haven't.</li><li>Tap <b>Create Key</b>, name it "Task", and copy it. It starts with sk-ant-.</li><li>Paste it below and tap Save. Task checks that it works.</li></ol>`}
-    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${k ? "Paste a new key to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button>${k ? `<button class="btn" type="button" id="key-test">Test</button><button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form>
-    <p class="caution" style="margin-top:12px">Never share your key or post it anywhere. Anyone who has it can spend your credit. If it leaks, delete it in the console and make a new one.</p></section>`;
+  const ks = aiKeys(), order = aiOrder(), models = lsGet("task.aiModels", {});
+  const rows = Object.entries(AI_PROV).filter(([p]) => ks[p]).map(([p, P]) => { const main = order[0] === p, list = models[p] || [], m = aiModel(p);
+    return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${main ? `<span class="pill s-good">Main</span>` : ""}</div>
+      <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span>${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<span>Model: auto</span>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></div>
+      <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div></li>`; }).join("");
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}` : "Add a key from Claude, ChatGPT, Gemini or OpenRouter. It's saved only on this device and never put in backups."}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+    ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
+    <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button></form>
+    <p class="sub" style="margin:8px 0 0">Get a key: ${Object.values(AI_PROV).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells which one it is.</p>
+    <p class="caution" style="margin-top:12px">Never share a key or post it anywhere. Anyone who has it can spend your credit. If one leaks, delete it where you made it and make a new one.</p></section>`;
 }
-async function testKey(btn){
+async function testKey(btn, p){
+  p ||= aiOrder()[0]; const was = btn?.textContent;
   if (btn){ btn.disabled = true; btn.textContent = "Checking..."; }
-  try { await apiSample("Reply with the single word OK."); aiState = "ready"; toast("Your key works. Task AI is on."); }
+  try { if (p !== "anthropic") await aiPickModel(p); await apiSample("Reply with the single word OK.", {only: p}); aiState = "ready"; toast(`Your ${AI_PROV[p].short} key works. Task AI is on.`); }
   catch (e){ toast(errCopy(e)); }
-  if (btn?.isConnected){ btn.disabled = false; btn.textContent = btn.id === "key-test" ? "Test" : "Save key"; }
+  if (btn?.isConnected){ btn.disabled = false; btn.textContent = was; }
   render();
 }
 function viewAI(){
@@ -1508,7 +1514,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.10.4";
+const APP_VERSION = "2.11";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2453,6 +2459,9 @@ document.addEventListener("click", async ev => {
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
+  if (d.aimain){ lsSet("task.aiMain", d.aimain); toast(`${AI_PROV[d.aimain].short} is now your main AI.`); render(); return; }
+  if (d.aitest){ testKey(t, d.aitest); return; }
+  if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key from this device?`)){ delete ks[d.aidel]; lsSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
   if (d.libdel){ const b = libBook(d.libdel); if (b && confirm(`Remove ${b.title} from this device?`)){ await libDelBook(d.libdel); toast("Book removed."); render(); } return; }
   if (d.libask){ closePop(); go("books"); libRun(d.libask); return; }
   if (d.exttype){ ext.type = d.exttype; ext.rows.forEach(r => { if (EXT_TYPES[ext.type].liquid ? r.unit === "pct" : ["mg5", "mgml"].includes(r.unit)) r.unit = EXT_TYPES[ext.type].liquid ? "mg5" : "pct"; }); saveExt(); render(); return; }
@@ -2544,7 +2553,6 @@ document.addEventListener("click", async ev => {
     case "chat-clear": chat = []; saveChat(); render(); break;
     case "chat-stop": aiCtl?.abort(); break;
     case "key-test": testKey(t); break;
-    case "key-clear": try { localStorage.removeItem("task.apiKey"); } catch {} toast("API key removed."); render(); break;
     case "notif-btn":
       unlockAudio();
       try { const p = await Notification.requestPermission(); toast(p === "granted" ? "Notifications are on." : "Notifications are blocked, so reminders will pop up inside Task instead."); }
@@ -2568,6 +2576,7 @@ document.addEventListener("change", async ev => {
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
+  if (ev.target.dataset?.aimodel){ lsSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
   if (ev.target.dataset?.libcat){ const b = libBook(ev.target.dataset.libcat); if (b){ b.cat = ev.target.value; saveLib(); } }
   if (id === "lib-filter"){ libFilter = ev.target.value; if (libQ) libRun(libQ); }
   if (id === "wm-toggle"){ saveProfile({watermark: ev.target.checked}); applyLook(); }
@@ -2626,8 +2635,10 @@ document.addEventListener("submit", ev => {
   else if (f === "quiz-form") makeQuiz();
   else if (f === "chat-form") sendChat();
   else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
-    if (!k) return; if (!/^sk-ant-/.test(k)){ toast("That doesn't look like an Anthropic key. It should start with sk-ant-."); return; }
-    try { localStorage.setItem("task.apiKey", k); } catch {} aiState = "unknown"; $("#api-key").value = ""; testKey($("#key-save")); }
+    if (!k) return; const p = provOfKey(k);
+    if (!p){ toast("That doesn't look like a Claude, ChatGPT, Gemini or OpenRouter key. Copy the whole key and try again."); return; }
+    lsSet("task.aiKeys", {...aiKeys(), [p]: k}); if (!aiOrder().length || aiOrder().length === 1) lsSet("task.aiMain", p);
+    aiState = "unknown"; $("#api-key").value = ""; document.activeElement?.blur(); render(); testKey($("#key-save"), p); }
 });
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
@@ -2770,18 +2781,92 @@ const tools = [
 let aiCtl = null, briefCache = "";
 const aiOffText = () => inClaude ? "Task AI isn't available in this view. Open the app on claude.ai while signed in."
   : !navigator.onLine ? "You're offline. Everything else in Task still works; the AI comes back when you reconnect."
-  : "Add your Anthropic API key under AI settings at the bottom of Task AI to turn on the assistant.";
+  : "Add an AI key (Claude, ChatGPT, Gemini or OpenRouter) under AI settings at the bottom of Task AI to turn on the assistant.";
 async function getSample(){
   const s = await cap("sample");
   if (s){ aiState = "ready"; return s; }
   if (apiKey() && navigator.onLine){ aiState = "ready"; return apiSample; }
   aiState = "off"; return null;
 }
-function apiKey(){ try { return localStorage.getItem("task.apiKey") || ""; } catch { return ""; } }
-// Standalone mode: call Claude with the user's own key, running the same page tools.
+// AI keys: one per provider, all on this device only. The main one is used first; if it fails, Task tries the others.
+const AI_PROV = {
+  anthropic: {name: "Anthropic (Claude)", short: "Claude", link: "https://console.anthropic.com/settings/keys"},
+  openai: {name: "OpenAI (ChatGPT)", short: "ChatGPT", link: "https://platform.openai.com/api-keys", base: "https://api.openai.com/v1"},
+  gemini: {name: "Google Gemini", short: "Gemini", link: "https://aistudio.google.com/apikey", base: "https://generativelanguage.googleapis.com/v1beta/openai"},
+  openrouter: {name: "OpenRouter", short: "OpenRouter", link: "https://openrouter.ai/keys", base: "https://openrouter.ai/api/v1", model: "openrouter/auto"}};
+const provOfKey = k => /^sk-ant-/.test(k) ? "anthropic" : /^sk-or-/.test(k) ? "openrouter" : /^AIza/.test(k) ? "gemini" : /^sk-/.test(k) ? "openai" : "";
+function aiKeys(){
+  const ks = lsGet("task.aiKeys", {});
+  try { const old = localStorage.getItem("task.apiKey"); if (old && !ks.anthropic){ ks.anthropic = old; lsSet("task.aiKeys", ks); } } catch {}
+  return ks;
+}
+const aiOrder = () => { const ks = aiKeys(), main = lsGet("task.aiMain", ""), have = Object.keys(AI_PROV).filter(p => ks[p]); return have.includes(main) ? [main, ...have.filter(p => p !== main)] : have; };
+const aiModel = p => lsGet("task.aiModel", {})[p] || AI_PROV[p].model || "";
+function apiKey(){ const p = aiOrder()[0]; return p ? aiKeys()[p] : ""; }
+// Standalone mode: call the main AI with the user's own key, then the other keys if it fails.
 async function apiSample(input, opts = {}){
+  const order = opts.only ? [opts.only] : aiOrder(); let last = {code: "bad_key"};
+  for (const p of order){
+    let got = "";
+    const o = {...opts, onText: x => { got = x.text; opts.onText?.(x); }};
+    try {
+      const r = p === "anthropic" ? await claudeSample(input, o) : await openaiSample(p, input, o);
+      if (p !== order[0] && !opts.only) toast(`Used your ${AI_PROV[p].short} key because ${AI_PROV[order[0]].short} didn't answer.`);
+      return r;
+    } catch (e){ if (e?.code === "cancelled" || e?.code === "refused" || got) throw e; last = e; }
+  }
+  throw last;
+}
+// Picks a current chat model from the provider's own list, so it keeps working as models change.
+async function aiPickModel(p){
+  if (p === "anthropic" || p === "openrouter") return aiModel(p);
+  const res = await fetch(AI_PROV[p].base + "/models", {headers: {authorization: "Bearer " + aiKeys()[p]}});
+  if (res.status === 401 || res.status === 403 || res.status === 400) throw {code: "bad_key"};
+  if (!res.ok) throw {code: "upstream_error"};
+  const ids = ((await res.json()).data || []).map(m => ({id: String(m.id).replace(/^models\//, ""), at: m.created || 0}));
+  const ver = id => parseFloat((id.match(/(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+  const ok = p === "openai" ? ids.filter(m => /^gpt-\d/.test(m.id) && !/audio|realtime|image|tts|transcri|search|codex|instruct|batch|nano|-pro|\d{4}-\d\d-\d\d/.test(m.id))
+    : ids.filter(m => /^gemini-[\d.]+-(flash|pro)(-latest)?$/.test(m.id));
+  ok.sort((a, b) => ver(b.id) - ver(a.id) || b.at - a.at || /mini|flash/.test(a.id) - /mini|flash/.test(b.id));
+  lsSet("task.aiModels", {...lsGet("task.aiModels", {}), [p]: ok.map(m => m.id).slice(0, 12)});
+  const cur = aiModel(p); if (cur && ok.some(m => m.id === cur)) return cur;
+  const pick = ok[0]?.id || (p === "openai" ? "gpt-4.1-mini" : "gemini-2.5-flash");
+  lsSet("task.aiModel", {...lsGet("task.aiModel", {}), [p]: pick}); return pick;
+}
+// OpenAI-style chat (OpenAI, Gemini and OpenRouter all speak it), with the same page tools.
+async function openaiSample(p, input, opts = {}){
+  const P = AI_PROV[p], model = aiModel(p) || await aiPickModel(p);
+  const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: String(m.content)}));
+  const apiTools = (opts.tools || []).map(t => ({type: "function", function: {name: t.name, description: t.description, parameters: t.inputSchema || {type: "object", properties: {}}}}));
+  let all = "";
+  for (let round = 0; round < 8; round++){
+    if (opts.signal?.aborted) throw {code: "cancelled", text: all};
+    let res;
+    try {
+      res = await fetch(P.base + "/chat/completions", {method: "POST", signal: opts.signal,
+        headers: {"content-type": "application/json", authorization: "Bearer " + aiKeys()[p], ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
+        body: JSON.stringify({model, messages, ...(apiTools.length ? {tools: apiTools} : {})})});
+    } catch { throw {code: opts.signal?.aborted ? "cancelled" : "offline", text: all}; }
+    if (!res.ok){ const why = await res.text().catch(() => "");
+      throw {code: res.status === 401 || res.status === 403 || /api.?key/i.test(why) ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 402 ? "no_credit" : res.status === 404 || /model/i.test(why) ? "model_missing" : "upstream_error", text: all}; }
+    const j = await res.json(), ch = j.choices?.[0] || {}, msg = ch.message || {};
+    if (j.error) throw {code: "upstream_error", text: all};
+    if (msg.content){ all += (all ? "\n\n" : "") + msg.content; opts.onText?.({text: all}); }
+    const uses = msg.tool_calls || [];
+    if (!uses.length) return {text: all, truncated: ch.finish_reason === "length"};
+    messages.push({role: "assistant", content: msg.content || "", tool_calls: uses});
+    for (const u of uses){
+      const tool = opts.tools.find(t => t.name === u.function?.name); let out;
+      try { out = await tool.execute(JSON.parse(u.function.arguments || "{}"), {signal: opts.signal}); out = typeof out === "string" ? out : JSON.stringify(out); }
+      catch (e){ out = "Error: " + (e.message || e); }
+      messages.push({role: "tool", tool_call_id: u.id, content: out});
+    }
+  }
+  return {text: all, truncated: false};
+}
+async function claudeSample(input, opts = {}){
   const {default: Anthropic} = await import("https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0/+esm");
-  const client = new Anthropic({apiKey: apiKey(), dangerouslyAllowBrowser: true});
+  const client = new Anthropic({apiKey: aiKeys().anthropic, dangerouslyAllowBrowser: true});
   const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: m.content}));
   const apiTools = (opts.tools || []).map(t => ({name: t.name, description: t.description, input_schema: t.inputSchema || {type: "object", properties: {}}}));
   let all = "";
@@ -2817,8 +2902,8 @@ async function askJson(sample, prompt){
   const m = text.match(/[\[{][\s\S]*[\]}]/); if (!m) throw {code: "invalid_json"};
   return JSON.parse(m[0]);
 }
-const errCopy = e => ({bad_key: "That API key didn't work. Check it in AI settings.", refused: "Claude declined that request. Try rephrasing it.", offline: "Couldn't reach Claude. Check your connection.",
-  not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Wait a moment, then try again.", cancelled: "Stopped.", invalid_json: "The answer came back in the wrong shape. Try again."}[e?.code] || "Couldn't get an answer (" + (e?.code || "error") + "). Try again.");
+const errCopy = e => ({bad_key: "Your AI key didn't work. Check it in AI settings.", refused: "Claude declined that request. Try rephrasing it.", offline: "Couldn't reach the AI. Check your connection.",
+  not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Wait a moment, then try again.", cancelled: "Stopped.", no_credit: "That key has no credit left. Top it up, or add another key in AI settings.", model_missing: "That AI model isn't available on your key. Pick another model in AI settings.", invalid_json: "The answer came back in the wrong shape. Try again."}[e?.code] || "Couldn't get an answer (" + (e?.code || "error") + "). Try again.");
 
 async function sendChat(){
   const box = $("#chat-in"); if (!box) return;
@@ -2835,7 +2920,7 @@ async function sendChat(){
   try {
     const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
       onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
-    chat.push({role: "assistant", content: answer}); saveChat(); if (bubble()) bubble().textContent = answer;
+    chat.push({role: "assistant", content: answer}); saveChat(); if (bubble()) bubble().textContent = answer; else if (view === "ai") render(); // a tool may have redrawn the chat
   } catch (e){
     if (bubble()) bubble().textContent = (e.text ? e.text + "\n\n" : "") + errCopy(e);
     if (e.text){ chat.push({role: "assistant", content: e.text}); saveChat(); }
