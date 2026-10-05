@@ -1508,7 +1508,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.10.1";
+const APP_VERSION = "2.10.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1740,6 +1740,7 @@ async function libLoad(){
   let changed = false;
   for (const b of libBooks) if (b.head == null){ const first = libMem.filter(c => c.b === b.id).sort((x, y) => x.p - y.p).slice(0, 8).map(c => c.t);
     b.head = libHeadOf(first, ""); if (b.cat === "other") b.cat = libCatOfText(b.head); changed = true; }
+  for (const b of libBooks) if (b.cat === "other" && !b.rechecked){ const c = libCatOfText(libText(b.id).slice(0, 20000)); b.rechecked = 1; if (c !== "other"){ b.cat = c; } changed = true; }
   if (changed) saveLib();
   return libMem;
 }
@@ -1910,6 +1911,7 @@ const ZIM_SHELF = [
     ["Dangerous Drugs Act (15:02)", /dangerous drugs|15[:.]02/i, /dangerous drugs act|chapter 15[:.]02/, "zimlii.org or veritaszim.net"],
     ["Health Professions Act (27:19)", /health professions|27[:.]19/i, /health professions act|chapter 27[:.]19/, "zimlii.org"],
     ["MCAZ guidelines", /(mcaz|medicines control).*guideline|guideline.*(mcaz|medicines control)/i, /(medicines control authority of zimbabwe|\bmcaz\b).{0,200}guideline|guideline.{0,200}(medicines control authority|\bmcaz\b)/, "mcaz.co.zw"],
+    ["MCAZ register of medicines", /register of medicines|medicines.?register/i, /register of medicines|reg\. no .{0,120}registration expires/, "mcaz.co.zw"],
     ["Pharmacists Council code of conduct", /pharmacists council|pcz|code of conduct/i, /pharmacists council of zimbabwe|code of (professional )?conduct/, "Pharmacists Council of Zimbabwe"]]],
   ["Guidelines", [
     ["EDLIZ: Zimbabwe treatment guidelines", /edliz|essential medicines list|standard treatment/i, /edliz|essential (medicines|drugs) list and standard treatment|standard treatment guidelines/, "Ministry of Health and Child Care"],
@@ -1918,11 +1920,24 @@ const ZIM_SHELF = [
   ["Textbooks", [
     ["Pharmacology (e.g. Katzung)", /katzung|pharmacolog/i, /katzung|basic (and|&) clinical pharmacology|pharmacology/, "Your own copy"],
     ["Rang & Dale's Pharmacology", /rang\b.{0,6}dale/i, /rang.{0,6}dale/, "Your own copy"],
+    ["Pharmacy practice (e.g. WHO handbook)", /pharmacy practice|pharmaceutical care|who.{0,20}handbook/i, /developing pharmacy practice|pharmaceutical care|good pharmacy practice/, "who.int"],
     ["Pharmaceutics (e.g. Aulton)", /aulton|pharmaceutic/i, /aulton|pharmaceutics|pharmaceutical (technology|practice)|dosage forms/, "Your own copy"],
     ["Anatomy & physiology (e.g. Tortora)", /anatom|physiol|tortora/i, /anatomy|physiology|tortora/, "Your own copy"],
     ["Cosmetics & skin (e.g. Baran & Maibach)", /cosmet|dermat|skin/i, /cosmetic|cosmeceutical|dermatolog/, "Your own copy"]]]
 ];
-const libMatch = (re, re2) => libBooks.find(b => re.test(b.title)) || libBooks.find(b => b.head && re2.test(b.head.slice(0, 500)));
+// Matches books to shelf slots: by title first, then the opening page, then the first pages of text.
+// Each pass only uses books and slots still free, so one Act that mentions another doesn't tick both.
+const libText = id => libMem ? libMem.filter(c => c.b === id).sort((x, y) => x.p - y.p).slice(0, 20).map(c => c.l).join(" ") : "";
+function libShelfMatch(){
+  const slots = ZIM_SHELF.flatMap(([, rows]) => rows), got = new Map(), taken = new Set();
+  const pass = test => slots.forEach(sl => { if (got.has(sl)) return; const b = libBooks.find(b => !taken.has(b.id) && test(b, sl)); if (b){ got.set(sl, [b]); taken.add(b.id); } });
+  // Every book whose title names a slot goes there, so two copies of an Act both show.
+  libBooks.forEach(b => { const sl = slots.find(([, re]) => re.test(b.title)); if (sl){ got.set(sl, [...got.get(sl) || [], b]); taken.add(b.id); } });
+  pass((b, [, , re2]) => b.head && re2.test(b.head.slice(0, 500)));
+  pass((b, [, , re2]) => re2.test(libText(b.id).slice(0, 6000)));
+  return {got, taken};
+}
+const SHELF_CATS = [["law"], ["clinical"], null];
 let libShelfTab = 0;
 // Ready-made packs of public documents (Acts, guidelines, registers), added in one tap.
 const LIB_PACKS = [{id: "zim-pharmacy-2026-10", file: "packs/zim-pharmacy.json", name: "Zimbabwe pharmacy pack", about: "Health Professions Act, Dangerous Drugs Act (2 versions), MCAZ register of medicines, WHO pharmacy practice handbook, EDLIZ 2020 (ch. 1-15)"}];
@@ -1953,9 +1968,11 @@ async function libInstallPack(id){
 const packHTML = () => LIB_PACKS.map(P => { const have = libBooks.some(b => b.pack === P.id);
   return `<div class="pack"><div><b>${esc(P.name)}</b><small>${esc(P.about)}</small></div>${have ? `<span class="pill s-good">Added</span>` : `<button class="btn sm primary" data-libpack="${P.id}" ${libBusy ? "disabled" : ""}>${IC.download || IC.plus}Add all</button>`}</div>`; }).join("") + `<div id="pack-status" class="lib-status" hidden></div>`;
 function libShelf(){
-  const [, rows] = ZIM_SHELF[libShelfTab];
+  const [, rows] = ZIM_SHELF[libShelfTab], {got, taken} = libShelfMatch(), cats = SHELF_CATS[libShelfTab];
+  const others = libBooks.filter(b => !taken.has(b.id) && (cats ? cats.includes(b.cat) : !SHELF_CATS.flat().includes(b.cat))), catName = k => (LIB_CATS.find(c => c[0] === k) || [, "Other"])[1];
   return packHTML() + `<div class="seg ext-tabs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ZIM_SHELF.map(([g], i) => `<button data-libshelf="${i}" aria-pressed="${i === libShelfTab}">${g}</button>`).join("")}</div>
-    <ul class="list lib-shelf">${rows.map(([t, re, re2, where]) => { const has = libMatch(re, re2); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library: " + esc(has.title) : esc(where)}</span></div></div></li>`; }).join("")}</ul>
+    <ul class="list lib-shelf">${rows.map(sl => { const [t, , , where] = sl, has = got.get(sl); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library: " + esc(has.map(b => b.title).join("; ")) : esc(where)}</span></div></div></li>`; }).join("")}
+    ${others.map(b => `<li class="row"><span class="lib-tick on">${IC.check}</span><div class="row-main"><div class="row-title">${esc(b.title)}</div><div class="row-meta"><span>In your library, read as ${esc(catName(b.cat))}</span></div></div></li>`).join("")}</ul>
     <p class="sub" style="margin:0">Download the ones you have, then tap Add books. Typed PDFs work best. Scanned pages can't be searched.</p>`;
 }
 const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e6).toFixed(1) + " MB";
@@ -1969,7 +1986,7 @@ function libBooksHTML(){
 }
 function viewBooks(){
   if (libUsage == null) libUsageCheck();
-  if (!libMem && libBooks.some(b => b.head == null)) libLoad().then(() => { if (view === "books"){ render(); if (popKey) fillPop(); } }).catch(() => {});
+  if (!libMem && libBooks.length) libLoad().then(() => { if (view === "books"){ render(); if (popKey) fillPop(); } }).catch(() => {});
   const hits = libHits || [], cats = [...new Set(libBooks.map(b => b.cat))];
   const hitRow = (h, i, full) => `<li><button class="lib-hit ${full ? "full" : ""}" data-libread="${i}"><span class="lib-src">${IC.book}${esc(libWhere(h.c))}</span><span class="lib-snip">${libMark(libSnip(h.c, h.terms, full ? 420 : 240), h.terms)}</span></button></li>`;
   if (hits.length) POPS["lib-hits"] = {title: "Results", sub: `${hits.length} passages for “${libQ}”`, html: `<ul class="lib-hits">${hits.map((h, i) => hitRow(h, i, true)).join("")}</ul>`};
