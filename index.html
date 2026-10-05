@@ -212,6 +212,12 @@ textarea{resize:vertical;min-height:80px}
 
 /* Chat */
 .chat{display:flex;flex-direction:column;height:min(74vh,720px);min-height:380px;padding:0;overflow:hidden}
+.upd-hero{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:8px 10px;margin-top:8px;color:inherit;font:inherit;font-size:14px;line-height:1.4;cursor:pointer}
+.upd-tag{flex:none;font-size:11px;font-weight:800;letter-spacing:.03em;background:#c8a24b;color:#0b2340;border-radius:99px;padding:2px 8px;margin-top:1px;white-space:nowrap}
+.upd-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.upd-row{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:inherit;padding:2px 0;font:inherit;cursor:pointer}
+.upd-row > span:nth-child(2){flex:1;min-width:0}.upd-row svg{width:16px;height:16px;color:var(--muted);flex:none}
+.upd-dot{width:8px;height:8px;border-radius:50%;background:var(--line-strong);flex:none}.upd-dot.on{background:var(--accent)}
 .chat-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
 .chat-bar select{width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px;flex:0 1 auto;min-width:0}
 .chat-bar-end{margin-left:auto;display:flex;gap:2px}.chat-bar .icon-btn{position:relative}
@@ -494,6 +500,7 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .pbtn > svg:last-child{display:none}
   .pbtn b{font-size:13.5px}.pbtn small{font-size:12px}
   .vc-plot,.vc-y{height:130px}
+  .upd-hero{font-size:13px;padding:6px 9px;margin-top:6px}.upd-text{-webkit-line-clamp:2}
   /* Phone chat: fills the screen like a messaging app, with larger text */
   .content:has(> .chat){display:flex;flex-direction:column;padding:8px 8px 6px;gap:0}
   .content > .chat{flex:1 1 auto;height:auto;min-height:0;border-radius:14px}
@@ -689,7 +696,7 @@ async function syncNow(){
   syncing = true; syncErr = "";
   try {
     if ((session.members || []).length < 2) acceptSession(await api("me")); // picks up a partner who just joined
-    let more = true, guard = 0;
+    let more = true, guard = 0; const arrived = [], firstSync = !lsGet(CKEY, 0);
     while (more && guard++ < 20){
       const sent = Object.entries(pending).slice(0, 500);
       const changes = sent.map(([id, p]) => { if (p && p.deleted) return {id, deleted: true, updatedAt: p.updatedAt}; const x = byId(id); return x ? {id, space: spaceOf(x), data: cleanForSync(x), updatedAt: x.updatedAt || now()} : null; }).filter(Boolean);
@@ -697,6 +704,7 @@ async function syncNow(){
       const r = await api("sync", {since: lsGet(CKEY, 0), changes});
       for (const [id] of sent){ const x = byId(id), p = pending[id]; if (p && p.deleted ? p.updatedAt === sentStamp[id] : (!x || x.updatedAt === sentStamp[id])) delete pending[id]; }
       let changed = false;
+      for (const it of r.items || []) if (it.by && !it.deleted && it.data?.kind && it.data.kind !== "meta" && !(pending[it.id] && byId(it.id))) arrived.push({by: it.by, kind: it.data.kind, data: it.data, isNew: !byId(it.id)});
       for (const it of r.items || []){
         const local = byId(it.id);
         if (pending[it.id] && local && (local.updatedAt || 0) > it.updatedAt) continue;
@@ -715,6 +723,7 @@ async function syncNow(){
     const aiNew = applyRemoteAi();
     if (!aiNew && !byId(aiItemId()) && Object.keys(aiKeys()).length) queueAiSync(true);
     if (applyRemoteProfile() || aiNew) render();
+    if (!firstSync) updTell(arrived);
     else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync(true);
     lastSync = now(); lsSet("task.lastSync", lastSync);
   } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
@@ -1099,6 +1108,73 @@ function apptRow(a, showDay = true){
     <div class="row-actions">${a.status === "scheduled" && a.start > now() ? calBtn(a.id) : ""}${editBtn(a.id)}${delBtn(a.id)}</div></li>`;
 }
 
+/* ---------- Task update: tells you what has happened, without being asked ---------- */
+// Built from your own data, so it works offline. With an AI key it is also written up in a sentence or two.
+let upd = lsGet("task.upd", {seen: 0, ai: "", aiFor: "", aiAt: 0});
+const saveUpd = () => lsSet("task.upd", upd);
+const KIND_WORD = {task: ["goal", "goals"], deal: ["client", "clients"], appt: ["meeting", "meetings"], card: ["drug card", "drug cards"], log: ["log entry", "log entries"], project: ["project", "projects"], biz: ["business", "businesses"], stock: ["stock item", "stock items"]};
+const nameOf = x => String(x.title || x.client || x.name || x.drug || x.text || "").slice(0, 40);
+const plural = (n, k) => `${n} ${KIND_WORD[k]?.[n === 1 ? 0 : 1] || "items"}`;
+// Each line: {t: text, go: view, news: true when it's something that changed rather than a standing reminder}
+function updLines(){
+  const since = upd.seen || now() - DAY, L = [];
+  // What your partner added, changed or finished since you last looked
+  const theirs = items.filter(x => x._by && KIND_WORD[x.kind] && (x.updatedAt || 0) > since);
+  const byWho = {};
+  theirs.forEach(x => { const k = x._by + "|" + x.kind + "|" + ((x.createdAt || 0) > since ? "added" : x.done || x.stage === "done" ? "finished" : "updated"); (byWho[k] ||= []).push(x); });
+  Object.entries(byWho).forEach(([k, xs]) => { const [who, kind, verb] = k.split("|");
+    L.push({t: `${who.split(/\s+/)[0]} ${verb} ${xs.length === 1 ? KIND_WORD[kind][0] + " " + nameOf(xs[0]) : plural(xs.length, kind) + ": " + xs.slice(0, 2).map(nameOf).join(", ") + (xs.length > 2 ? "…" : "")}.`, go: {task: "tasks", deal: "deals", appt: "appts", card: "learn", log: "log", project: "projects", biz: "biz", stock: "stock"}[kind], news: true}); });
+  const won = of("deal").filter(d => d.stage === "done" && (d.doneAt || 0) > since && !d._by);
+  if (won.length) L.push({t: `Delivered: ${won.slice(0, 2).map(nameOf).join(", ")}.`, go: "deals", news: true});
+  // Website visits
+  const days = web.site && web.stats?.days;
+  if (days?.length > 1){ const t = days.at(-1).uv || 0, y = days.at(-2).uv || 0; if (t || y) L.push({t: `${web.site}: ${t} visitor${t === 1 ? "" : "s"} today${y ? ` (${y} yesterday)` : ""}.`, go: "site", news: t > y}); }
+  // What needs you now
+  const overdue = of("task").filter(t => !t.done && t.due && t.due < now() - HOUR);
+  if (overdue.length) L.push({t: `${plural(overdue.length, "task")} overdue: ${overdue.slice(0, 2).map(nameOf).join(", ")}${overdue.length > 2 ? "…" : ""}.`, go: "tasks"});
+  const meet = of("appt").filter(a => a.status === "scheduled" && isToday(a.start) && a.start > now()).sort((a, b) => a.start - b.start);
+  if (meet.length) L.push({t: `${meet.length === 1 ? "Meeting" : meet.length + " meetings"} today, next with ${nameOf(meet[0])} at ${fmtTime(meet[0].start)}.`, go: "appts"});
+  const fu = followUps(); if (fu.length) L.push({t: `${plural(fu.length, "deal")} to follow up: ${fu.slice(0, 2).map(nameOf).join(", ")}.`, go: "deals"});
+  const st = stockAlerts(); if (st.length) L.push({t: `${plural(st.length, "stock")} expiring soon: ${st.slice(0, 2).map(nameOf).join(", ")}.`, go: "stock"});
+  const down = of("project").filter(p => p.status === "down"); if (down.length) L.push({t: `Down: ${down.map(nameOf).join(", ")}.`, go: "projects", news: true});
+  const cd = cardsDue().length; if (cd) L.push({t: `${plural(cd, "card")} ready to review.`, go: "learn"});
+  const left = daily.day === dayKey(now()) ? (daily.set || []).length - (daily.i || 0) : DAILY_N;
+  if (left > 0 && (daily.notes.length || libBooks.length)) L.push({t: `${left} daily note${left === 1 ? "" : "s"} to read.`, go: "learn"});
+  return L;
+}
+const updHash = L => L.map(l => l.t).join("|");
+// The short version shown on Today without being asked: the AI sentence when there is one, otherwise the top lines.
+function updSummary(L){
+  if (!L.length) return "";
+  if (upd.ai && upd.aiFor === updHash(L)) return upd.ai;
+  return L.slice(0, 3).map(l => l.t).join(" ");
+}
+let updBusy = false;
+async function updWrite(L){
+  if (updBusy || !L.length || inClaude && !navigator.onLine) return;
+  const h = updHash(L); if (upd.aiFor === h || now() - (upd.aiAt || 0) < 10 * MIN) return;
+  if (!(inClaude || apiKey()) || !navigator.onLine) return;
+  updBusy = true;
+  try {
+    const sample = await getSample("quick"); if (!sample) return;
+    const {text} = await sample(`You are Task, ${firstName() || "the user"}'s assistant. Turn these facts into a short spoken-style update for them: at most 2 sentences, most important first (news from their partner, anything overdue or urgent, then the rest). Plain text only, no lists, no greeting.\n\n${L.map(l => "- " + l.t).join("\n")}`);
+    upd.ai = plain(text).trim().slice(0, 320); upd.aiFor = h; upd.aiAt = now(); saveUpd();
+    if (view === "today") render();
+  } catch {} finally { updBusy = false; }
+}
+function updPop(L){
+  POPS["upd"] = {title: "What's new", sub: upd.seen ? "Since " + ago(upd.seen) : "Today", html: `<section class="card">${L.length ? `<ul class="list upd-list">${L.map(l => `<li class="row"><button class="upd-row" data-nav="${l.go}"><span class="upd-dot ${l.news ? "on" : ""}"></span><span>${esc(l.t)}</span>${IC.chev}</button></li>`).join("")}</ul>` : empty("You're all caught up.", "Task will tell you here when something happens.")}
+    <div class="btn-row" style="margin-top:10px;justify-content:flex-end"><button class="btn sm primary" id="upd-seen">Got it</button></div></section>`};
+}
+// Changes that arrive from your partner while Task is open are told straight away.
+function updTell(arrived){
+  if (!arrived.length) return;
+  const who = arrived[0].by.split(/\s+/)[0], text = arrived.length === 1 ? `${who} ${arrived[0].isNew ? "added" : "updated"} ${KIND_WORD[arrived[0].kind]?.[0] || "an item"} ${nameOf(arrived[0].data || {})}.` : `${who} made ${arrived.length} changes.`;
+  if (document.hidden && "Notification" in window && Notification.permission === "granted"){
+    (swReg ? swReg.showNotification("Task update", {body: text, tag: "task-update", icon: "icon-192.png", badge: "icon-192.png"}) : Promise.resolve(new Notification("Task update", {body: text}))).catch(() => {});
+  } else toast(text);
+}
+
 function viewToday(){
   const tasksToday = sortTasks(of("task").filter(t => !t.done && t.due && (isToday(t.due) || t.due < now())));
   const apptsToday = of("appt").filter(a => isToday(a.start) && a.status !== "cancelled").sort((a, b) => a.start - b.start);
@@ -1110,11 +1186,12 @@ function viewToday(){
   const nextAppt = of("appt").filter(a => a.status === "scheduled" && a.start > now()).sort((a, b) => a.start - b.start)[0];
   const nextTask = sortTasks(of("task").filter(t => !t.done && t.due && t.due > now()))[0];
   const next = [nextAppt && {t: nextAppt.start, s: `${nextAppt.client} at ${fmtWhen(nextAppt.start)}`}, nextTask && {t: nextTask.due, s: `${nextTask.title}, ${fmtWhen(nextTask.due)}`}].filter(Boolean).sort((a, b) => a.t - b.t)[0];
-  const h = new Date().getHours();
+  const h = new Date().getHours(), U = updLines(), news = U.filter(l => l.news).length;
+  updPop(U); updWrite(U);
   return `
   <section class="card hero today-hero">
     <div class="hero-top"><div><h2>${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}${firstName() ? ", " + esc(firstName()) : ""}.</h2>
-    <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
+    ${U.length ? `<button class="upd-hero" data-pop="upd"><span class="upd-tag">${news ? `${news} new` : "Update"}</span><span class="upd-text">${esc(updSummary(U))}</span></button>` : `<p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "All caught up. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p>`}</div>${avatar("md")}</div>
     <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
   ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off until you add your key.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
@@ -1556,7 +1633,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.15";
+const APP_VERSION = "2.16";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2593,6 +2670,7 @@ document.addEventListener("click", async ev => {
     case "proj-summary": summarizeProjects(t); break;
     case "ai-card-btn": aiFillCard(t); break;
     case "chat-clear": chat = []; saveChat(); render(); break;
+    case "upd-seen": upd.seen = now(); saveUpd(); closePop(); render(); break;
     case "chat-stop": aiCtl?.abort(); break;
     case "key-test": testKey(t); break;
     case "notif-btn":
@@ -3156,7 +3234,8 @@ const moreArrows = (() => {
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
 loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb(); checkApi();
-setInterval(() => { if (!document.hidden) syncNow(); }, 15000);
+// Hidden in the background, Task still checks once a minute so news from your partner can arrive as a notification.
+setInterval(() => { if (!document.hidden || now() - lastSync > MIN) syncNow(); }, 15000);
 setInterval(() => { if (!document.hidden && (view === "site" || view === "today")) loadWeb(); }, 30000);
 addEventListener("focus", () => syncNow());
 addEventListener("online", () => syncNow());
