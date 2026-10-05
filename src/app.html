@@ -446,7 +446,7 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
 
 <div class="wm" id="wm" aria-hidden="true"></div>
 <!-- File pickers live outside the views so a re-render while the picker is open can't drop the chosen file. -->
-<div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"><input type="file" id="lib-file" accept=".pdf,.docx,.txt,.md,.html,.htm,application/pdf" multiple tabindex="-1"></div>
+<div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"><input type="file" id="lib-file" accept=".pdf,.docx,.txt,.md,.html,.htm,.rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*" multiple tabindex="-1"></div>
 <div class="linkmenu" id="linkmenu" role="dialog" aria-label="Open link" hidden></div>
 <div class="pop" id="pop" role="dialog" aria-modal="true" hidden><div class="pop-box"><div class="pop-head"><div><h3 id="pop-title"></h3><p id="pop-sub"></p></div><button class="icon-btn" data-popclose="1" aria-label="Close"></button></div><div class="pop-body" id="pop-body"></div></div></div>
 <div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
@@ -1443,7 +1443,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.7";
+const APP_VERSION = "2.7.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1654,7 +1654,12 @@ Check the arithmetic and point out any error. Don't invent references; say "chec
 /* ---------- Library: your own books and documents, read and searched on this device (works offline) ---------- */
 const LIB_CATS = [["clinical", "Treatment guidelines"], ["law", "Law & regulation"], ["pharmacology", "Pharmacology"], ["practice", "Pharmacy practice"], ["anatomy", "Anatomy & physiology"], ["cosmetic", "Cosmetics & skin"], ["other", "Other"]];
 const libCatOf = n => /\b(act|regulations?|statutory|mcaz|masca|council|code of conduct|chapter \d)/i.test(n) ? "law" : /edliz|guideline|treatment|formulary|bnf|martindale|protocol/i.test(n) ? "clinical"
-  : /anatom|physiol|tortora|gray/i.test(n) ? "anatomy" : /cosmet|derma|skin|baran|harry/i.test(n) ? "cosmetic" : /pharmacolog|katzung|rang|goodman/i.test(n) ? "pharmacology" : /practice|pharmaceutic|aulton|remington|compound|dispens/i.test(n) ? "practice" : "other";
+  : /anatom|physiol|tortora|gray/i.test(n) ? "anatomy" : /cosmet|derma|skin|baran|harry/i.test(n) ? "cosmetic" : /pharmacolog|katzung|rang.{0,6}dale|goodman/i.test(n) ? "pharmacology" : /practice|pharmaceutic|aulton|remington|compound|dispens/i.test(n) ? "practice" : "other";
+// Sorts a book by what its opening pages talk about most.
+const LIB_CUES = {law: /\b(act|section|regulations?|statutory instrument|chapter \d+[:.]\d+|hereby|shall|offence|licen[cs]e)\b/g, clinical: /\b(guidelines?|treatment|management|diagnosis|first.line|regimen|refer)\b/g,
+  pharmacology: /\b(receptors?|agonists?|antagonists?|pharmacokinetics?|mechanism of action|pharmacolog\w*)\b/g, anatomy: /\b(anatomy|physiology|muscles?|nerves?|arter\w+|veins?|bones?|tissues?|organs?)\b/g,
+  cosmetic: /\b(cosmetic\w*|skin|dermat\w*|emollients?|sunscreens?|acne|pigment\w*|hair)\b/g, practice: /\b(dispensing|compounding|pharmaceutics?|dosage forms?|formulation|counsel\w*|excipients?)\b/g};
+const libCatOfText = t => { const sc = Object.entries(LIB_CUES).map(([k, re]) => [k, (t.match(re) || []).length]).sort((a, b) => b[1] - a[1]); return sc[0][1] >= 4 ? sc[0][0] : "other"; };
 const LIB_STOP = new Set("the and for are but not you all any can had her was one our out has have this that with from they will what when which their there been were into than them then some such only also more most other these those about after before over under between while where does each both very should would could must may might used use using how why who its it's per of in on at to by an or as is be if it no so do up we he she his".split(" "));
 let libBooks = lsGet("task.lib", []), libMem = null, libQ = "", libFilter = "", libHits = null, libRead = null, libAns = "", libUsage = null, libBusy = false;
 const saveLib = () => lsSet("task.lib", libBooks);
@@ -1666,7 +1671,12 @@ async function libLoad(){
   if (libMem) return libMem;
   const db = await libOpen(); const all = await new Promise((res, rej) => { const q = db.transaction("chunks").objectStore("chunks").getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
   const known = new Set(libBooks.map(b => b.id));
-  return libMem = all.filter(c => known.has(c.b)).map(c => ({...c, l: libNorm(c.t)}));
+  libMem = all.filter(c => known.has(c.b)).map(c => ({...c, l: libNorm(c.t)}));
+  let changed = false;
+  for (const b of libBooks) if (b.head == null){ const first = libMem.filter(c => c.b === b.id).sort((x, y) => x.p - y.p).slice(0, 8).map(c => c.t);
+    b.head = libHeadOf(first, ""); if (b.cat === "other") b.cat = libCatOfText(b.head); changed = true; }
+  if (changed) saveLib();
+  return libMem;
 }
 async function libDelBook(id){
   const db = await libOpen();
@@ -1717,40 +1727,67 @@ function libSplit(text, size = 1200){
 }
 const libVendor = f => inClaude ? ({"pdf.min.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs", "mammoth.browser.min.js": "https://cdn.jsdelivr.net/npm/mammoth@1.13.0/mammoth.browser.min.js"})[f] : new URL("vendor/" + f, location.href).href;
 const loadScript = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load")); document.head.append(s); });
-async function libExtract(file, prog){
-  const ext = file.name.split(".").pop().toLowerCase();
-  if (ext === "pdf"){
-    const pdfjs = await import(libVendor("pdf.min.mjs")); pdfjs.GlobalWorkerOptions.workerSrc = libVendor("pdf.worker.min.mjs");
-    const doc = await pdfjs.getDocument({data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false}).promise, pages = [];
-    for (let i = 1; i <= doc.numPages; i++){ const pg = await doc.getPage(i); const tc = await pg.getTextContent();
-      pages.push(tc.items.map(x => (x.str || "") + (x.hasEOL ? "\n" : " ")).join("")); pg.cleanup(); if (i % 5 === 0 || i === doc.numPages) prog(`page ${i} of ${doc.numPages}`); }
-    await doc.destroy(); return {pages, label: "page"};
-  }
-  let text;
-  if (ext === "docx"){ if (!window.mammoth) await loadScript(libVendor("mammoth.browser.min.js")); text = (await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()})).value; }
-  else if (["html", "htm"].includes(ext)){ const d = new DOMParser().parseFromString(await file.text(), "text/html"); d.querySelectorAll("script,style").forEach(e => e.remove()); text = d.body?.textContent || ""; }
-  else if (["txt", "md", "csv", "text"].includes(ext) || file.type.startsWith("text/")) text = await file.text();
-  else throw new Error("unsupported");
-  return {pages: libSplit(text, 1500), label: "part"};
+async function libKind(file){
+  const ext = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] || "").toLowerCase();
+  const head = new Uint8Array(await file.slice(0, 8).arrayBuffer()), sig = String.fromCharCode(...head);
+  if (sig.startsWith("%PDF") || ext === "pdf" || file.type === "application/pdf") return "pdf";
+  if (sig.startsWith("PK") && (ext === "docx" || /wordprocessingml/.test(file.type) || !ext)) return "docx";
+  if (ext === "epub" || ext === "doc" || ext === "djvu" || ext === "mobi") return ext;
+  if (["html", "htm", "xhtml"].includes(ext) || file.type === "text/html") return "html";
+  if (["txt", "md", "csv", "text", "rtf"].includes(ext) || file.type.startsWith("text/")) return "text";
+  return sig.startsWith("PK") ? "docx" : "text";
 }
+async function libExtract(file, prog){
+  const kind = await libKind(file);
+  if (kind === "pdf"){
+    const pdfjs = await import(libVendor("pdf.min.mjs")); pdfjs.GlobalWorkerOptions.workerSrc = libVendor("pdf.worker.min.mjs");
+    let doc;
+    try { doc = await pdfjs.getDocument({data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, stopAtErrors: false}).promise; }
+    catch (e){ throw new Error(e?.name === "PasswordException" ? "password" : "pdf"); }
+    const pages = []; let meta = "";
+    try { const m = await doc.getMetadata(); meta = [m?.info?.Title, m?.info?.Subject, m?.info?.Author].filter(Boolean).join(" · "); } catch {}
+    for (let i = 1; i <= doc.numPages; i++){
+      try { const pg = await doc.getPage(i); const tc = await pg.getTextContent(); pages.push(tc.items.map(x => (x.str || "") + (x.hasEOL ? "\n" : " ")).join("")); pg.cleanup(); }
+      catch { pages.push(""); } // a damaged page shouldn't stop the whole book
+      if (i % 5 === 0 || i === doc.numPages) prog(`page ${i} of ${doc.numPages}`);
+    }
+    await doc.destroy(); return {pages, label: "page", meta};
+  }
+  if (["epub", "doc", "djvu", "mobi"].includes(kind)) throw new Error("convert:" + kind);
+  let text;
+  if (kind === "docx"){ if (!window.mammoth) await loadScript(libVendor("mammoth.browser.min.js")); text = (await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()})).value; }
+  else if (kind === "html"){ const d = new DOMParser().parseFromString(await file.text(), "text/html"); d.querySelectorAll("script,style").forEach(e => e.remove()); text = d.body?.textContent || ""; }
+  else text = await file.text();
+  return {pages: libSplit(text, 1500), label: "part", meta: ""};
+}
+// The opening pages say what a book is, whatever the file is called.
+const libHeadOf = (pages, meta) => libNorm((meta ? meta + "\n" : "") + pages.join("\n").slice(0, 6000)).replace(/\s+/g, " ");
 async function libImport(files){
   if (libBusy || !files.length) return; libBusy = true;
   const st = m => { const el = $("#lib-status"); if (el){ el.hidden = false; el.textContent = m; } };
   try { await navigator.storage?.persist?.(); } catch {}
   let added = 0;
   for (const file of files){
-    const title = file.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").trim();
+    let title = file.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").trim();
     if (libBooks.some(b => b.title === title && b.size === file.size)){ toast(`${title} is already in your library.`); continue; }
     st(`Reading ${title}…`);
     try {
-      const {pages, label} = await libExtract(file, m => st(`Reading ${title}: ${m}`));
+      const {pages, label, meta} = await libExtract(file, m => st(`Reading ${title}: ${m}`));
       const id = uid(), rows = []; let chars = 0;
       pages.forEach((p, i) => libSplit(p).forEach(t => { if (t.length > 20){ rows.push({b: id, p: i + 1, t}); chars += t.length; } }));
       if (!rows.length){ toast(`${title} has no readable text. It may be scanned pictures of pages. Try a typed PDF or Word copy.`); continue; }
       st(`Saving ${title}…`); await libPut(rows);
-      libBooks.push({id, title, cat: libCatOf(file.name), label, pages: pages.length, chunks: rows.length, chars, size: file.size, addedAt: now()}); saveLib(); libMem = null; added++;
-      if (label === "page" && chars < pages.length * 150) toast(`${title} added, but many pages had little text. Scanned pages can't be searched.`);
-    } catch (e){ toast(e?.message === "unsupported" ? `${file.name}: use PDF, Word (.docx) or text files.` : e?.name === "QuotaExceededError" ? "Your device is out of space for more books." : `Couldn't read ${file.name}. Try saving it as a PDF again.`); }
+      // Files called "scan 0042" or "IMG 2231" get the book's own title instead.
+      if (/^(img|scan|doc|document|file|download|book|untitled|noext|pdf)?[\s\-]*\d*(\s*\(\d+\))?$/i.test(title) || !/[a-z]{3}/i.test(title)){
+        const own = (meta.split(" · ")[0] || pages.join("\n").split("\n").map(x => x.trim()).find(x => /[a-z]{3}/i.test(x) && x.length >= 4) || "").trim(); const own2 = own.length > 64 ? own.slice(0, 64).replace(/\s+\S*$/, "") + "…" : own;
+        if (own2) title = own2.replace(/\s+/g, " "); }
+      const head = libHeadOf(pages, meta), byName = libCatOf(file.name), blank = label === "page" ? pages.filter(x => x.trim().length < 30).length : 0;
+      libBooks.push({id, title, cat: byName !== "other" ? byName : libCatOfText(head), head, blank, label, pages: pages.length, chunks: rows.length, chars, size: file.size, addedAt: now()}); saveLib(); libMem = null; added++;
+      if (blank > pages.length * .3) toast(`${title} added, but ${blank} of ${pages.length} pages are pictures (scanned), so those pages can't be searched.`);
+    } catch (e){ const m = e?.message || "";
+      if (m === "password"){ toast(`${title} is locked with a password. Open it, save an unlocked copy, then add that.`); continue; }
+      if (m.startsWith("convert:")){ toast(`${title} is a .${m.slice(8)} file. Save or convert it to PDF, then add it.`); continue; }
+      toast(e?.message === "unsupported" ? `${file.name}: use PDF, Word (.docx) or text files.` : e?.name === "QuotaExceededError" ? "Your device is out of space for more books." : `Couldn't read ${file.name}. Try saving it as a PDF again.`); }
   }
   libBusy = false; if (added) toast(`${added} book${added > 1 ? "s" : ""} added to your library.`); libUsageCheck(); render();
 }
@@ -1795,29 +1832,31 @@ function libQuiz(topic, hits, n){
   }
   return qs;
 }
+// Each entry: name, title pattern, pattern for the book's opening pages, where to get it.
 const ZIM_SHELF = [
   ["Law", [
-    ["Medicines & Allied Substances Control Act (15:03)", /allied substances|masca|15[:.]03/i, "zimlii.org or veritaszim.net"],
-    ["Dangerous Drugs Act (15:02)", /dangerous drugs|15[:.]02/i, "zimlii.org or veritaszim.net"],
-    ["Health Professions Act (27:19)", /health professions|27[:.]19/i, "zimlii.org"],
-    ["MCAZ guidelines", /mcaz|medicines control/i, "mcaz.co.zw"],
-    ["Pharmacists Council code of conduct", /pharmacists council|pcz|code of conduct/i, "Pharmacists Council of Zimbabwe"]]],
+    ["Medicines & Allied Substances Control Act (15:03)", /allied substances|masca|15[:.]03/i, /medicines and allied substances control|chapter 15[:.]03/, "zimlii.org or veritaszim.net"],
+    ["Dangerous Drugs Act (15:02)", /dangerous drugs|15[:.]02/i, /dangerous drugs act|chapter 15[:.]02/, "zimlii.org or veritaszim.net"],
+    ["Health Professions Act (27:19)", /health professions|27[:.]19/i, /health professions act|chapter 27[:.]19/, "zimlii.org"],
+    ["MCAZ guidelines", /mcaz|medicines control/i, /medicines control authority of zimbabwe|\bmcaz\b/, "mcaz.co.zw"],
+    ["Pharmacists Council code of conduct", /pharmacists council|pcz|code of conduct/i, /pharmacists council of zimbabwe|code of (professional )?conduct/, "Pharmacists Council of Zimbabwe"]]],
   ["Guidelines", [
-    ["EDLIZ: Zimbabwe treatment guidelines", /edliz|essential medicines list|standard treatment/i, "Ministry of Health and Child Care"],
-    ["HIV, TB and malaria guidelines", /hiv|art guideline|tuberculosis|malaria/i, "Ministry of Health and Child Care"],
-    ["BNF or Martindale", /bnf|british national formulary|martindale/i, "Your own copy"]]],
+    ["EDLIZ: Zimbabwe treatment guidelines", /edliz|essential medicines list|standard treatment/i, /edliz|essential (medicines|drugs) list and standard treatment|standard treatment guidelines/, "Ministry of Health and Child Care"],
+    ["HIV, TB and malaria guidelines", /hiv|\bart\b|antiretroviral|tuberculosis|\btb\b|malaria/i, /(guideline|manual|protocol)s?.{0,80}(hiv|antiretroviral|tuberculosis|malaria)|(hiv|antiretroviral|tuberculosis|malaria).{0,80}(guideline|manual|protocol)/, "Ministry of Health and Child Care"],
+    ["BNF or Martindale", /bnf|british national formulary|martindale/i, /british national formulary|martindale|\bbnf\b/, "Your own copy"]]],
   ["Textbooks", [
-    ["Katzung: Basic & Clinical Pharmacology", /katzung|basic (and|&) clinical pharmacology/i, "Your own copy"],
-    ["Rang & Dale's Pharmacology", /rang/i, "Your own copy"],
-    ["Aulton's Pharmaceutics", /aulton|pharmaceutics/i, "Your own copy"],
-    ["Anatomy & physiology (e.g. Tortora)", /anatom|physiol|tortora/i, "Your own copy"],
-    ["Cosmetic dermatology (e.g. Baran & Maibach)", /cosmet|derma/i, "Your own copy"]]]
+    ["Pharmacology (e.g. Katzung)", /katzung|pharmacolog/i, /katzung|basic (and|&) clinical pharmacology|pharmacology/, "Your own copy"],
+    ["Rang & Dale's Pharmacology", /rang\b.{0,6}dale/i, /rang.{0,6}dale/, "Your own copy"],
+    ["Pharmaceutics (e.g. Aulton)", /aulton|pharmaceutic/i, /aulton|pharmaceutics|pharmaceutical (technology|practice)|dosage forms/, "Your own copy"],
+    ["Anatomy & physiology (e.g. Tortora)", /anatom|physiol|tortora/i, /anatomy|physiology|tortora/, "Your own copy"],
+    ["Cosmetics & skin (e.g. Baran & Maibach)", /cosmet|dermat|skin/i, /cosmetic|cosmeceutical|dermatolog/, "Your own copy"]]]
 ];
+const libMatch = (re, re2) => libBooks.find(b => re.test(b.title)) || libBooks.find(b => b.head && re2.test(b.head));
 let libShelfTab = 0;
 function libShelf(){
   const [, rows] = ZIM_SHELF[libShelfTab];
   return `<div class="seg ext-tabs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ZIM_SHELF.map(([g], i) => `<button data-libshelf="${i}" aria-pressed="${i === libShelfTab}">${g}</button>`).join("")}</div>
-    <ul class="list lib-shelf">${rows.map(([t, re, where]) => { const has = libBooks.some(b => re.test(b.title)); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library" : esc(where)}</span></div></div></li>`; }).join("")}</ul>
+    <ul class="list lib-shelf">${rows.map(([t, re, re2, where]) => { const has = libMatch(re, re2); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library: " + esc(has.title) : esc(where)}</span></div></div></li>`; }).join("")}</ul>
     <p class="sub" style="margin:0">Download the ones you have, then tap Add books. Typed PDFs work best. Scanned pages can't be searched.</p>`;
 }
 const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e6).toFixed(1) + " MB";
@@ -1831,6 +1870,7 @@ function libBooksHTML(){
 }
 function viewBooks(){
   if (libUsage == null) libUsageCheck();
+  if (!libMem && libBooks.some(b => b.head == null)) libLoad().then(() => { if (view === "books"){ render(); if (popKey) fillPop(); } }).catch(() => {});
   const hits = libHits || [], cats = [...new Set(libBooks.map(b => b.cat))];
   const hitRow = (h, i, full) => `<li><button class="lib-hit ${full ? "full" : ""}" data-libread="${i}"><span class="lib-src">${IC.book}${esc(libWhere(h.c))}</span><span class="lib-snip">${libMark(libSnip(h.c, h.terms, full ? 420 : 240), h.terms)}</span></button></li>`;
   if (hits.length) POPS["lib-hits"] = {title: "Results", sub: `${hits.length} passages for “${libQ}”`, html: `<ul class="lib-hits">${hits.map((h, i) => hitRow(h, i, true)).join("")}</ul>`};
