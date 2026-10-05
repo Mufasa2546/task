@@ -211,7 +211,12 @@ textarea{resize:vertical;min-height:80px}
 .caution{font-size:12.5px;color:var(--muted);border-left:3px solid var(--warn);padding:4px 10px;margin:0}
 
 /* Chat */
-.chat{display:flex;flex-direction:column;height:min(68vh,660px);min-height:380px;padding:0;overflow:hidden}
+.chat{display:flex;flex-direction:column;height:min(74vh,720px);min-height:380px;padding:0;overflow:hidden}
+.chat-bar{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.chat-bar select{width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px;flex:0 1 auto;min-width:0}
+.chat-bar-end{margin-left:auto;display:flex;gap:2px}.chat-bar .icon-btn{position:relative}
+.dot-warn{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--warn,#d98b1f)}
+.sugg-list{display:grid;gap:8px}.sugg-list .btn{justify-content:flex-start;text-align:left;white-space:normal;min-height:46px}
 /* No scroll bars anywhere; an arrow shows when there's more below */
 *{scrollbar-width:none;-ms-overflow-style:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
@@ -489,7 +494,12 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .pbtn > svg:last-child{display:none}
   .pbtn b{font-size:13.5px}.pbtn small{font-size:12px}
   .vc-plot,.vc-y{height:130px}
-  .chat{height:calc(100dvh - 255px);min-height:300px}
+  /* Phone chat: fills the screen like a messaging app, with larger text */
+  .content:has(> .chat){display:flex;flex-direction:column;padding:8px 8px 6px;gap:0}
+  .content > .chat{flex:1 1 auto;height:auto;min-height:0;border-radius:14px}
+  .msg{font-size:16px;line-height:1.45;max-width:88%}
+  .chat-log{padding:12px 10px;gap:12px}
+  .chat-form{padding:8px}.chat-form textarea{font-size:16px}
   .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
   .tabbar button{border:0;background:none;display:grid;justify-items:center;gap:3px;padding:6px 2px;font-size:11px;font-weight:600;color:var(--muted);border-radius:10px;min-width:0}
   .tabbar button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -1341,14 +1351,18 @@ async function testKey(btn, p){
   if (btn?.isConnected){ btn.disabled = false; btn.textContent = was; }
   render();
 }
+const AI_SUGG = ["Plan my day", "Who needs a follow-up?", "Quiz me on antibiotics", "What should I focus on this week?", "Draft an AI automation proposal outline", "Summarize my projects", "Book a discovery call tomorrow at 10am"];
+// Chat fills the screen; suggestions, the AI picker and settings sit in one slim bar on top.
 function viewAI(){
+  const many = !inClaude && aiOrder().length > 1;
+  POPS["ai-sugg"] = {title: "Suggestions", sub: "Tap one to ask Task AI", html: `<div class="sugg-list">${AI_SUGG.map(c => `<button class="btn" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>`};
   return `<section class="card chat">
-    <div class="chips">${["Plan my day", "Who needs a follow-up?", "Quiz me on antibiotics", "Focus for this week?", "Draft an AI automation proposal", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.role === "user" ? m.content : plain(m.content))}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
-    ${!inClaude && aiOrder().length > 1 ? `<div class="ai-pick"><label for="ai-pick">Answer with</label><select id="ai-pick" data-aipick="1"><option value="auto" ${aiAuto() ? "selected" : ""}>Auto (best for each job)</option>${Object.keys(AI_PROV).filter(p => aiKeys()[p]).map(p => `<option value="${p}" ${!aiAuto() && p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)} only</option>`).join("")}</select></div>` : ""}
-    <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
+    <div class="chat-bar"><button class="btn sm" data-pop="ai-sugg">${IC.ai}Suggestions</button>
+      ${many ? `<select id="ai-pick" data-aipick="1" aria-label="Which AI answers"><option value="auto" ${aiAuto() ? "selected" : ""}>Auto AI</option>${Object.keys(AI_PROV).filter(p => aiKeys()[p]).map(p => `<option value="${p}" ${!aiAuto() && p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)}</option>`).join("")}</select>` : "<span></span>"}
+      <span class="chat-bar-end">${inClaude ? "" : `<button class="icon-btn" data-pop="ai-key" aria-label="AI settings" title="AI settings">${IC.settings}${apiKey() ? "" : `<span class="dot-warn"></span>`}</button>`}${chat.length ? `<button class="icon-btn" id="chat-clear" aria-label="Clear chat" title="Clear chat">${IC.trash}</button>` : ""}</span></div>
+    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.role === "user" ? m.content : plain(m.content))}</div>`).join("") : `<div class="msg sys">Ask anything, or tell Task what to add. It knows your goals, meetings, clients, drug cards and books.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
+    <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Message Task AI" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
-  <div class="btn-row" style="justify-content:flex-end">${inClaude ? "" : `<button class="btn sm" data-pop="ai-key">${IC.settings}AI settings${apiKey() ? "" : ` <span class="pill s-warn">Off</span>`}</button>`}${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
   ${inClaude ? "" : (POPS["ai-key"] = {title: "AI settings", sub: apiKey() ? "Task AI is on" : "Add your API key", html: keyCard()}, "")}`;
 }
 
@@ -1542,7 +1556,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.14";
+const APP_VERSION = "2.15";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2539,7 +2553,7 @@ document.addEventListener("click", async ev => {
     editing = ["task", "appt", "biz", "project", "stock", "deal"].includes(r.kind) ? r : null;
     go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects", stock: "stock", deal: "deals"}[r.kind] || "today");
     if (editing) setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 30); return; }
-  if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
+  if (d.prompt){ closePop(); go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
   switch (t.id){
     case "load-examples": loadExamples(); break;
     case "backup-btn": downloadBackup(); break;
@@ -2999,6 +3013,7 @@ async function sendChat(){
     const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
       onText: ({text}) => { const b = bubble(); if (b){ b.textContent = plain(text); const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
     chat.push({role: "assistant", content: plain(answer)}); saveChat(); if (bubble()) bubble().textContent = plain(answer); else if (view === "ai") render(); // a tool may have redrawn the chat
+    if (view === "ai" && !$("#chat-clear")) render(); // show the clear button after the first answer
   } catch (e){
     if (bubble()) bubble().textContent = (e.text ? e.text + "\n\n" : "") + errCopy(e);
     if (e.text){ chat.push({role: "assistant", content: e.text}); saveChat(); }
