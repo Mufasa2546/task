@@ -1508,7 +1508,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.10.2";
+const APP_VERSION = "2.10.3";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1979,7 +1979,7 @@ const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e
 function libBooksHTML(){
   return packHTML() + `<div class="btn-row" style="justify-content:space-between;align-items:center"><span class="sub">${libBooks.length} book${libBooks.length === 1 ? "" : "s"}${libUsage ? " · " + fmtMB(libUsage) + " used on this device" : ""}</span><label class="btn sm primary" for="lib-file" role="button">${IC.plus}Add books</label></div>
     ${libBooks.length ? `<ul class="list lib-books">${[...libBooks].sort((a, b) => a.title.localeCompare(b.title)).map(b => `<li class="row"><div class="row-main"><div class="row-title">${esc(b.title)}</div>
-      <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span>${daily.used?.[b.id] ? `<span>Used for notes ${esc(ago(daily.used[b.id]))}</span>` : `<span>Not used for notes yet</span>`}</div>
+      <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span>${daily.cnt?.[b.id] ? `<span>${daily.cnt[b.id]} note${daily.cnt[b.id] === 1 ? "" : "s"}, last ${esc(ago(daily.used?.[b.id] || now()))}</span>` : `<span>No notes yet</span>`}</div>
       <select data-libcat="${b.id}" aria-label="Category for ${esc(b.title)}">${LIB_CATS.map(([k, l]) => `<option value="${k}" ${b.cat === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
       <div class="row-actions"><button class="icon-btn" data-libdel="${b.id}" aria-label="Remove ${esc(b.title)}">${IC.trash}</button></div></li>`).join("")}</ul>` : empty("No books yet.", "Add PDFs, Word files or text notes.")}
     <p class="caution" style="margin:0">Books stay on this device only. They aren't uploaded, synced or included in backups, so add them on each device you use.</p>`;
@@ -2010,24 +2010,33 @@ function viewBooks(){
 /* ---------- Daily notes: short pharmacy and skin notes with explanations, ready offline ---------- */
 // Claude writes notes from your books while you're online; Task shows a few each day, even offline.
 // With no saved notes left, notes come straight from your books.
-const DAILY_N = 4;
+const DAILY_N = 10;
 let daily = lsGet("task.daily", {});
 if (daily.v !== 2) daily = {v: 2, notes: [], day: "", set: [], i: 0, refilledAt: 0, streak: 0, lastDone: ""};
 const saveDaily = () => lsSet("task.daily", daily);
 let dailyBusy = false;
 const SKIN_RE = /\b(skin|dermat\w*|eczema|acne|psoriasis|fung\w*|tinea|scabies|rash\w*|topical|cream|ointment|emollient|sunscreen|pigment\w*|melasma|wound|burns?|itch\w*|urticaria)\b/i;
 const PHARM_RE = /\b(dispens\w*|counsel\w*|label\w*|storage|store|expiry|tablets?|capsules?|syrup|dose|dosing|interaction\w*|adverse|pregnan\w*|children|elderly|renal|refer\w*|prescription|first.line)\b/i;
-// Takes turns across books, so every book gets used, not just the biggest ones.
+// Bigger books give more notes: each book's share of notes follows its share of the library's text.
+// Every book gets at least a small share, so short Acts still come up now and then.
+// The book furthest behind its share goes next; daily.cnt keeps the running count.
+function libNextBooks(byBook){
+  const cnt = daily.cnt ||= {}, books = libBooks.filter(b => byBook[b.id]?.length);
+  const size = b => b.chars || b.size || 1, tot = books.reduce((s, b) => s + size(b), 0) || 1, floor = tot * .03;
+  const w = Object.fromEntries(books.map(b => [b.id, Math.max(size(b), floor)])), wt = Object.values(w).reduce((s, x) => s + x, 0) || 1;
+  const done = books.reduce((s, b) => s + (cnt[b.id] || 0), 0);
+  return books.map(b => [b, (done + 1) * w[b.id] / wt - (cnt[b.id] || 0) + Math.random() * .01]).sort((x, y) => y[1] - x[1]).map(x => x[0]);
+}
+const libMark1 = id => { (daily.cnt ||= {})[id] = (daily.cnt[id] || 0) + 1; (daily.used ||= {})[id] = now(); };
 async function libRandomChunks(n, prefer){
-  const mem = await libLoad(), byBook = {};
+  const mem = await libLoad(), byBook = {}, out = [];
   mem.forEach(c => (byBook[c.b] ||= []).push(c));
-  const used = daily.used ||= {}, out = [];
-  const order = libBooks.filter(b => byBook[b.id]?.length).sort((x, y) => (used[x.id] || 0) - (used[y.id] || 0) || Math.random() - .5);
-  for (let k = 0; k < n && order.length; k++){
-    const bk = order[k % order.length], all = byBook[bk.id], good = all.filter(c => c.t.length > 400), pool = good.length ? good : all;
+  for (let k = 0; k < n; k++){
+    const bk = libNextBooks(byBook)[0]; if (!bk) break;
+    const all = byBook[bk.id], good = all.filter(c => c.t.length > 400), pool = good.length ? good : all;
     const liked = prefer ? pool.filter(c => prefer.test(c.t)) : [], from = liked.length && Math.random() < .75 ? liked : pool;
     for (let t = 0; t < 6; t++){ const c = from[Math.floor(Math.random() * from.length)]; if (!out.includes(c)){ out.push(c); break; } }
-    used[bk.id] = now() + k; // ms apart keeps the turn order stable
+    libMark1(bk.id);
   }
   saveDaily(); return out;
 }
@@ -2059,19 +2068,19 @@ function noteFrom(c){
   const why = sents.slice(k + 1, k + 3).filter(x => ok(x, 1)).join(" ") || CAT_WHY[bk.cat] || "";
   return {topic: SKIN_RE.test(sents[k]) ? "Skin" : "Pharmacy", title, note: sents[k].replace(/[;:]$/, "."), why, src};
 }
-// Goes round the books, least recently used first, one note per book before any book gets a second.
+// Picks books by their share of the library (see libNextBooks), and only counts a book when it gave a note.
 async function dailyOffline(n){
-  const mem = await libLoad(), byBook = {}, used = daily.used ||= {}, out = [];
+  const mem = await libLoad(), byBook = {}, out = [], failed = new Set();
   mem.forEach(c => (byBook[c.b] ||= []).push(c));
-  const order = libBooks.filter(b => byBook[b.id]?.length).sort((x, y) => (used[x.id] || 0) - (used[y.id] || 0) || Math.random() - .5);
-  for (let round = 0; round < 3 && out.length < n; round++) for (const bk of order){
-    if (out.length >= n) break;
+  while (out.length < n){
+    const bk = libNextBooks(byBook).find(b => !failed.has(b.id)); if (!bk) break;
     const all = byBook[bk.id], good = all.filter(c => c.t.length > 300), pool = good.length ? good : all;
-    const liked = pool.filter(c => SKIN_RE.test(c.t) || PHARM_RE.test(c.t));
-    for (let t = 0; t < 12; t++){
-      const from = liked.length && t < 8 ? liked : pool, note = noteFrom(from[Math.floor(Math.random() * from.length)]);
-      if (note && !out.some(o => o.note === note.note)){ out.push(note); used[bk.id] = now() + out.length; break; }
+    const liked = pool.filter(c => SKIN_RE.test(c.t) || PHARM_RE.test(c.t)); let note = null;
+    for (let t = 0; t < 12 && !note; t++){
+      const from = liked.length && t < 8 ? liked : pool, x = noteFrom(from[Math.floor(Math.random() * from.length)]);
+      if (x && !out.some(o => o.note === x.note)) note = x;
     }
+    if (note){ out.push(note); libMark1(bk.id); } else failed.add(bk.id);
   }
   saveDaily(); return out;
 }
@@ -2084,13 +2093,13 @@ async function dailyEnsure(){
 }
 async function dailyRefill(force){
   if (dailyBusy || !navigator.onLine) return;
-  if (!force && (daily.notes.length >= 16 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
+  if (!force && (daily.notes.length >= 30 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
   const sample = await getSample(); if (!sample) return;
   dailyBusy = true; if (force) render();
   try {
-    const chunks = libBooks.length ? [...await libRandomChunks(3, SKIN_RE), ...await libRandomChunks(3, PHARM_RE)] : [];
+    const chunks = libBooks.length ? [...await libRandomChunks(5, SKIN_RE), ...await libRandomChunks(5, PHARM_RE)] : [];
     const r = await askJson(sample, `You write short daily study notes for a practising community pharmacist in Zimbabwe who loves skin care and cosmetics.
-${chunks.length ? `Passages from his own books:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n` : ""}Write 8 notes: about half on skin (conditions, topical products, cosmetics and skin care, counselling) and half on everyday pharmacy practice (dispensing, counselling, doses, storage, interactions, special groups, Zimbabwe practice).
+${chunks.length ? `Passages from his own books:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n` : ""}Write 12 notes: about half on skin (conditions, topical products, cosmetics and skin care, counselling) and half on everyday pharmacy practice (dispensing, counselling, doses, storage, interactions, special groups, Zimbabwe practice).
 Return a JSON array. Each item: {"topic": "Skin" or "Pharmacy", "title": a few words, "note": one or two plain sentences with the key fact, "why": two or three sentences explaining why it matters or how to use it at the counter, "src": the passage label exactly as given (e.g. "${chunks[0] ? libWhere(chunks[0]) : "General knowledge"}") or "General knowledge" if not from a passage}.
 Prefer facts from the passages. Only add general knowledge that is well established; never invent doses. Keep each note simple.`);
     const notes = (Array.isArray(r) ? r : r?.notes || []).filter(x => x?.note).map(x => ({topic: /skin/i.test(x.topic) ? "Skin" : "Pharmacy", title: String(x.title || ""), note: String(x.note), why: String(x.why || ""), src: String(x.src || "")}));
