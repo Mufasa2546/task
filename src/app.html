@@ -1508,7 +1508,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.10.3";
+const APP_VERSION = "2.10.4";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2084,16 +2084,22 @@ async function dailyOffline(n){
   }
   saveDaily(); return out;
 }
+// Notes Claude wrote ahead fill at most half the day, so the rest always comes fresh from every book by size.
+// Adding or removing books redoes today's unread book notes, so new books show up the same day.
+const libSig = () => libBooks.map(b => b.id).sort().join();
 async function dailyEnsure(){
-  if (daily.day === dayKey(now())) return;
-  let set = daily.notes.splice(0, DAILY_N);
-  if (set.length < DAILY_N && libBooks.length){ try { set = set.concat(await dailyOffline(DAILY_N - set.length)); } catch {} }
+  const today = dayKey(now()), sig = libSig();
+  if (daily.day === today && daily.sig === sig && (daily.set || []).length >= DAILY_N) return;
+  let set = [];
+  if (daily.day === today) set = daily.set.filter((x, j) => j < daily.i || !x.off);
+  else { set = daily.notes.splice(0, libBooks.length ? Math.ceil(DAILY_N / 2) : DAILY_N); daily.i = 0; }
+  if (set.length < DAILY_N && libBooks.length){ try { set = set.concat((await dailyOffline(DAILY_N - set.length)).map(x => ({...x, off: 1}))); } catch {} }
   if (!set.length) return;
-  Object.assign(daily, {day: dayKey(now()), set, i: 0}); saveDaily();
+  Object.assign(daily, {day: today, set, sig, i: Math.min(daily.i || 0, set.length)}); saveDaily();
 }
 async function dailyRefill(force){
   if (dailyBusy || !navigator.onLine) return;
-  if (!force && (daily.notes.length >= 30 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
+  if (!force && daily.refSig === libSig() && (daily.notes.length >= 30 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
   const sample = await getSample(); if (!sample) return;
   dailyBusy = true; if (force) render();
   try {
@@ -2103,7 +2109,7 @@ ${chunks.length ? `Passages from his own books:\n\n${chunks.map((c, i) => `[${i 
 Return a JSON array. Each item: {"topic": "Skin" or "Pharmacy", "title": a few words, "note": one or two plain sentences with the key fact, "why": two or three sentences explaining why it matters or how to use it at the counter, "src": the passage label exactly as given (e.g. "${chunks[0] ? libWhere(chunks[0]) : "General knowledge"}") or "General knowledge" if not from a passage}.
 Prefer facts from the passages. Only add general knowledge that is well established; never invent doses. Keep each note simple.`);
     const notes = (Array.isArray(r) ? r : r?.notes || []).filter(x => x?.note).map(x => ({topic: /skin/i.test(x.topic) ? "Skin" : "Pharmacy", title: String(x.title || ""), note: String(x.note), why: String(x.why || ""), src: String(x.src || "")}));
-    daily.notes.push(...notes); daily.refilledAt = now(); saveDaily();
+    daily.notes.push(...notes); daily.refilledAt = now(); daily.refSig = libSig(); saveDaily();
     if (force) toast(`Saved ${notes.length} notes for the coming days.`);
   } catch (e){ if (force) toast(errCopy(e)); }
   dailyBusy = false; if (force || view === "learn" || view === "today") render();
@@ -2126,7 +2132,7 @@ function dailyGo(i){
   saveDaily(); render();
 }
 let dailyTried = "";
-const dailyAuto = () => { if (daily.day !== dayKey(now()) && dailyTried !== dayKey(now()) && (daily.notes.length || libBooks.length)){ dailyTried = dayKey(now()); dailyEnsure().then(() => { if (view === "today" || view === "learn") render(); }).catch(() => {}); } };
+const dailyAuto = () => { if ((daily.day !== dayKey(now()) || daily.sig !== libSig() || (daily.set || []).length < DAILY_N) && dailyTried !== dayKey(now()) && (daily.notes.length || libBooks.length)){ dailyTried = dayKey(now()); dailyEnsure().then(() => { if (view === "today" || view === "learn") render(); }).catch(() => {}); } };
 
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
