@@ -799,7 +799,7 @@ function renderChrome(){
   $("#side").innerHTML = `<div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#c8a24b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>Task</div>` +
     Object.entries(groups).map(([g, keys]) => `<div class="nav-group"><div class="nav-label">${g}</div>${keys.map(k =>
       `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span>${c[k] ? `<span class="nav-count">${c[k]}</span>` : ""}</button>`).join("")}</div>`).join("") +
-    `<button class="side-me" data-nav="settings">${avatar()}<div><b>${esc(profile.name || "Add your profile")}</b><span>${esc(profile.company ? profile.company + " · " + (profile.role || "Co-founder") : "Name, photo and look")}</span></div></button>` +
+    `<button class="side-me" data-nav="settings">${avatar()}<div><b>${esc(profile.name || "Add your profile")}</b><span>${esc(profile.company ? profile.company + " · " + (profile.role || "Co-owner") : "Name, photo and look")}</span></div></button>` +
     `<div class="side-foot"><span class="dot ${online || inClaude ? "" : "off"}"></span>${esc(syncLabel || foot)}</div>`;
   const inMore = !TAB_KEYS.includes(view);
   $("#tabbar").innerHTML = TAB_KEYS.map(k => `<button data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].short || SECTIONS[k].label}</span></button>`).join("") +
@@ -1264,7 +1264,7 @@ function viewSettings(){
   const notif = !("Notification" in window) ? "Not supported in this browser" : Notification.permission === "granted" ? "On" : Notification.permission === "denied" ? "Blocked in browser settings" : "Off";
   const acct = inClaude ? "" : !apiOk ? `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Sign-in works on task.brandbridgeacademy.workers.dev when you're online.</p></div></div></section>`
     : signedIn() ? `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Signed in as ${esc(session.user.email)}</p></div><span class="pill s-good">Synced</span></div>
-      <div class="set-row"><div class="t"><b>${esc(session.team?.name || "Team")}</b><span>${(session.members || []).map(m => esc(m.name || m.email) + (m.role === "owner" ? " (owner)" : "")).join(" · ")}</span></div></div>
+      <div class="set-row"><div class="t"><b>${esc(session.team?.name || "Team")}</b><span>${(session.members || []).length > 1 ? "Co-owners: " : "Owner: "}${(session.members || []).map(m => esc(m.name || m.email)).join(" · ")}</span></div></div>
       ${session.team?.code && (session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Invite code for ${esc(partner())}</b><span>${esc(partner())} opens Task, taps Create account and enters this code.</span></div><div class="btn-row"><span class="code">${esc(session.team.code)}</span><button class="btn" data-copy="Join me on Task: open https://task.brandbridgeacademy.workers.dev, tap Create account and enter invite code ${esc(session.team.code)}">${IC.copy}Copy invite</button></div></div>` : ""}
       ${(session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Have a code from your partner?</b><span>Join their team instead</span></div><div class="btn-row"><input id="join-code" placeholder="Invite code" style="max-width:150px" autocapitalize="characters"><button class="btn" id="join-btn">Join</button></div></div>` : ""}
       <div class="set-row"><div class="t"><b>Sync</b><span>${syncing ? "Syncing..." : syncErr ? esc(syncErr) : lastSync ? "Last synced " + esc(ago(lastSync)) : "Not synced yet"}${Object.keys(pending).length ? " · " + Object.keys(pending).length + " change(s) waiting" : ""}</span></div><div class="btn-row"><button class="btn" id="sync-now">Sync now</button><button class="btn ghost" id="sign-out">Sign out</button></div></div>
@@ -1274,11 +1274,11 @@ function viewSettings(){
   return `<div class="grid2">
     ${acct}
     <section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">Shown in the menu, the greeting and the lock screen. Saved on this device.</p></div></div>
-      <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-founder", profile.company].filter(Boolean).join(", "))}</span></div></div>
+      <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-owner", profile.company].filter(Boolean).join(", "))}</span></div></div>
         <div class="btn-row"><label class="btn" for="photo-file" role="button">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</label>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div></div>
       <div class="form" style="padding:0">
         <label class="field">Your name<input id="pf-name" value="${esc(profile.name)}" placeholder="Mufasa" autocomplete="name"></label>
-        <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-founder"></label>
+        <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-owner"></label>
         <label class="field">Company<input id="pf-company" value="${esc(profile.company)}" placeholder="Brandbridge"></label>
         <label class="field">Business partner<input id="pf-partner" value="${esc(profile.partner)}" placeholder="Paul"></label>
         <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" placeholder="KES" maxlength="5"></label></div></section>
@@ -1306,7 +1306,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.2.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1878,8 +1878,8 @@ function snapshot(){
     learnedPatterns: learnPatterns().tips
   });
 }
-function aboutUser(){ const nm = profile.name || "the user"; return `${nm}${profile.role ? ", " + profile.role : ""}, co-runs ${profile.company || "Brandbridge"} (private limited) with ${partner()}: web development, AI automations, digital advertising and innovation projects. ${firstName() || "They"} is also a pharmacist who runs a pharmacy and keeps studying. Task is their personal command centre for all of this.`; }
-const RULES = () => `You are Task AI, a sharp, warm personal assistant inside ${firstName() || "the user"}'s command-centre app. ${aboutUser()} Money values are in ${profile.currency || "the local currency"}. For Brandbridge work, think like a growth-minded agency co-founder: pipeline, follow-ups, proposals, delivery and cash flow. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
+function aboutUser(){ const nm = profile.name || "the user"; return `${nm}${profile.role ? ", " + profile.role : ""}, co-owns ${profile.company || "Brandbridge"} (private limited) with ${partner()} as equal owners: web development, AI automations, digital advertising and innovation projects. ${firstName() || "They"} is also a pharmacist who runs a pharmacy and keeps studying. Task is their personal command centre for all of this.`; }
+const RULES = () => `You are Task AI, a sharp, warm personal assistant inside ${firstName() || "the user"}'s command-centre app. ${aboutUser()} Money values are in ${profile.currency || "the local currency"}. For Brandbridge work, think like a growth-minded agency co-owner: pipeline, follow-ups, proposals, delivery and cash flow. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
 const tools = [
   {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00. Optional repeat (needs a due time): daily, weekdays, weekly, monthly.",
    inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},

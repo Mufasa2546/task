@@ -66,6 +66,8 @@ export class Store extends DurableObject {
       CREATE TABLE IF NOT EXISTS uv (site TEXT, day TEXT, h TEXT, last INTEGER, PRIMARY KEY (site, day, h));
       CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
     `);
+    // Everyone in a team is a co-owner (Brandbridge has two equal owners).
+    this.sql.exec("UPDATE members SET role = 'owner' WHERE role != 'owner'");
   }
 
   one(q, ...a) { return this.sql.exec(q, ...a).toArray()[0] || null; }
@@ -127,7 +129,7 @@ export class Store extends DurableObject {
     if (code && !team) return json({ error: "bad_invite" }, 400);
     const id = rand(10), salt = rand(16);
     this.sql.exec("INSERT INTO users (id, email, name, hash, salt, created) VALUES (?, ?, ?, ?, ?, ?)", id, email, name, await hashKey(key, salt), salt, Date.now());
-    if (team) this.sql.exec("INSERT INTO members (team_id, user_id, role, joined) VALUES (?, ?, 'member', ?)", team.id, id, Date.now());
+    if (team) this.sql.exec("INSERT INTO members (team_id, user_id, role, joined) VALUES (?, ?, 'owner', ?)", team.id, id, Date.now());
     else this.createTeam(id, String(b.company || "Brandbridge").trim().slice(0, 60) || "Brandbridge");
     return json({ token: await this.session(id), ...this.me({ id, email, name }) });
   }
@@ -157,7 +159,7 @@ export class Store extends DurableObject {
     if (cur && cur.id === team.id) return json(this.me(user));
     // Leaving a team you own and share with nobody is fine; otherwise switch membership.
     if (cur) this.sql.exec("DELETE FROM members WHERE team_id = ? AND user_id = ?", cur.id, user.id);
-    this.sql.exec("INSERT INTO members (team_id, user_id, role, joined) VALUES (?, ?, 'member', ?)", team.id, user.id, Date.now());
+    this.sql.exec("INSERT INTO members (team_id, user_id, role, joined) VALUES (?, ?, 'owner', ?)", team.id, user.id, Date.now());
     return json(this.me(user));
   }
   renameTeam(user, b) {
