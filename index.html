@@ -500,7 +500,8 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .pbtn > svg:last-child{display:none}
   .pbtn b{font-size:13.5px}.pbtn small{font-size:12px}
   .vc-plot,.vc-y{height:130px}
-  .upd-hero{font-size:13px;padding:6px 9px;margin-top:6px}.upd-text{-webkit-line-clamp:2}
+  .upd-hero{font-size:13px;line-height:1.35;padding:5px 8px;margin-top:5px}.upd-text{-webkit-line-clamp:2}
+  .today-hero:has(.upd-hero){padding-top:9px;padding-bottom:9px}.today-hero:has(.upd-hero) h2{font-size:16px}
   /* Phone chat: fills the screen like a messaging app, with larger text */
   .content:has(> .chat){display:flex;flex-direction:column;padding:8px 8px 6px;gap:0}
   .content > .chat{flex:1 1 auto;height:auto;min-height:0;border-radius:14px}
@@ -1633,7 +1634,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.16";
+const APP_VERSION = "2.16.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
