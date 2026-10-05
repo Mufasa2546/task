@@ -355,6 +355,10 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .pay-grid>div{background:var(--sunk);border-radius:var(--r-sm);padding:10px 12px;min-width:0}
 .pay-grid span{display:block;font-size:12px;color:var(--muted);font-weight:600}
 .pay-grid b{display:block;font-family:var(--f-num);font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:2px}
+.sugg-pop{position:fixed;z-index:95;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--r-sm);box-shadow:0 10px 30px rgba(0,0,0,.28);overflow:hidden}
+.sugg-pop[hidden]{display:none}.sugg-pop button{all:unset;cursor:pointer;padding:11px 14px;font-size:15px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--line)}
+.sugg-pop button:last-child{border-bottom:0}.sugg-pop button:hover,.sugg-pop button:focus-visible{background:var(--sunk)}
+.pay-grid small{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}.cp-more{margin-top:10px;flex-wrap:wrap}.fee-form{margin-top:12px;padding-top:12px!important;border-top:1px solid var(--line)}
 .pay-grid .owe b{color:var(--bad)}.pay-grid .ok b{color:var(--good)}.cp-next{margin:0 0 12px}
 .rx-img{all:unset;display:block;width:100%;max-height:52vh;overflow:hidden;border-radius:var(--r-sm);background:var(--sunk);cursor:zoom-in;margin-bottom:6px}
 .rx-img img{display:block;width:100%;max-height:52vh;object-fit:contain;transition:transform .2s}
@@ -576,6 +580,7 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet" role="dialog" aria-label="More sections"><div class="grip"></div><div class="sheet-grid" id="sheet-grid"></div></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="sugg-pop" id="sugg-pop" role="listbox" hidden></div>
 
 <script>
 (() => {
@@ -749,10 +754,10 @@ function renderAuth(){
   el.innerHTML = `<div class="lock-box auth-box"><span class="auth-logo"><img src="icon-192.png" alt=""></span><h2>${up ? "Create your account" : "Sign in to Task"}</h2>
     <p>${up ? "Your Brandbridge clients and shared goals sync with your partner. Pharmacy and personal items stay private to you." : "Pick up where you left off on any device."}</p>
     <form id="auth-form" class="auth-form">
-      ${up ? `<label>Your name<input id="au-name" autocomplete="name" required value="${esc(profile.name)}" placeholder="Mufasa"></label>` : ""}
-      <label>Email<input id="au-email" type="email" autocomplete="email" required placeholder="you@brandbridge.co"></label>
-      <label>Password<input id="au-pass" type="password" autocomplete="${up ? "new-password" : "current-password"}" required minlength="8" placeholder="${up ? "At least 8 characters" : ""}"></label>
-      ${up ? `<label>Invite code <span class="opt">(only if your partner already has an account)</span><input id="au-invite" autocapitalize="characters" placeholder="e.g. K7Q2M9XD"></label>` : ""}
+      ${up ? `<label>Your name<input id="au-name" autocomplete="name" required value="${esc(profile.name)}"></label>` : ""}
+      <label>Email<input id="au-email" type="email" autocomplete="email" required></label>
+      <label>${up ? "Password (at least 8 characters)" : "Password"}<input id="au-pass" type="password" autocomplete="${up ? "new-password" : "current-password"}" required minlength="8" ></label>
+      ${up ? `<label>Invite code <span class="opt">(only if your partner already has an account)</span><input id="au-invite" autocapitalize="characters"></label>` : ""}
       ${authMsg ? `<div class="auth-msg">${esc(authMsg)}</div>` : ""}
       <button class="btn primary auth-go" type="submit" id="au-go">${up ? "Create account" : "Sign in"}</button></form>
     <button class="btn ghost sm" id="au-switch">${up ? "I already have an account" : "New here? Create an account"}</button>
@@ -1023,7 +1028,7 @@ const SECTIONS = {
   books: {label: "Library", icon: "book", group: "Pharmacy"},
   tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Pharmacy"},
   stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Pharmacy"},
-  creams: {label: "Cream business", short: "Creams", icon: "cream", group: "Personal"},
+  creams: {label: "Cosmetic business", short: "Cosmetics", icon: "cream", group: "Personal"},
   log: {label: "Activity log", short: "Log", icon: "log", group: "Personal"},
   insights: {label: "Insights", icon: "insights", group: "Personal"},
   ai: {label: "Task AI", icon: "ai", group: "Assistant"},
@@ -1058,7 +1063,7 @@ function renderChrome(){
   $("#sheet-grid").innerHTML = Object.keys(SECTIONS).filter(k => !TAB_KEYS.includes(k)).map(k =>
     `<button data-nav="${k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span></button>`).join("");
   const ma = $("#m-avatar"); if (ma) ma.innerHTML = avatar();
-  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["deal","deals","Client or deal"],["appt","appts","Meeting or appointment"],["log","log","Log an update"],["card","learn","Drug card"],["stock","stock","Stock expiry"],["cream","cream","Cream order"]]
+  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["deal","deals","Client or deal"],["appt","appts","Meeting or appointment"],["log","log","Log an update"],["card","learn","Drug card"],["stock","stock","Stock expiry"],["cream","cream","Cosmetic order"]]
     .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
 }
 function go(k, opts = {}){
@@ -1235,13 +1240,13 @@ function viewToday(){
 let taskFilter = "open";
 function taskForm(e){
   return `<form class="form" id="task-form">
-    <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Send the website proposal to the client" autocomplete="off"></label>
+    <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" autocomplete="off"></label>
     <label class="field">Who<select id="t-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
     <label class="field">When<input id="t-due" type="datetime-local" value="${toInput(e?.due)}"></label>
     <label class="field">Business<select id="t-biz">${bizOptions(e?.bizId)}</select></label>
     <label class="field">Repeat<select id="t-repeat">${[["", "Doesn't repeat"], ["daily", "Every day"], ["weekdays", "Weekdays (Mon to Fri)"], ["weekly", "Every week"], ["monthly", "Every month"]].map(([k, l]) => `<option value="${k}" ${(e?.repeat || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="check"><input id="t-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
-    <label class="field wide">Notes<textarea id="t-notes" placeholder="Optional details">${esc(e?.notes)}</textarea></label>
+    <label class="field wide">Notes<textarea id="t-notes">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add goal"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
 }
 function viewTasks(){
@@ -1260,16 +1265,16 @@ let apptFilter = "upcoming";
 function apptForm(e){
   const d = e?.start || (() => { const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); })();
   return `<form class="form" id="appt-form">
-    <label class="field">Client or contact<input id="a-client" required value="${esc(e?.client)}" placeholder="Mary Wanjiku" autocomplete="off" list="contacts"><datalist id="contacts">${[...new Set([...of("deal").map(d => d.client), ...of("appt").map(a => a.client)])].slice(0, 50).map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
-    <label class="field">Phone<input id="a-phone" type="tel" value="${esc(e?.phone)}" placeholder="+254 7..." autocomplete="off"></label>
-    <label class="field">Purpose<input id="a-purpose" list="purposes" value="${esc(e?.purpose)}" placeholder="Discovery call"><datalist id="purposes"><option>Discovery call</option><option>Project kickoff</option><option>Proposal presentation</option><option>Website handover</option><option>Ad campaign review</option><option>Meeting with ${esc(partner())}</option><option>Medication review</option><option>Blood pressure check</option><option>Blood sugar check</option><option>Prescription pickup</option><option>Vaccination</option><option>Consultation</option><option>Home delivery</option><option>Follow-up</option></datalist></label>
+    <label class="field">Client or contact<input id="a-client" required value="${esc(e?.client)}" autocomplete="off" data-list="contacts"><datalist id="contacts">${[...new Set([...of("deal").map(d => d.client), ...of("appt").map(a => a.client)])].slice(0, 50).map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
+    <label class="field">Phone<input id="a-phone" type="tel" value="${esc(e?.phone)}" autocomplete="off"></label>
+    <label class="field">Purpose<input id="a-purpose" data-list="purposes" value="${esc(e?.purpose)}"><datalist id="purposes"><option>Discovery call</option><option>Project kickoff</option><option>Proposal presentation</option><option>Website handover</option><option>Ad campaign review</option><option>Meeting with ${esc(partner())}</option><option>Medication review</option><option>Blood pressure check</option><option>Blood sugar check</option><option>Prescription pickup</option><option>Vaccination</option><option>Consultation</option><option>Home delivery</option><option>Follow-up</option></datalist></label>
     <label class="field">Date and time<input id="a-start" type="datetime-local" required value="${toInput(d)}"></label>
     <label class="field">Length<select id="a-dur">${[15, 30, 45, 60, 90].map(m => `<option value="${m}" ${(e?.duration || 30) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
     <label class="field">Remind me<select id="a-lead">${[[-1, "No reminder"], [0, "At start time"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [1440, "1 day before"]].map(([v, l]) => `<option value="${v}" ${(e ? (e.lead ?? -1) : 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    <label class="field">Location<input id="a-loc" value="${esc(e?.location)}" placeholder="Office, Google Meet, client's office, pharmacy"></label>
+    <label class="field">Location<input id="a-loc" value="${esc(e?.location)}"></label>
     <label class="field">Business<select id="a-biz">${bizOptions(e?.bizId)}</select></label>
     ${signedIn() && session.members?.length > 1 ? `<label class="check"><input id="a-shared" type="checkbox" ${e?.shared ? "checked" : ""}> Share with ${esc(partner())}</label>` : ""}
-    <label class="field wide">Notes<textarea id="a-notes" placeholder="Agenda, what to prepare">${esc(e?.notes)}</textarea></label>
+    <label class="field wide">Notes<textarea id="a-notes">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Book appointment"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
 }
 function viewAppts(){
@@ -1300,8 +1305,8 @@ const FIELDS = [["indication", "Used for"], ["moa", "How it works"], ["dosing", 
 function cardForm(e){
   const v = e || draftCard || {};
   return `<form class="form" id="card-form">
-    <label class="field">Drug name<input id="c-drug" required value="${esc(v.drug)}" placeholder="Amoxicillin" autocomplete="off"></label>
-    <label class="field">Class<input id="c-cls" value="${esc(v.cls)}" placeholder="Penicillin antibiotic"></label>
+    <label class="field">Drug name<input id="c-drug" required value="${esc(v.drug)}" autocomplete="off"></label>
+    <label class="field">Class<input id="c-cls" value="${esc(v.cls)}"></label>
     ${FIELDS.map(([k, l]) => `<label class="field wide">${l}<textarea id="c-${k}" rows="2" style="min-height:60px">${esc(v[k])}</textarea></label>`).join("")}
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Save card"}</button>${!e ? `<button class="btn" type="button" id="ai-card-btn">${IC.ai}Fill with AI</button>` : ""}${e || draftCard ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div>
     ${draftCard ? `<p class="caution wide">Filled by AI. Check every line against your references (product label, national formulary) before relying on it.</p>` : ""}</form>`;
@@ -1346,7 +1351,7 @@ function viewLearn(){
   } else {
     body = `<section class="card"><div class="card-head"><div><h2>Quiz me</h2><p class="sub">Questions from AI and your Library. With no AI, the quiz comes from your books.</p></div></div>
       <form class="form" id="quiz-form" style="padding:0">
-        <label class="field">Topic<input id="q-topic" list="topics" placeholder="Anticoagulants" value="${esc(quiz?.topic || "")}"><datalist id="topics"><option>My drug cards</option><option>Antibiotics</option><option>Antihypertensives</option><option>Diabetes medicines</option><option>Anticoagulants</option><option>Drug interactions</option><option>Paediatric dosing</option><option>Pharmacy law and ethics</option><option>Medicines and Allied Substances Control Act</option><option>Dangerous Drugs Act</option><option>EDLIZ treatment guidelines</option><option>Skin conditions and cosmetics</option><option>Pharmacokinetics</option></datalist></label>
+        <label class="field">Topic<input id="q-topic" data-list="topics" value="${esc(quiz?.topic || "")}"><datalist id="topics"><option>My drug cards</option><option>Antibiotics</option><option>Antihypertensives</option><option>Diabetes medicines</option><option>Anticoagulants</option><option>Drug interactions</option><option>Paediatric dosing</option><option>Pharmacy law and ethics</option><option>Medicines and Allied Substances Control Act</option><option>Dangerous Drugs Act</option><option>EDLIZ treatment guidelines</option><option>Skin conditions and cosmetics</option><option>Pharmacokinetics</option></datalist></label>
         <label class="field">Questions<select id="q-n">${[5, 10].map(n => `<option>${n}</option>`).join("")}</select></label>
         <div class="btn-row"><button class="btn primary" type="submit" id="quiz-go">${IC.ai}Make quiz</button></div></form>
       <p class="caution" style="margin-top:12px">AI questions can contain mistakes. Check anything you'll use in practice against your references.</p></section>
@@ -1372,7 +1377,7 @@ function viewLog(){
   if (last) rows += "</ul>";
   const tags = ["Brandbridge", "Pharmacy", "Learning", "Personal", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
   return `${adder("log", "Log an update", `<form class="form" id="log-form">
-      <label class="field wide">What did you do?<textarea id="l-text" required placeholder="Launched the ad campaign for a client"></textarea></label>
+      <label class="field wide">What did you do?<textarea id="l-text" required></textarea></label>
       <label class="field">About<select id="l-tag"><option value="">General</option>${[...new Set(tags)].map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
       <div class="btn-row"><button class="btn primary" type="submit">Log it</button></div></form>`, !logs.length)}
     <section class="card">${rows || empty("Your log is empty.", "Every update is timestamped and grouped by day.")}</section>`;
@@ -1383,11 +1388,11 @@ const projPill = s => `<span class="pill ${({live: "s-good", building: "s-warn",
 function viewBiz(){
   const e = editing?.kind === "biz" ? editing : null, list = of("biz");
   return `${adder("biz", e ? "Edit business" : "New business", `<form class="form" id="biz-form">
-      <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Brandbridge Ltd"></label>
+      <label class="field">Name<input id="b-name" required value="${esc(e?.name)}"></label>
       <label class="field">Status<select id="b-status">${["active", "building", "idea", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label class="field">Website<input id="b-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}" placeholder="brandbridgeacademy.site"></label>
+      <label class="field">Website<input id="b-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}"></label>
       ${signedIn() && session.members?.length > 1 ? `<label class="check"><input id="b-shared" type="checkbox" ${e?.shared ? "checked" : ""}> Share with ${esc(partner())}</label>` : ""}
-      <label class="field wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
+      <label class="field wide">Notes, numbers, next step<textarea id="b-notes">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
     ${list.length ? `<div class="tiles">${list.map(b => {
       const open = of("task").filter(t => t.bizId === b.id && !t.done).length, appts = of("appt").filter(a => a.bizId === b.id && a.status === "scheduled" && a.start > now()).length;
@@ -1400,11 +1405,11 @@ let projSummary = "";
 function viewProjects(){
   const e = editing?.kind === "project" ? editing : null, list = of("project");
   return `${adder("project", e ? "Update project" : "New project", `<form class="form" id="proj-form">
-      <label class="field">Name<input id="p-name" required value="${esc(e?.name)}" placeholder="brandbridgeacademy.site"></label>
+      <label class="field">Name<input id="p-name" required value="${esc(e?.name)}"></label>
       <label class="field">Status<select id="p-status">${["live", "building", "down", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-      <label class="field">Website address<input id="p-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}" placeholder="brandbridgeacademy.site"></label>
-      <label class="field">Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
-      <label class="field wide">Latest status notes<textarea id="p-notes" placeholder="What shipped, signups this week, open bugs">${esc(e?.notes)}</textarea></label>
+      <label class="field">Website address<input id="p-url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(e?.url)}"></label>
+      <label class="field">Repo (optional)<input id="p-repo" value="${esc(e?.repo)}"></label>
+      <label class="field wide">Latest status notes<textarea id="p-notes">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add project"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
     ${list.length ? `<section class="card"><div class="card-head"><div><h2>Status summary</h2><p class="sub">AI turns your notes into one report.</p></div><button class="btn sm primary" id="proj-summary">${IC.ai}Summarize all</button></div>
       <div class="brief ${projSummary ? "" : "placeholder"}" id="proj-summary-out">${esc(projSummary || "Press Summarize all for a one-line status per project and the most important next step.")}</div></section>
@@ -1602,11 +1607,11 @@ function viewSettings(){
       <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-owner", profile.company].filter(Boolean).join(", "))}</span></div></div>
         <div class="btn-row"><label class="btn" for="photo-file" role="button">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</label>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div></div>
       <div class="form" style="padding:0">
-        <label class="field">Your name<input id="pf-name" value="${esc(profile.name)}" placeholder="Mufasa" autocomplete="name"></label>
-        <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-owner"></label>
-        <label class="field">Company<input id="pf-company" value="${esc(profile.company)}" placeholder="Brandbridge"></label>
-        <label class="field">Business partner<input id="pf-partner" value="${esc(profile.partner)}" placeholder="Paul"></label>
-        <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" placeholder="KES" maxlength="5"></label></div></section>`;
+        <label class="field">Your name<input id="pf-name" value="${esc(profile.name)}" autocomplete="name"></label>
+        <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}"></label>
+        <label class="field">Company<input id="pf-company" value="${esc(profile.company)}"></label>
+        <label class="field">Business partner<input id="pf-partner" value="${esc(profile.partner)}"></label>
+        <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" maxlength="5"></label></div></section>`;
   const lookSec = `<section class="card"><div class="card-head"><div><h2>Look</h2><p class="sub">Background and logo watermark</p></div></div>
       <div class="set-row"><div class="t"><b>Background</b><span>Soft, so text stays easy to read</span></div>
         <div class="bg-pick">${[["none", "Plain", ""], ["navy", "Navy", "sw-navy"], ["gold", "Gold", "sw-gold"], ["grid", "Grid", "sw-grid"], ["photo", profile.bgPhoto ? "" : "Photo", "sw-photo"]].map(([k, l, c]) => `<button data-bg="${k}" class="${c}" aria-pressed="${(profile.bg || "none") === k}" aria-label="${k} background">${l}</button>`).join("")}</div></div>
@@ -1646,7 +1651,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.18";
+const APP_VERSION = "2.18.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1671,14 +1676,14 @@ function viewStock(){
   const list = all.filter(x => stockFilter === "all" ? true : stockFilter === "soon" ? !x.cleared && stockLeft(x) <= (x.alertDays ?? 30) : !x.cleared);
   const expired = all.filter(x => !x.cleared && stockLeft(x) < 0).length, in30 = all.filter(x => !x.cleared && stockLeft(x) >= 0 && stockLeft(x) <= 30).length, in90 = all.filter(x => !x.cleared && stockLeft(x) > 30 && stockLeft(x) <= 90).length;
   return `${adder("stock", e ? "Edit stock item" : "Add stock item", `<form class="form" id="stock-form">
-    <label class="field wide">Medicine or product<input id="s-name" required value="${esc(e?.name)}" placeholder="Amoxicillin 500 mg capsules" autocomplete="off"></label>
+    <label class="field wide">Medicine or product<input id="s-name" required value="${esc(e?.name)}" autocomplete="off"></label>
     <label class="field">Expiry date<input id="s-exp" type="date" required value="${e?.expiry ? toInput(e.expiry).slice(0, 10) : ""}"></label>
     <label class="field">Alert me<select id="s-alert">${[[30, "30 days before"], [60, "60 days before"], [90, "90 days before"], [180, "6 months before"]].map(([n, l]) => `<option value="${n}" ${(e?.alertDays ?? 90) === n ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    <label class="field">Batch number<input id="s-batch" value="${esc(e?.batch)}" placeholder="Optional"></label>
-    <label class="field">Quantity<input id="s-qty" value="${esc(e?.qty)}" placeholder="e.g. 3 packs of 21"></label>
-    <label class="field">Where<input id="s-loc" value="${esc(e?.location)}" placeholder="Shelf B, fridge"></label>
+    <label class="field">Batch number (optional)<input id="s-batch" value="${esc(e?.batch)}"></label>
+    <label class="field">Quantity<input id="s-qty" value="${esc(e?.qty)}"></label>
+    <label class="field">Where<input id="s-loc" value="${esc(e?.location)}"></label>
     <label class="field">Business<select id="s-biz">${bizOptions(e?.bizId)}</select></label>
-    <label class="field wide">Notes<textarea id="s-notes" placeholder="Supplier, return policy">${esc(e?.notes)}</textarea></label>
+    <label class="field wide">Notes<textarea id="s-notes">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add item"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
   <div class="stats">
     <div class="stat"><div class="n" ${expired ? 'style="color:var(--bad)"' : ""}>${expired}</div><div class="l">Expired</div></div>
@@ -1689,7 +1694,7 @@ function viewStock(){
     ${list.length ? shortList("stock-all", "Stock by expiry", list.map(stockRow), 3) : empty(all.length ? "Nothing here." : "No stock tracked yet.", all.length ? "Try another filter." : "Add short-dated items and Task will alert you before they expire.")}</section>`;
 }
 
-/* ---------- Cream business (his own, private: never shared with the Brandbridge team) ---------- */
+/* ---------- Cosmetic business (his own, private: never shared with the Brandbridge team) ---------- */
 const creamProfit = x => (+x.price || 0) - (+x.cost || 0);
 const creamOwed = x => Math.max(0, (+x.price || 0) - (+x.paid || 0));
 const monthStart = (back = 0) => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); d.setMonth(d.getMonth() - back); return d.getTime(); };
@@ -1697,7 +1702,7 @@ function creamSub(){ const n = of("cream").filter(x => x.at >= monthStart()).len
 function creamRow(x){
   const pr = creamProfit(x), owe = creamOwed(x);
   return `<li class="row"><div class="row-main"><div class="row-title">${esc(x.client || "Client")}</div>
-    <div class="row-meta"><span>${esc(x.product || "Cream")}</span><span class="pill ${pr >= 0 ? "s-good" : "s-bad"}">Profit ${money(pr) || "0"}</span>${owe ? `<span class="pill s-bad">Owes ${money(owe)}</span>` : ""}<span>${esc(fmtDay(x.at))}</span>${x.price ? `<span>${money(x.price)}</span>` : ""}</div>
+    <div class="row-meta"><span>${esc(x.product || "Product")}</span><span class="pill ${pr >= 0 ? "s-good" : "s-bad"}">Profit ${money(pr) || "0"}</span>${owe ? `<span class="pill s-bad">Owes ${money(owe)}</span>` : ""}<span>${esc(fmtDay(x.at))}</span>${x.price ? `<span>${money(x.price)}</span>` : ""}</div>
     ${x.regimen ? `<div class="row-notes">${esc(x.regimen)}</div>` : ""}${x.notes ? `<div class="row-notes">${esc(x.notes)}</div>` : ""}
     ${owe || x.phone ? `<div class="btn-row" style="margin-top:8px">${owe ? `<button class="btn sm" data-creampaid="${x.id}">${IC.check}Paid in full</button>` : ""}${contactBtns(x.phone, true)}</div>` : ""}</div>
     <div class="row-actions">${editBtn(x.id)}${delBtn(x.id)}</div></li>`;
@@ -1713,15 +1718,15 @@ function viewCreams(){
   const monthHTML = `<section class="card"><ul class="list">${months.map(m => `<li class="row"><div class="row-main"><div class="row-title">${esc(m.label)}</div><div class="row-meta"><span>${m.n} order${m.n === 1 ? "" : "s"}</span><span>Sales ${money(m.sales) || "0"}</span><span>Costs ${money(m.cost) || "0"}</span><span class="pill ${m.profit >= 0 ? "s-good" : "s-bad"}">Profit ${money(m.profit) || "0"}</span></div></div></li>`).join("")}</ul>
     <p class="sub" style="margin-top:10px">All time: ${all.length} orders, sales ${money(sum(all, x => +x.price || 0)) || "0"}, profit ${money(sum(all, creamProfit)) || "0"}.</p></section>`;
   return `${adder("cream", e ? "Edit order" : "New cream order", `<form class="form" id="cream-form">
-    <label class="field">Client name<input id="cr-client" required value="${esc(e?.client)}" placeholder="Rudo M." autocomplete="off"></label>
-    <label class="field">Client phone<input id="cr-phone" value="${esc(e?.phone)}" placeholder="Optional, for WhatsApp" inputmode="tel" autocomplete="off"></label>
-    <label class="field">Cream name<input id="cr-product" required value="${esc(e?.product)}" placeholder="Night brightening cream" list="cream-names" autocomplete="off"><datalist id="cream-names">${names.map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
+    <label class="field">Client name<input id="cr-client" required value="${esc(e?.client)}" autocomplete="off"></label>
+    <label class="field">Client phone (optional)<input id="cr-phone" value="${esc(e?.phone)}" inputmode="tel" autocomplete="off"></label>
+    <label class="field">Product<input id="cr-product" required value="${esc(e?.product)}" data-list="cream-names" autocomplete="off"><datalist id="cream-names">${names.map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
     <label class="field">Date<input id="cr-at" type="date" value="${dateVal(e?.at)}"></label>
-    <label class="field">Price charged (${cur})<input id="cr-price" inputmode="decimal" value="${esc(e?.price || "")}" placeholder="25"></label>
-    <label class="field">Cost of ingredients and jar<input id="cr-cost" inputmode="decimal" value="${esc(e?.cost || "")}" placeholder="8"></label>
-    <label class="field">Paid so far<input id="cr-paid" inputmode="decimal" value="${e && creamOwed(e) ? String(+e.paid || 0) : ""}" placeholder="Leave empty if paid in full"></label>
-    <label class="field wide">Regimen and formula<textarea id="cr-regimen" placeholder="Ingredients and strengths, base and amount, how to apply and for how long">${esc(e?.regimen)}</textarea></label>
-    <label class="field wide">Notes<textarea id="cr-notes" placeholder="Skin type, review date, reactions">${esc(e?.notes)}</textarea></label>
+    <label class="field">Price charged (${cur})<input id="cr-price" inputmode="decimal" value="${esc(e?.price || "")}"></label>
+    <label class="field">Cost of ingredients and jar<input id="cr-cost" inputmode="decimal" value="${esc(e?.cost || "")}"></label>
+    <label class="field">Paid so far (empty means paid in full)<input id="cr-paid" inputmode="decimal" value="${e && creamOwed(e) ? String(+e.paid || 0) : ""}"></label>
+    <label class="field wide">Regimen and formula<textarea id="cr-regimen">${esc(e?.regimen)}</textarea></label>
+    <label class="field wide">Notes<textarea id="cr-notes">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Save order"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
   <div class="stats">
     <div class="stat"><div class="n ${sum(mo, x => +x.price || 0) ? "stat-money" : ""}">${moneyK(sum(mo, x => +x.price || 0))}</div><div class="l">Sales this month</div></div>
@@ -1729,7 +1734,7 @@ function viewCreams(){
     <div class="stat"><div class="n ${sum(all, creamProfit) ? "stat-money" : ""}">${moneyK(sum(all, creamProfit))}</div><div class="l">Profit all time</div></div>
     <button class="stat" data-crfilter="unpaid"><div class="n ${owed ? "stat-money" : ""}" ${owed ? 'style="color:var(--bad)"' : ""}>${moneyK(owed)}</div><div class="l">Owed to you</div></button></div>
   <section class="card"><div class="card-head"><div><h2>Orders</h2><p class="sub">Your own business, kept apart from Brandbridge</p></div><div class="seg">${[["recent", "All"], ["month", "This month"], ["unpaid", "Unpaid"]].map(([k, l]) => `<button data-crfilter="${k}" aria-pressed="${creamFilter === k}">${l}</button>`).join("")}</div></div>
-    ${list.length ? shortList("cream-all", "Cream orders", list.map(creamRow), 3) : empty(all.length ? "Nothing here." : "No orders yet.", all.length ? "Try another filter." : "Add each cream you make: who it's for, the regimen, what you charged and what it cost. Task works out your profit.")}</section>
+    ${list.length ? shortList("cream-all", "Cosmetic orders", list.map(creamRow), 3) : empty(all.length ? "Nothing here." : "No orders yet.", all.length ? "Try another filter." : "Add each product you make: who it's for, the regimen, what you charged and what it cost. Task works out your profit.")}</section>
   ${all.length ? `<div class="pgrid">${panel("cream-months", "insights", "Profit by month", months[0].label + ": " + (money(months[0].profit) || "0"), monthHTML, "Sales, costs and profit")}</div>` : ""}`;
 }
 
@@ -1742,7 +1747,7 @@ function rxHTML(){
       <label class="btn ${rxImg ? "" : "primary"}">${IC.camera}${rxImg ? "Retake" : "Take photo"}<input type="file" id="rx-cam" accept="image/*" capture="environment" hidden></label>
       <label class="btn">${IC.upload}Choose photo<input type="file" id="rx-file" accept="image/*" hidden></label>
       ${rxImg ? `<button class="btn" id="rx-enh">${rxEnh ? "Normal view" : "Sharpen view"}</button><button class="btn ghost" id="rx-clear">${IC.trash}Remove</button>` : ""}</div>
-    ${rxImg ? `<label class="field wide" style="margin-top:12px">Anything the photo doesn't show (optional)<input id="rx-note" placeholder="Age, weight, pregnancy, allergies, other medicines" autocomplete="off"></label>
+    ${rxImg ? `<label class="field wide" style="margin-top:12px">Anything the photo doesn't show (optional)<input id="rx-note" autocomplete="off"></label>
       <div class="btn-row" style="margin-top:10px"><button class="btn primary" id="rx-go" ${rxBusy ? "disabled" : ""}>${IC.ai}${rxOut ? "Check again" : "Check with AI"}</button></div>
       <div class="brief ${rxOut ? "" : "placeholder"}" id="rx-out" style="margin-top:12px">${esc(rxOut || "The AI reads every line, points out anything unclear, and flags problems with doses, interactions and missing details.")}</div>` : ""}
     <p class="caution" style="margin:12px 0 0">The photo goes only to your own AI provider and isn't saved in Task. Confirm anything flagged before you dispense.</p></section>`;
@@ -1899,20 +1904,20 @@ function extRx(){
   if (r){
     const srcInfo = EXT_SRC.find(x => x[0] === (r.src || "pure"));
     return `<div class="ext-edit">
-      <label class="field" style="grid-column:1/-1">${r.unit === "qs" ? "Base or vehicle" : "Ingredient"}<input data-extr="${e}" data-k="name" value="${esc(r.name)}" placeholder="${r.unit === "qs" ? "e.g. " + esc(T.base.split(" or ")[0]) : "e.g. Prednisolone"}"></label>
-      ${r.unit === "qs" ? `<p class="sub" style="grid-column:1/-1;margin:0">This makes up the rest to ${esc(ext.make || "?")} ${T.unit}.</p>` : `<label class="field">Strength on Rx<input data-extr="${e}" data-k="amt" inputmode="decimal" value="${esc(r.amt)}" placeholder="10"></label>
+      <label class="field" style="grid-column:1/-1">${r.unit === "qs" ? "Base or vehicle" : "Ingredient"}<input data-extr="${e}" data-k="name" value="${esc(r.name)}" ></label>
+      ${r.unit === "qs" ? `<p class="sub" style="grid-column:1/-1;margin:0">This makes up the rest to ${esc(ext.make || "?")} ${T.unit}.</p>` : `<label class="field">Strength on Rx<input data-extr="${e}" data-k="amt" inputmode="decimal" value="${esc(r.amt)}"></label>
       <label class="field">Unit<select data-extr="${e}" data-k="unit">${EXT_UNITS.filter(u => u[0] !== "qs").map(([k, l]) => `<option value="${k}" ${r.unit === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field">Available as<select data-extr="${e}" data-k="src">${EXT_SRC.map(([k, l]) => `<option value="${k}" ${(r.src || "pure") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label class="field">Available strength${srcInfo[2] ? ` (${srcInfo[2]})` : ""}<input data-extr="${e}" data-k="str" inputmode="decimal" value="${esc(r.str)}" placeholder="${({tab: "5", liq5: "15", liqml: "4", semi: "0.1"})[r.src] || "Not needed"}" ${(r.src || "pure") === "pure" ? "disabled" : ""}></label>
+      <label class="field">Available strength${srcInfo[2] ? ` (${srcInfo[2]})` : ""}<input data-extr="${e}" data-k="str" inputmode="decimal" value="${esc(r.str)}"  ${(r.src || "pure") === "pure" ? "disabled" : ""}></label>
       <p class="sub ext-hint" style="grid-column:1/-1;margin:0">${(r.src || "pure") === "pure" ? "Choose what you have in stock, e.g. Tablets, to enter its strength." : "Amounts will be worked out from the " + esc(srcInfo[1].toLowerCase()) + " you have."}</p>`}
     </div>
     <div class="btn-row" style="justify-content:space-between"><button class="btn sm danger-text" data-extdel="${e}">${IC.trash}Remove</button><button class="btn sm primary" data-extdone="1">Done</button></div>`;
   }
   return `<div class="seg ext-seg">${Object.entries(EXT_TYPES).map(([k, t]) => `<button data-exttype="${k}" aria-pressed="${ext.type === k}">${esc(t.label.split(" ")[0])}</button>`).join("")}</div>
     <div class="ext-grid3">
-      <label class="field">Make (${T.unit})<input data-extf="make" inputmode="decimal" value="${esc(ext.make)}" placeholder="100"></label>
-      <label class="field">Rx is for<input data-extf="master" inputmode="decimal" value="${esc(ext.master)}" placeholder="Optional"></label>
-      <label class="field">Extra %<input data-extf="ov" inputmode="decimal" value="${esc(ext.ov)}" placeholder="0"></label></div>
+      <label class="field">Make (${T.unit})<input data-extf="make" inputmode="decimal" value="${esc(ext.make)}"></label>
+      <label class="field">Rx is for<input data-extf="master" inputmode="decimal" value="${esc(ext.master)}"></label>
+      <label class="field">Extra %<input data-extf="ov" inputmode="decimal" value="${esc(ext.ov)}"></label></div>
     <ul class="ext-rows">${ext.rows.map((x, i) => `<li><button class="ext-pick" data-extsel="${i}"><b>${esc(x.name || (x.unit === "qs" ? T.base : "New ingredient"))}</b><small>${esc(extRowSummary(x))}</small></button><span class="ext-go">${IC.chev}</span></li>`).join("")}</ul>
     <div class="btn-row" style="justify-content:space-between"><button class="btn sm" data-extadd="1">${IC.plus}Add ingredient</button><button class="btn sm primary" data-exttab="amounts">See amounts${IC.chev}</button></div>`;
 }
@@ -1939,7 +1944,7 @@ function extMethod(){
       ${last ? `<button class="btn sm primary" data-exttab="ai">${IC.ai}Safety check</button>` : `<button class="btn sm primary" data-extmp="${pg + 1}">Next steps${IC.chev}</button>`}</div>`;
 }
 function extAIView(){
-  return `<label class="field">What you have in stock (optional)<textarea data-extf="have" rows="2" placeholder="e.g. prednisolone 5 mg tablets, syrup BP, Ora-Plus, methylparaben">${esc(ext.have)}</textarea></label>
+  return `<label class="field">What you have in stock (optional)<textarea data-extf="have" rows="2">${esc(ext.have)}</textarea></label>
     <button class="btn primary" id="ext-ai" style="width:100%;justify-content:center">${IC.ai}Check with AI</button>
     <div class="brief ext-ai ${ext.ai ? "" : "placeholder"}" id="ext-out">${esc(ext.ai || "AI checks strength, safety, compatibility, stability, the best vehicle or base, preservative, storage and expiry, and which of your stock to use. Always confirm with your references.")}</div>`;
 }
@@ -2244,7 +2249,7 @@ function viewBooks(){
   POPS["lib-answer"] = {title: "Answer from your books", sub: libQ, html: `<div class="brief ext-ai ${libAns ? "" : "placeholder"}" id="lib-ai">${esc(libAns || "Press Answer with AI.")}</div><p class="caution" style="margin:0">Check doses and legal points against the source before you act on them.</p>`};
   const canAI = inClaude || !!apiKey();
   const ask = `<section class="card"><div class="card-head"><div><h2>Ask your library</h2><p class="sub">Answers from your own books, even with no internet or API key</p></div></div>
-    <form id="lib-form" class="lib-form"><label class="search">${IC.search}<input id="lib-q" type="search" enterkeyhint="search" placeholder="${libBooks.length ? "e.g. management of scabies" : "Add a book to start"}" value="${esc(libQ)}" aria-label="Search your books"></label>
+    <form id="lib-form" class="lib-form"><label class="search">${IC.search}<input id="lib-q" type="search" enterkeyhint="search" placeholder="Search your books" value="${esc(libQ)}" aria-label="Search your books"></label>
       ${cats.length > 1 ? `<select id="lib-filter" aria-label="Which books"><option value="">All books</option>${LIB_CATS.filter(([k]) => cats.includes(k)).map(([k, l]) => `<option value="${k}" ${libFilter === k ? "selected" : ""}>${l}</option>`).join("")}</select>` : ""}
       <button class="btn primary" type="submit">Search</button></form>
     <div id="lib-status" class="lib-status" ${libBusy ? "" : "hidden"}>${libBusy ? "Reading your book…" : ""}</div>
@@ -2387,29 +2392,29 @@ const dailyAuto = () => { if ((daily.day !== dayKey(now()) || daily.sig !== libS
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
       <div class="form" style="padding:0">
-        <label class="field">Weight (kg)<input id="d-wt" inputmode="decimal" placeholder="18"></label>
-        <label class="field">Dose (mg/kg per dose)<input id="d-mgkg" inputmode="decimal" placeholder="15"></label>
-        <label class="field">Doses per day<input id="d-freq" inputmode="decimal" placeholder="3"></label>
-        <label class="field">Max single dose (mg)<input id="d-max" inputmode="decimal" placeholder="Optional"></label>
-        <label class="field">Strength: mg<input id="d-mg" inputmode="decimal" placeholder="250"></label>
-        <label class="field">per mL<input id="d-ml" inputmode="decimal" placeholder="5"></label></div>
+        <label class="field">Weight (kg)<input id="d-wt" inputmode="decimal"></label>
+        <label class="field">Dose (mg/kg per dose)<input id="d-mgkg" inputmode="decimal"></label>
+        <label class="field">Doses per day<input id="d-freq" inputmode="decimal"></label>
+        <label class="field">Max single dose, mg (optional)<input id="d-max" inputmode="decimal"></label>
+        <label class="field">Strength: mg<input id="d-mg" inputmode="decimal"></label>
+        <label class="field">per mL<input id="d-ml" inputmode="decimal"></label></div>
       <div class="brief placeholder calc-out" id="dose-out">Enter weight and mg/kg.</div></section>`;
   const t1 = `<section class="card calc" data-calc="crcl"><div class="card-head"><div><h2>Creatinine clearance</h2><p class="sub">Cockcroft-Gault, for renal dose adjustment</p></div></div>
       <div class="form" style="padding:0">
-        <label class="field">Age (years)<input id="c-age" inputmode="decimal" placeholder="68"></label>
-        <label class="field">Weight (kg)<input id="c-wt" inputmode="decimal" placeholder="70"></label>
+        <label class="field">Age (years)<input id="c-age" inputmode="decimal"></label>
+        <label class="field">Weight (kg)<input id="c-wt" inputmode="decimal"></label>
         <label class="field">Sex<select id="c-sex"><option value="m">Male</option><option value="f">Female</option></select></label>
-        <label class="field">Serum creatinine<input id="c-scr" inputmode="decimal" placeholder="110"></label>
+        <label class="field">Serum creatinine<input id="c-scr" inputmode="decimal"></label>
         <label class="field">Unit<select id="c-unit"><option value="umol">µmol/L</option><option value="mg">mg/dL</option></select></label></div>
       <div class="brief placeholder calc-out" id="crcl-out">Enter age, weight and creatinine.</div></section>`;
   const t2 = `<section class="card calc" data-calc="bmi"><div class="card-head"><div><h2>BMI and body surface area</h2><p class="sub">BSA by the Mosteller formula</p></div></div>
       <div class="form" style="padding:0">
-        <label class="field">Weight (kg)<input id="b-wt" inputmode="decimal" placeholder="72"></label>
-        <label class="field">Height (cm)<input id="b-ht" inputmode="decimal" placeholder="170"></label></div>
+        <label class="field">Weight (kg)<input id="b-wt" inputmode="decimal"></label>
+        <label class="field">Height (cm)<input id="b-ht" inputmode="decimal"></label></div>
       <div class="brief placeholder calc-out" id="bmi-out">Enter weight and height.</div></section>`;
   const extPanel = panel("tool-ext", "tools", "Extemporaneous preparation", "Creams, ointments, lotions, syrups", extHTML(), "Amounts, method and safety check");
   const t3 = `<section class="card"><div class="card-head"><div><h2>Interaction check</h2><p class="sub">AI reviews a list of medicines for interactions</p></div></div>
-      <form class="form" id="ix-form" style="padding:0"><label class="field wide">Medicines (one per line or separated by commas)<textarea id="ix-in" placeholder="warfarin, clarithromycin, omeprazole"></textarea></label>
+      <form class="form" id="ix-form" style="padding:0"><label class="field wide">Medicines (one per line or separated by commas)<textarea id="ix-in"></textarea></label>
         <div class="btn-row"><button class="btn primary" type="submit" id="ix-go">${IC.ai}Check interactions</button></div></form>
       <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>`;
   return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
@@ -2472,12 +2477,20 @@ function dealRow(d, compact){
 // Task adds each month's charge on its own from the first monthly date, so the balance is always current.
 const addMonths = (t, n) => { const d = new Date(t), day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return d.getTime(); };
 const paysOf = id => of("pay").filter(p => p.dealId === id).sort((a, b) => b.at - a.at);
-const hasPlan = d => (+d.setupFee || 0) > 0 || (+d.monthly || 0) > 0;
+const hasPlan = d => (+d.setupFee || 0) > 0 || (+d.monthly || 0) > 0 || !!d.fees?.length;
+// The monthly fee runs for as long as we maintain the site, and it can change: d.fees lists each new amount and the date it starts.
+const feeAt = (d, t) => (d.fees || []).filter(f => f.from <= t).sort((a, b) => b.from - a.from)[0]?.amount ?? (+d.monthly || 0);
 function billing(d, t = now()){
-  const setup = +d.setupFee || 0, monthly = +d.monthly || 0, end = Math.min(t, d.billStop || Infinity);
-  let months = 0; if (monthly && d.billStart) while (months < 600 && addMonths(d.billStart, months) <= end) months++;
-  const charged = setup + monthly * months, paid = paysOf(d.id).reduce((s, p) => s + (+p.amount || 0), 0);
-  return {setup, monthly, months, charged, paid, balance: charged - paid, nextDue: monthly && d.billStart && !d.billStop ? addMonths(d.billStart, months) : null};
+  const setup = +d.setupFee || 0, end = Math.min(t, d.billStop || Infinity), started = !!d.billStart && ((+d.monthly || 0) > 0 || !!d.fees?.length);
+  let months = 0, monthlyCharged = 0;
+  if (started) while (months < 600){ const due = addMonths(d.billStart, months); if (due > end) break; monthlyCharged += feeAt(d, due); months++; }
+  // Payments marked for the initial fee or the monthly fee count there; unmarked ones clear the initial fee first.
+  const pays = paysOf(d.id), sumOf = f => pays.filter(f).reduce((s, p) => s + (+p.amount || 0), 0);
+  let setupPaid = sumOf(p => p.for === "setup"), monthlyPaid = sumOf(p => p.for === "monthly");
+  const loose = sumOf(p => !p.for), toSetup = Math.min(loose, Math.max(0, setup - setupPaid)); setupPaid += toSetup; monthlyPaid += loose - toSetup;
+  const nextDue = started && !d.billStop ? addMonths(d.billStart, months) : null;
+  return {setup, setupPaid, setupLeft: setup - setupPaid, monthly: feeAt(d, nextDue || t), months, monthlyCharged, monthlyPaid, monthlyLeft: monthlyCharged - monthlyPaid,
+    charged: setup + monthlyCharged, paid: setupPaid + monthlyPaid, balance: setup + monthlyCharged - setupPaid - monthlyPaid, nextDue};
 }
 const owedClients = () => of("deal").filter(hasPlan).map(d => ({d, b: billing(d)})).filter(x => x.b.balance > 0);
 const balPill = d => { if (!hasPlan(d)) return ""; const b = billing(d); return b.balance > 0 ? `<span class="pill s-bad">Owes ${money(b.balance)}</span>` : `<span class="pill s-good">Paid up</span>`; };
@@ -2497,30 +2510,39 @@ function contactBtns(c, sm){
   const p = phoneOf(c), m = emailOf(c), z = sm ? " sm" : "";
   return (p ? `<a class="btn${z} wa" href="${waLink(p)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a><a class="btn${z}" href="tel:${esc(p)}">${IC.phone}Call</a>` : "") + (m ? `<a class="btn${z}" href="mailto:${esc(m)}">${IC.mail}Email</a>` : "");
 }
-let clientId = null;
+let clientId = null, feeEdit = null;
 const dateVal = t => toInput(t || now()).slice(0, 10);
 function clientPop(d){
-  const b = billing(d), pays = paysOf(d.id), cur = esc(profile.currency || "amount");
+  const b = billing(d), pays = paysOf(d.id), cur = esc(profile.currency || "amount"), money0 = n => money(n) || "0";
   const head = `<section class="card cp-card"><div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
     ${d.contact ? `<p class="cp-contact">${esc(d.contact)}</p><div class="btn-row cp-actions">${contactBtns(d.contact)}<button class="btn" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>`
       : `<p class="sub">Add a phone number to WhatsApp or call ${esc(d.client)} from here.</p><div class="btn-row"><button class="btn" data-edit="${d.id}">${IC.edit}Add phone number</button></div>`}</section>`;
-  const money0 = n => money(n) || "0";
+  const fd = b.nextDue || now(), forDefault = b.monthlyLeft > 0 || b.setupLeft <= 0 ? "monthly" : "setup";
+  const feeHist = (d.fees || []).length ? `<p class="sub cp-next">Monthly fee: ${[[d.billStart, +d.monthly || 0], ...d.fees.map(f => [f.from, f.amount])].sort((x, y) => x[0] - y[0]).map(([f, a]) => `${money0(a)} from ${new Date(f).toLocaleDateString([], {month: "short", year: "numeric"})}`).join(", then ")}.</p>` : "";
   const pay = hasPlan(d) ? `<div class="pay-grid">
-      <div><span>Initial fee</span><b>${money0(b.setup)}</b></div><div><span>Monthly</span><b>${money0(b.monthly)}</b></div>
-      <div><span>Paid so far</span><b>${money0(b.paid)}</b></div><div class="${b.balance > 0 ? "owe" : "ok"}"><span>${b.balance > 0 ? "Balance due" : b.balance < 0 ? "Paid ahead" : "Balance"}</span><b>${money0(Math.abs(b.balance))}</b></div></div>
-    <p class="sub cp-next">${b.nextDue ? `Next monthly payment ${esc(fmtDay(b.nextDue))}. ${b.months} month${b.months === 1 ? "" : "s"} charged so far.` : d.billStop ? `Monthly payments stopped ${esc(fmtDay(d.billStop))}.` : b.monthly ? "Set the first monthly payment date to start the monthly charges." : "Initial fee only."}</p>
+      <div><span>Initial fee</span><b>${money0(b.setup)}</b><small>${!b.setup ? "None" : b.setupLeft > 0 ? `${money0(b.setupPaid)} paid, ${money0(b.setupLeft)} left` : "Paid in full"}</small></div>
+      <div><span>Monthly fee</span><b>${money0(b.monthly)}</b><small>${b.months ? `${b.months} month${b.months === 1 ? "" : "s"}, ${b.monthlyLeft > 0 ? money0(b.monthlyLeft) + " owed" : "up to date"}` : "Not started yet"}</small></div>
+      <div><span>Paid so far</span><b>${money0(b.paid)}</b><small>${pays.length} payment${pays.length === 1 ? "" : "s"}</small></div>
+      <div class="${b.balance > 0 ? "owe" : "ok"}"><span>${b.balance > 0 ? "Balance due" : b.balance < 0 ? "Paid ahead" : "Balance"}</span><b>${money0(Math.abs(b.balance))}</b><small>${b.balance > 0 ? "Initial and monthly together" : "Nothing owed"}</small></div></div>
+    <p class="sub cp-next">${b.nextDue ? `Next monthly payment ${esc(fmtDay(b.nextDue))}: ${money0(b.monthly)}. It carries on every month until you stop it.` : d.billStop ? `Monthly payments stopped ${esc(fmtDay(d.billStop))}.` : "No monthly fee set yet."}</p>${feeHist}
     <form class="form" id="pay-form" data-deal="${d.id}" style="padding:0">
-      <label class="field">Amount (${cur})<input id="py-amt" inputmode="decimal" required value="${b.balance > 0 ? b.balance : b.monthly || ""}"></label>
+      <label class="field">Payment for<select id="py-for" data-setup="${Math.max(0, b.setupLeft)}" data-monthly="${b.monthlyLeft > 0 ? b.monthlyLeft : b.monthly}"><option value="monthly" ${forDefault === "monthly" ? "selected" : ""}>Monthly fee</option>${b.setup ? `<option value="setup" ${forDefault === "setup" ? "selected" : ""}>Initial fee</option>` : ""}</select></label>
+      <label class="field">Amount (${cur})<input id="py-amt" inputmode="decimal" required value="${forDefault === "setup" ? Math.max(0, b.setupLeft) || "" : (b.monthlyLeft > 0 ? b.monthlyLeft : b.monthly) || ""}"></label>
       <label class="field">Date paid<input id="py-at" type="date" value="${dateVal()}"></label>
-      <label class="field wide">Note<input id="py-note" placeholder="EcoCash, bank transfer, cash" autocomplete="off"></label>
-      <div class="btn-row"><button class="btn primary" type="submit">${IC.check}Record payment</button>${b.monthly && d.billStart ? `<button class="btn ghost" type="button" data-billing="${d.id}" data-to="${d.billStop ? "on" : "off"}">${d.billStop ? "Restart monthly" : "Stop monthly"}</button>` : ""}</div></form>`
-    : `<p class="sub">Add the initial fee and the monthly fee. Task then adds each month's charge on its own and keeps the balance up to date.</p>
+      <label class="field">Note<input id="py-note" autocomplete="off"></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${IC.check}Record payment</button></div></form>
+    ${feeEdit === d.id ? `<form class="form fee-form" id="fee-form" data-deal="${d.id}" style="padding:0">
+      <label class="field">New monthly fee (${cur})<input id="fe-amt" inputmode="decimal" required></label>
+      <label class="field">Starting<input id="fe-from" type="date" value="${dateVal(fd)}"></label>
+      <div class="btn-row"><button class="btn primary" type="submit">Save new fee</button><button class="btn ghost" type="button" data-feeedit="">Cancel</button></div></form>`
+      : `<div class="btn-row cp-more"><button class="btn sm" data-feeedit="${d.id}">${IC.edit}Change monthly fee</button>${d.billStart ? `<button class="btn sm ghost" data-billing="${d.id}" data-to="${d.billStop ? "on" : "off"}">${d.billStop ? "Restart monthly" : "Stop monthly"}</button>` : ""}</div>`}`
+    : `<p class="sub">Add the initial fee and the monthly fee. Task adds the monthly fee every month on its own until you stop it, and keeps the balance up to date. The initial fee can be paid in parts.</p>
     <form class="form" id="plan-form" data-deal="${d.id}" style="padding:0">
-      <label class="field">Initial fee (${cur})<input id="pl-setup" inputmode="decimal" placeholder="Paid once"></label>
-      <label class="field">Monthly fee (${cur})<input id="pl-monthly" inputmode="decimal" placeholder="Every month"></label>
+      <label class="field">Initial fee (${cur})<input id="pl-setup" inputmode="decimal"></label>
+      <label class="field">Monthly fee (${cur})<input id="pl-monthly" inputmode="decimal"></label>
       <label class="field">First monthly payment<input id="pl-start" type="date" value="${dateVal(addMonths(now(), 1))}"></label>
       <div class="btn-row"><button class="btn primary" type="submit">${IC.pay}Save payment plan</button></div></form>`;
-  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span>${x.note ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
+  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span><span>${x.for === "setup" ? "Initial fee" : x.for === "monthly" ? "Monthly fee" : "Payment"}</span>${x.note ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
   const more = d.nextStep || d.notes ? `<section class="card">${d.nextStep ? `<p><b>Next:</b> ${esc(d.nextStep)}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</p>` : ""}${d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}</section>` : "";
   return {title: d.client, sub: [d.company !== d.client && d.company, d.service].filter(Boolean).join(" · ") || "Client", html: `${head}
     <section class="card"><div class="card-head"><div><h2>Payments</h2></div>${hasPlan(d) ? `<button class="btn sm ghost" data-edit="${d.id}">${IC.edit}Change plan</button>` : ""}</div>${pay}</section>
@@ -2547,20 +2569,20 @@ function viewDeals(){
     if (r.length) body = shortList("deals-all", ({done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter], r.map(d => dealRow(d)), 3);
   }
   return `${adder("deal", e ? "Edit client" : "New client or deal", `<form class="form" id="deal-form">
-      <label class="field">Client or contact<input id="dl-client" required value="${esc(e?.client)}" placeholder="John Kamau" autocomplete="off"></label>
-      <label class="field">Company<input id="dl-company" value="${esc(e?.company)}" placeholder="Acme Hotels"></label>
-      <label class="field">Phone or email<input id="dl-contact" value="${esc(e?.contact)}" placeholder="+254 7... or name@company.com" autocomplete="off"></label>
+      <label class="field">Client or contact<input id="dl-client" required value="${esc(e?.client)}" autocomplete="off"></label>
+      <label class="field">Company<input id="dl-company" value="${esc(e?.company)}"></label>
+      <label class="field">Phone or email<input id="dl-contact" value="${esc(e?.contact)}" autocomplete="off"></label>
       <label class="field">Service<select id="dl-service">${SERVICES.map(x => `<option ${(e?.service || SERVICES[0]) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label class="field">Stage<select id="dl-stage">${STAGES.map(([k, l]) => `<option value="${k}" ${(e?.stage || "lead") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}" placeholder="150000"></label>
-      <label class="field">Initial fee<input id="dl-setup" inputmode="decimal" value="${esc(e?.setupFee || "")}" placeholder="Paid once, at the start"></label>
-      <label class="field">Monthly fee<input id="dl-monthly" inputmode="decimal" value="${esc(e?.monthly || "")}" placeholder="Paid every month"></label>
+      <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}"></label>
+      <label class="field">Initial fee<input id="dl-setup" inputmode="decimal" value="${esc(e?.setupFee || "")}"></label>
+      <label class="field">Monthly fee<input id="dl-monthly" inputmode="decimal" value="${e && hasPlan(e) ? (billing(e).monthly || "") : ""}"></label>
       <label class="field">First monthly payment<input id="dl-billstart" type="date" value="${e?.billStart ? toInput(e.billStart).slice(0, 10) : ""}"></label>
       <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
-      <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" placeholder="Send proposal" list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
+      <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" data-list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
       <label class="field">When<input id="dl-at" type="datetime-local" value="${toInput(e ? e.nextAt : n)}"></label>
       <label class="check"><input id="dl-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
-      <label class="field wide">Notes<textarea id="dl-notes" placeholder="Scope, budget, decision maker, links">${esc(e?.notes)}</textarea></label>
+      <label class="field wide">Notes<textarea id="dl-notes">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add client"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
     <div class="stats">
       <div class="stat"><div class="n">${open.length}</div><div class="l">Open deals</div></div>
@@ -2703,6 +2725,52 @@ function siteTodayCard(){
 
 function dealDefaultNext(){ const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); }
 
+/* ---------- Suggestions while typing ---------- */
+// No example text inside the boxes (he found it confusing). Once you start typing, matching words pop up just under the box: things you've typed before, plus common ones.
+const SUGG = {
+  "t-title": () => of("task").map(x => x.title),
+  "a-client": () => [...of("appt").map(x => x.client), ...of("deal").map(x => x.client)],
+  "a-loc": () => ["Office", "Pharmacy", "Client's office", "Google Meet", "Zoom", "WhatsApp call", "Phone call", ...of("appt").map(x => x.location)],
+  "a-purpose": () => of("appt").map(x => x.purpose),
+  "dl-client": () => of("deal").map(x => x.client), "dl-company": () => of("deal").map(x => x.company),
+  "dl-next": () => of("deal").map(x => x.nextStep),
+  "py-note": () => ["EcoCash", "Bank transfer", "Cash", "InnBucks", "OneMoney", "Mukuru", ...of("pay").map(x => x.note)],
+  "cr-client": () => of("cream").map(x => x.client), "cr-product": () => of("cream").map(x => x.product),
+  "s-name": () => of("stock").map(x => x.name), "s-loc": () => ["Shelf", "Fridge", "Dispensary", "Store room", ...of("stock").map(x => x.location)],
+  "b-name": () => of("biz").map(x => x.name), "p-name": () => of("project").map(x => x.name),
+  "c-drug": () => of("card").map(x => x.drug), "c-cls": () => of("card").map(x => x.cls),
+  "ix-in": () => of("card").map(x => x.drug), "pf-currency": () => ["USD", "ZWG", "ZAR", "KES", "GBP", "EUR"]
+};
+let suggFor = null;
+function suggest(el){
+  const box = $("#sugg-pop"); if (!box) return;
+  const get = SUGG[el?.id], list = el?.dataset?.list;
+  if (!el || (!get && !list)){ box.hidden = true; suggFor = null; return; }
+  // For a list of medicines, suggest for the one being typed after the last comma.
+  const multi = el.id === "ix-in", raw = el.value, q = (multi ? raw.split(/[,\n]/).pop() : raw).trim().toLowerCase();
+  const pool = [...(get ? get() : []), ...(list ? [...document.querySelectorAll(`#${list} option`)].map(o => o.value || o.textContent) : [])];
+  const seen = new Set(), hits = [];
+  for (const w of pool){ const t = String(w || "").trim(), k = t.toLowerCase(); if (!t || seen.has(k) || k === q) continue; seen.add(k);
+    if (q && k.includes(q)) hits.push([k.startsWith(q) ? 0 : 1, t]); }
+  hits.sort((a, b) => a[0] - b[0]);
+  if (!q || !hits.length){ box.hidden = true; suggFor = null; return; }
+  suggFor = el;
+  box.innerHTML = hits.slice(0, 5).map(([, t]) => `<button type="button" data-sugg="${esc(t)}">${esc(t)}</button>`).join("");
+  box.hidden = false; placeSugg();
+}
+function placeSugg(){
+  const box = $("#sugg-pop"); if (!suggFor || box.hidden) return;
+  if (!suggFor.isConnected){ box.hidden = true; suggFor = null; return; }
+  const r = suggFor.getBoundingClientRect(), vh = window.visualViewport?.height || innerHeight, h = box.offsetHeight;
+  box.style.left = Math.max(8, r.left) + "px"; box.style.width = Math.min(r.width, innerWidth - 16) + "px";
+  box.style.top = (r.bottom + 6 + h > vh - 8 && r.top - 6 - h > 8 ? r.top - 6 - h : r.bottom + 6) + "px";
+}
+document.addEventListener("focusin", ev => { const el = ev.target; if (SUGG[el.id] || el.dataset?.list) el.setAttribute("autocomplete", "off"); if (suggFor && el !== suggFor) suggest(null); });
+document.addEventListener("focusout", ev => { if (ev.target === suggFor) setTimeout(() => { if (document.activeElement !== suggFor) suggest(null); }, 120); });
+// Tapping a suggestion must not take focus away from the box first.
+document.addEventListener("pointerdown", ev => { if (ev.target.closest("#sugg-pop")) ev.preventDefault(); });
+addEventListener("resize", placeSugg); window.visualViewport?.addEventListener("resize", placeSugg); document.addEventListener("scroll", placeSugg, true);
+
 /* ---------- Pop-up panels ---------- */
 // Views register their extra detail here while rendering; a panel button opens it in a pop-up.
 let POPS = {}, popKey = null;
@@ -2814,6 +2882,10 @@ document.addEventListener("click", async ev => {
   if (d.linkgo){ if (d.linkgo === "close") closeLinkMenu(); else linkGo(d.linkgo, d.url); return; }
   if (d.dfilter){ dealFilter = d.dfilter; render(); return; }
   if (d.client){ const c = byId(d.client); if (c){ clientId = c.id; POPS.client = clientPop(c); openPop("client"); } return; }
+  if (d.sugg != null && suggFor){ const el = suggFor;
+    el.value = el.id === "ix-in" ? el.value.replace(/[^,\n]*$/, m => (/^\s/.test(m) || el.value.length > m.length ? " " : "") + d.sugg) : d.sugg;
+    suggest(null); el.dispatchEvent(new Event("input", {bubbles: true})); suggest(null); el.focus(); return; }
+  if (d.feeedit != null){ feeEdit = d.feeedit || null; render(); if (feeEdit) setTimeout(() => $("#fe-amt")?.focus(), 30); return; }
   if (d.billing){ const c = byId(d.billing); if (c){ put({...c, billStop: d.to === "off" ? now() : null}); toast(d.to === "off" ? "Monthly charges stopped. The balance so far stays." : "Monthly charges restarted."); } return; }
   if (d.creampaid){ const c = byId(d.creampaid); if (c){ put({...c, paid: +c.price || 0}); toast(`${c.client} has paid in full.`); } return; }
   if (d.crfilter){ creamFilter = d.crfilter; render(); return; }
@@ -2887,6 +2959,7 @@ document.addEventListener("click", async ev => {
   }
 });
 document.addEventListener("input", ev => {
+  if (SUGG[ev.target.id] || ev.target.dataset?.list) suggest(ev.target);
   if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); }
   if (ev.target.closest?.(".calc")) calc();
   const ed = ev.target.dataset || {};
@@ -2903,6 +2976,7 @@ document.addEventListener("change", async ev => {
   if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
+  if (id === "py-for"){ const a = $("#py-amt"), o = ev.target.dataset; if (a) a.value = (ev.target.value === "setup" ? o.setup : o.monthly) || ""; }
   if ((id === "rx-cam" || id === "rx-file") && f){ try { rxImg = await readImage(f, 1800, "image/jpeg", .88); rxOut = ""; rxEnh = false; } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
   if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(ev.target.value === "auto" ? "Task now picks the best AI for each job." : `Task AI now answers with ${AI_PROV[ev.target.value].short}.`); render(); }
@@ -2951,6 +3025,10 @@ document.addEventListener("submit", ev => {
     const nextAt = fromInput($("#dl-at").value), val = parseFloat(v("#dl-value").replace(/[^\d.]/g, "")) || 0;
     const data = {client: v("#dl-client"), company: v("#dl-company"), contact: v("#dl-contact"), service: $("#dl-service").value, stage: $("#dl-stage").value, value: val, who: $("#dl-who").value, nextStep: v("#dl-next"), nextAt, remind: $("#dl-remind").checked && !!nextAt, notes: v("#dl-notes"),
       ...planFrom("#dl-setup", "#dl-monthly", "#dl-billstart")};
+    // Months already charged keep their old fee; a new monthly amount starts from the next payment.
+    if (editing?.kind === "deal" && editing.billStart && billing(editing).months > 0){ const b = billing(editing);
+      if (data.monthly !== b.monthly) data.fees = [...(editing.fees || []), {from: b.nextDue || now(), amount: data.monthly}];
+      data.monthly = editing.monthly; data.billStart = editing.billStart; }
     if (data.stage === "done" && editing?.stage !== "done") data.doneAt = now();
     if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else add("deal", data);
     toast(`${editing ? "Updated" : "Added"} ${data.client}${nextAt && data.remind ? ", reminder " + fmtWhen(nextAt) : ""}`); editing = null; openForm = null;
@@ -2958,7 +3036,13 @@ document.addEventListener("submit", ev => {
   else if (f === "pay-form"){
     const dl = byId(ev.target.dataset.deal), a = amt("#py-amt"); if (!dl || !a){ toast("Type the amount paid."); return; }
     const day = $("#py-at").value, at = day ? new Date(day + "T12:00").getTime() : now();
-    const left = billing(dl).balance - a; add("pay", {dealId: dl.id, amount: a, at, note: v("#py-note")}); document.activeElement?.blur(); toast(`Recorded ${money(a)} from ${dl.client}. ${left > 0 ? "Still owes " + money(left) + "." : "All paid up."}`); return;
+    const left = billing(dl).balance - a; add("pay", {dealId: dl.id, amount: a, at, note: v("#py-note"), for: $("#py-for")?.value || "monthly"}); document.activeElement?.blur(); toast(`Recorded ${money(a)} from ${dl.client}. ${left > 0 ? "Still owes " + money(left) + "." : "All paid up."}`); return;
+  }
+  else if (f === "fee-form"){
+    const dl = byId(ev.target.dataset.deal), a = amt("#fe-amt"), day = $("#fe-from").value; if (!dl || !day){ toast("Type the new fee and when it starts."); return; }
+    const from = new Date(day + "T00:00").getTime(); feeEdit = null; document.activeElement?.blur();
+    put(dl.billStart ? {...dl, fees: [...(dl.fees || []).filter(f => f.from !== from), {from, amount: a}]} : {...dl, monthly: a, billStart: new Date(day + "T09:00").getTime()});
+    toast(`${dl.client}'s monthly fee is ${money(a) || "0"} from ${fmtDay(from)}. Earlier months keep their old fee.`); return;
   }
   else if (f === "plan-form"){
     const dl = byId(ev.target.dataset.deal); if (!dl) return; const plan = planFrom("#pl-setup", "#pl-monthly", "#pl-start");
@@ -3108,9 +3192,9 @@ function snapshot(){
     stockExpiry: of("stock").filter(x => !x.cleared).map(x => ({name: x.name, batch: x.batch, expires: new Date(x.expiry).toDateString(), daysLeft: stockLeft(x)})),
     officialWebsite: (() => { const S = webSummary(); return web.site && S ? {site: web.site, visitorsToday: S.today.uv, pageViewsToday: S.today.pv, onSiteNow: S.live, visitorsLast7Days: S.uv7, topPages: web.stats.top.path.slice(0, 5), sources: web.stats.top.ref.slice(0, 5), countries: web.stats.top.country.slice(0, 5).map(([c, n]) => [countryName(c), n])} : undefined; })(),
     clientPayments: of("deal").filter(hasPlan).map(d => { const b = billing(d); return {client: d.client, initialFee: b.setup, monthlyFee: b.monthly, paid: b.paid, balanceDue: b.balance, nextMonthlyDue: b.nextDue ? new Date(b.nextDue).toDateString() : null}; }),
-    myCreamBusiness: (() => { const c = of("cream"); if (!c.length) return undefined; const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0); const mo = c.filter(x => x.at >= m0.getTime());
-      return {note: "Personal side business, separate from Brandbridge", ordersThisMonth: mo.length, salesThisMonth: mo.reduce((s, x) => s + (+x.price || 0), 0), profitThisMonth: mo.reduce((s, x) => s + creamProfit(x), 0), profitAllTime: c.reduce((s, x) => s + creamProfit(x), 0), owedToMe: c.reduce((s, x) => s + creamOwed(x), 0),
-        recent: c.sort((a, b) => b.at - a.at).slice(0, 20).map(x => ({date: new Date(x.at).toDateString(), client: x.client, cream: x.product, price: x.price, cost: x.cost, paid: x.paid}))}; })(),
+    myCosmeticBusiness: (() => { const c = of("cream"); if (!c.length) return undefined; const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0); const mo = c.filter(x => x.at >= m0.getTime());
+      return {note: "Personal cosmetic business (topical creams he formulates), separate from Brandbridge", ordersThisMonth: mo.length, salesThisMonth: mo.reduce((s, x) => s + (+x.price || 0), 0), profitThisMonth: mo.reduce((s, x) => s + creamProfit(x), 0), profitAllTime: c.reduce((s, x) => s + creamProfit(x), 0), owedToMe: c.reduce((s, x) => s + creamOwed(x), 0),
+        recent: c.sort((a, b) => b.at - a.at).slice(0, 20).map(x => ({date: new Date(x.at).toDateString(), client: x.client, product: x.product, price: x.price, cost: x.cost, paid: x.paid}))}; })(),
     learnedPatterns: learnPatterns().tips
   });
 }
