@@ -216,6 +216,7 @@ textarea{resize:vertical;min-height:80px}
 .msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
 .msg.ai{align-self:flex-start;background:var(--sunk);border-bottom-left-radius:5px}
 .msg.sys{align-self:center;font-size:13px;color:var(--muted);text-align:center;background:none}
+.ai-pick{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 12px 0;font-size:13px;color:var(--muted)}.ai-pick select{width:auto;min-height:34px;padding:4px 28px 4px 10px;font-size:13px}
 .chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
 .chat-form textarea{min-height:44px;height:44px;max-height:140px}
 .brief{white-space:pre-wrap;font-size:14.5px;color:var(--fg)}
@@ -1317,7 +1318,8 @@ async function testKey(btn, p){
 function viewAI(){
   return `<section class="card chat">
     <div class="chips">${["Plan my day", "Book a discovery call with Acme tomorrow at 10am", "Quiz me on antibiotics", "Which clients need a follow-up?", "Draft a proposal outline for an AI automation project", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
+    <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.role === "user" ? m.content : plain(m.content))}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
+    ${!inClaude && aiOrder().length > 1 ? `<div class="ai-pick"><label for="ai-pick">Answer with</label><select id="ai-pick" data-aipick="1">${aiOrder().slice().sort((a, b) => Object.keys(AI_PROV).indexOf(a) - Object.keys(AI_PROV).indexOf(b)).map(p => `<option value="${p}" ${p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)}</option>`).join("")}</select></div>` : ""}
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
   <div class="btn-row" style="justify-content:flex-end">${inClaude ? "" : `<button class="btn sm" data-pop="ai-key">${IC.settings}AI settings${apiKey() ? "" : ` <span class="pill s-warn">Off</span>`}</button>`}${chat.length ? `<button class="btn sm ghost" id="chat-clear">Clear chat</button>` : ""}</div>
@@ -1514,7 +1516,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.11.1";
+const APP_VERSION = "2.11.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2114,7 +2116,7 @@ async function dailyRefill(force){
 ${chunks.length ? `Passages from his own books:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n` : ""}Write 12 notes: about half on skin (conditions, topical products, cosmetics and skin care, counselling) and half on everyday pharmacy practice (dispensing, counselling, doses, storage, interactions, special groups, Zimbabwe practice).
 Return a JSON array. Each item: {"topic": "Skin" or "Pharmacy", "title": a few words, "note": one or two plain sentences with the key fact, "why": two or three sentences explaining why it matters or how to use it at the counter, "src": the passage label exactly as given (e.g. "${chunks[0] ? libWhere(chunks[0]) : "General knowledge"}") or "General knowledge" if not from a passage}.
 Prefer facts from the passages. Only add general knowledge that is well established; never invent doses. Keep each note simple.`);
-    const notes = (Array.isArray(r) ? r : r?.notes || []).filter(x => x?.note).map(x => ({topic: /skin/i.test(x.topic) ? "Skin" : "Pharmacy", title: String(x.title || ""), note: String(x.note), why: String(x.why || ""), src: String(x.src || "")}));
+    const notes = (Array.isArray(r) ? r : r?.notes || []).filter(x => x?.note).map(x => ({topic: /skin/i.test(x.topic) ? "Skin" : "Pharmacy", title: plain(x.title), note: plain(x.note), why: plain(x.why), src: String(x.src || "")}));
     daily.notes.push(...notes); daily.refilledAt = now(); daily.refSig = libSig(); saveDaily();
     if (force) toast(`Saved ${notes.length} notes for the coming days.`);
   } catch (e){ if (force) toast(errCopy(e)); }
@@ -2576,6 +2578,7 @@ document.addEventListener("change", async ev => {
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
+  if (ev.target.dataset?.aipick){ lsSet("task.aiMain", ev.target.value); toast(`Task AI now answers with ${AI_PROV[ev.target.value].short}.`); }
   if (ev.target.dataset?.aimodel){ lsSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
   if (ev.target.dataset?.libcat){ const b = libBook(ev.target.dataset.libcat); if (b){ b.cat = ev.target.value; saveLib(); } }
   if (id === "lib-filter"){ libFilter = ev.target.value; if (libQ) libRun(libQ); }
@@ -2734,7 +2737,7 @@ function snapshot(){
   });
 }
 function aboutUser(){ const nm = profile.name || "the user"; return `${nm}${profile.role ? ", " + profile.role : ""}, co-owns ${profile.company || "Brandbridge"} (private limited) with ${partner()} as equal owners: web development, AI automations, digital advertising and innovation projects. ${firstName() || "They"} is also a pharmacist who runs a pharmacy and keeps studying. Task is their personal command centre for all of this.`; }
-const RULES = () => `You are Task AI, a sharp, warm personal assistant inside ${firstName() || "the user"}'s command-centre app. ${aboutUser()} Money values are in ${profile.currency || "the local currency"}. For Brandbridge work, think like a growth-minded agency co-owner: pipeline, follow-ups, proposals, delivery and cash flow. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
+const RULES = () => `You are Task AI, a sharp, warm personal assistant inside ${firstName() || "the user"}'s command-centre app. ${aboutUser()} Money values are in ${profile.currency || "the local currency"}. For Brandbridge work, think like a growth-minded agency co-owner: pipeline, follow-ups, proposals, delivery and cash flow. Keep answers short and precise: lead with the answer, then at most 5 short lines, unless asked for more detail. Plain text only: never use asterisks, # headings, bold or tables; use "• " for lists. When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
 const tools = [
   {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00. Optional repeat (needs a due time): daily, weekdays, weekly, monthly.",
    inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},
@@ -2904,6 +2907,9 @@ async function askJson(sample, prompt){
   const m = text.match(/[\[{][\s\S]*[\]}]/); if (!m) throw {code: "invalid_json"};
   return JSON.parse(m[0]);
 }
+// The user doesn't want markdown symbols, so strip any the AI still sends.
+const plain = t => String(t || "").replace(/\*\*([^*\n]+)\*\*/g, "$1").replace(/__([^_\n]+)__/g, "$1").replace(/^#{1,6}\s*/gm, "").replace(/^\s*[*-]\s+/gm, "• ")
+  .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/gm, "$1$2").replace(/`([^`\n]+)`/g, "$1").replace(/\*{2,}/g, "");
 const errCopy = e => ({bad_key: "Your AI key didn't work. Check it in AI settings.", refused: "Claude declined that request. Try rephrasing it.", offline: "Couldn't reach the AI. Check your connection.",
   not_granted: "Task AI needs your OK to use your Claude account. Try again and allow it.", rate_limited: "Too many requests at once. Wait a moment, then try again.", cancelled: "Stopped.", no_credit: "That key has no credit left. Top it up, or add another key in AI settings.", model_missing: "That AI model isn't available on your key. Pick another model in AI settings.", invalid_json: "The answer came back in the wrong shape. Try again."}[e?.code] || "Couldn't get an answer (" + (e?.code || "error") + "). Try again.");
 
@@ -2921,8 +2927,8 @@ async function sendChat(){
   const input = [{role: "user", content: RULES() + "\n\nCurrent data (JSON):\n" + snapshot() + (libHelp.length ? "\n\nPassages from my own books that may help with my latest message. Use them where relevant and cite like [Book, p. N]:\n" + libCite(libHelp) : "")}, ...chat.slice(-16)];
   try {
     const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
-      onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
-    chat.push({role: "assistant", content: answer}); saveChat(); if (bubble()) bubble().textContent = answer; else if (view === "ai") render(); // a tool may have redrawn the chat
+      onText: ({text}) => { const b = bubble(); if (b){ b.textContent = plain(text); const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
+    chat.push({role: "assistant", content: plain(answer)}); saveChat(); if (bubble()) bubble().textContent = plain(answer); else if (view === "ai") render(); // a tool may have redrawn the chat
   } catch (e){
     if (bubble()) bubble().textContent = (e.text ? e.text + "\n\n" : "") + errCopy(e);
     if (e.text){ chat.push({role: "assistant", content: e.text}); saveChat(); }
@@ -2936,7 +2942,7 @@ async function runInto(btn, outSel, prompt, store){
   const out = $(outSel); btn.disabled = true; out.classList.remove("placeholder"); out.textContent = "Thinking...";
   const sample = await getSample();
   if (!sample){ out.textContent = aiOffText(); btn.disabled = false; return; }
-  try { const {text} = await sample(prompt, {onText: ({text}) => { const o = $(outSel); if (o) o.textContent = text; }}); store(text); const o = $(outSel); if (o) o.textContent = text; }
+  try { const {text} = await sample(prompt, {onText: ({text}) => { const o = $(outSel); if (o) o.textContent = plain(text); }}); store(plain(text)); const o = $(outSel); if (o) o.textContent = plain(text); }
   catch (e){ const o = $(outSel); if (o) o.textContent = errCopy(e); }
   btn.disabled = false;
 }
