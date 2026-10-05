@@ -1522,7 +1522,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.10";
+const APP_VERSION = "2.10.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1881,7 +1881,12 @@ async function libRun(q){
 // Passages for Task AI and quizzes: only clearly relevant ones, kept short.
 async function libContext(q, n = 5){
   if (!libBooks.length) return [];
-  try { return (await libSearch(q, n)).filter(h => h.hit >= Math.min(2, h.terms.length)); } catch { return []; }
+  try {
+    // Best matches, but at most 2 passages per book so other books get a say.
+    const per = {}, out = [];
+    for (const h of (await libSearch(q, 30)).filter(h => h.hit >= Math.min(2, h.terms.length))){ if ((per[h.c.b] = (per[h.c.b] || 0) + 1) <= 2) out.push(h); if (out.length >= n) break; }
+    return out;
+  } catch { return []; }
 }
 const libCite = hits => hits.map((h, i) => `[${i + 1}] ${libWhere(h.c)}:\n${h.c.t.slice(0, 1100)}`).join("\n\n");
 function libAsk(btn){
@@ -1971,7 +1976,7 @@ const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e
 function libBooksHTML(){
   return packHTML() + `<div class="btn-row" style="justify-content:space-between;align-items:center"><span class="sub">${libBooks.length} book${libBooks.length === 1 ? "" : "s"}${libUsage ? " · " + fmtMB(libUsage) + " used on this device" : ""}</span><label class="btn sm primary" for="lib-file" role="button">${IC.plus}Add books</label></div>
     ${libBooks.length ? `<ul class="list lib-books">${[...libBooks].sort((a, b) => a.title.localeCompare(b.title)).map(b => `<li class="row"><div class="row-main"><div class="row-title">${esc(b.title)}</div>
-      <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span></div>
+      <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span>${daily.used?.[b.id] ? `<span>Used for notes ${esc(ago(daily.used[b.id]))}</span>` : `<span>Not used for notes yet</span>`}</div>
       <select data-libcat="${b.id}" aria-label="Category for ${esc(b.title)}">${LIB_CATS.map(([k, l]) => `<option value="${k}" ${b.cat === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
       <div class="row-actions"><button class="icon-btn" data-libdel="${b.id}" aria-label="Remove ${esc(b.title)}">${IC.trash}</button></div></li>`).join("")}</ul>` : empty("No books yet.", "Add PDFs, Word files or text notes.")}
     <p class="caution" style="margin:0">Books stay on this device only. They aren't uploaded, synced or included in backups, so add them on each device you use.</p>`;
@@ -2009,23 +2014,63 @@ const saveDaily = () => lsSet("task.daily", daily);
 let dailyBusy = false;
 const SKIN_RE = /\b(skin|dermat\w*|eczema|acne|psoriasis|fung\w*|tinea|scabies|rash\w*|topical|cream|ointment|emollient|sunscreen|pigment\w*|melasma|wound|burns?|itch\w*|urticaria)\b/i;
 const PHARM_RE = /\b(dispens\w*|counsel\w*|label\w*|storage|store|expiry|tablets?|capsules?|syrup|dose|dosing|interaction\w*|adverse|pregnan\w*|children|elderly|renal|refer\w*|prescription|first.line)\b/i;
+// Takes turns across books, so every book gets used, not just the biggest ones.
 async function libRandomChunks(n, prefer){
-  const mem = await libLoad(), good = mem.filter(c => c.t.length > 400);
-  const pool = good.length ? good : mem, liked = prefer ? pool.filter(c => prefer.test(c.t)) : [], out = [];
-  for (let k = 0; k < n * 6 && out.length < n && pool.length; k++){ const from = liked.length && Math.random() < .75 ? liked : pool; const c = from[Math.floor(Math.random() * from.length)]; if (!out.includes(c)) out.push(c); }
-  return out;
-}
-const cleanSent = x => x.length > 50 && x.length < 240 && /^[A-Z][a-z]/.test(x) && !/[?|{}<>@#_~]|\s[a-z]\s[A-Z|]/.test(x) && (x.match(/[a-z]/g) || []).length > x.length * .6;
-async function dailyOffline(n){
-  const out = [], seen = new Set();
-  for (const c of [...await libRandomChunks(n * 3, SKIN_RE), ...await libRandomChunks(n * 3, PHARM_RE)]){
-    if (out.length >= n || seen.has(c)) continue; seen.add(c);
-    const sents = c.t.replace(/\s+/g, " ").split(/(?<=[.;])\s+(?=[A-Z])/);
-    const k = sents.findIndex((x, j) => cleanSent(x) && !/^(Refer to|See|Table|Figure|For more)\b/.test(x) && (SKIN_RE.test(x) || PHARM_RE.test(x)) && cleanSent(sents[j + 1] || "")); if (k < 0) continue;
-    const why = sents.slice(k + 1, k + 3).filter(cleanSent).join(" ");
-    out.push({topic: SKIN_RE.test(sents[k]) ? "Skin" : "Pharmacy", title: libBook(c.b)?.title || "From your books", note: sents[k], why, src: libWhere(c)});
+  const mem = await libLoad(), byBook = {};
+  mem.forEach(c => (byBook[c.b] ||= []).push(c));
+  const used = daily.used ||= {}, out = [];
+  const order = libBooks.filter(b => byBook[b.id]?.length).sort((x, y) => (used[x.id] || 0) - (used[y.id] || 0) || Math.random() - .5);
+  for (let k = 0; k < n && order.length; k++){
+    const bk = order[k % order.length], all = byBook[bk.id], good = all.filter(c => c.t.length > 400), pool = good.length ? good : all;
+    const liked = prefer ? pool.filter(c => prefer.test(c.t)) : [], from = liked.length && Math.random() < .75 ? liked : pool;
+    for (let t = 0; t < 6; t++){ const c = from[Math.floor(Math.random() * from.length)]; if (!out.includes(c)){ out.push(c); break; } }
+    used[bk.id] = now() + k; // ms apart keeps the turn order stable
   }
-  return out;
+  saveDaily(); return out;
+}
+const LAW_RE = /\b(pharmac\w*|licen[cs]\w*|regist\w*|prescri\w*|poisons?|dangerous drugs?|medicines?|sell|sale|supply|schedul\w*|practi[cs]\w*|offence|council|inspect\w*|authority)\b/i;
+const cleanSent = (x, loose) => x.length > (loose ? 40 : 50) && x.length < (loose ? 300 : 240) && /^[A-Z][a-z]/.test(x) && !/[?|{}<>@#_~]|\s[a-z]\s[A-Z|]/.test(x) && (x.match(/[a-z]/g) || []).length > x.length * (loose ? .55 : .6);
+// What each register class means at the counter.
+const REG_CLASS = {"P.P": "Prescription preparation: supply only against a valid prescription.", "P": "Pharmacy medicine: sold only from a pharmacy, under a pharmacist's supervision.", "H.R": "Household remedy: may also be sold outside pharmacies.", "P.I.M": "Pharmacist-initiated medicine: a pharmacist may supply it without a prescription after assessing the patient.", "N": "Narcotic: Dangerous Drugs Act controls apply, including the register and safe custody."};
+const CAT_WHY = {law: "This is part of the law you practise under, so it matters for inspections, licensing and the council.", clinical: "This is national guidance, so it is what prescribers and inspectors will expect.", practice: "Good practice like this is what makes the counter safe and patients confident."};
+// One note from one passage, or null. Handles register rows, Acts with numbered clauses, and normal prose.
+function noteFrom(c){
+  const bk = libBook(c.b) || {}, src = libWhere(c), title = bk.title || "From your books";
+  const rows = c.t.split("\n").map(l => l.match(/^(.+?) — (.+?)\. ([A-Z][^.]*?)\s*(?:\(([A-Z.]+?)(?:\d+)?\.?\))?\.\s+Reg\. no ([^,]+), registered [\d-]+, registration expires ([\d-]+)/)).filter(Boolean);
+  if (rows.length){
+    const [, trade, what, cls, code, no, exp] = rows[Math.floor(Math.random() * rows.length)];
+    const k = (code || "").replace(/\.$/, ""), cname = cls.replace(/,\s*$/, "").toLowerCase();
+    return {topic: SKIN_RE.test(what) ? "Skin" : "Pharmacy", title: "MCAZ register: " + trade.trim(), note: `${trade.trim()} is ${what.trim()}, registered as ${cname}${k ? ` (${k})` : ""}.`,
+      why: `${REG_CLASS[k] || "Check its class before you sell it."} Registration ${no.trim()} runs until ${exp}.`, src};
+  }
+  // Drop running heads and capitals headings, then clause numbers like (1), (c) and 12A at the start of lines.
+  const lines = c.t.replace(/-\n(?=[a-z])/g, "").split("\n").filter((l, i) => { l = l.trim(); return l && !(l.length < 45 && i < 3 && !/[.;:,]$/.test(l)) && !(l.length > 3 && l === l.toUpperCase() && /[A-Z]{3}/.test(l)); });
+  const t = lines.map(l => l.trim().replace(/^(?:\((?:[a-z]{1,4}|\d{1,3})\)\s*)+/, "").replace(/^\d{1,3}[A-Z]?\.?\s+(?=[A-Z])/, "")).join(" ").replace(/\[[^\]]{0,240}\]/g, " ").replace(/\s+/g, " ");
+  const sents = t.split(/(?<=[.;:])\s+(?=[A-Z])/).map(x => x.trim().replace(/\s\d{1,3}$/, "")), bad = /^(Refer to|See|Table|Figure|For more|Provided that|References?|Acknowledg)/;
+  const kw = x => SKIN_RE.test(x) || PHARM_RE.test(x) || (bk.cat === "law" && LAW_RE.test(x));
+  const ok = (x, loose) => cleanSent(x, loose) && !bad.test(x) && /[.;:)]$/.test(x) && (x.match(/\(/g) || []).length === (x.match(/\)/g) || []).length;
+  let k = sents.findIndex((x, j) => ok(x) && kw(x) && ok(sents[j + 1] || "", 1));
+  if (k < 0) k = sents.findIndex(x => ok(x, 1) && kw(x));
+  if (k < 0) k = sents.findIndex((x, j) => ok(x) && ok(sents[j + 1] || "", 1));
+  if (k < 0) return null;
+  const why = sents.slice(k + 1, k + 3).filter(x => ok(x, 1)).join(" ") || CAT_WHY[bk.cat] || "";
+  return {topic: SKIN_RE.test(sents[k]) ? "Skin" : "Pharmacy", title, note: sents[k].replace(/[;:]$/, "."), why, src};
+}
+// Goes round the books, least recently used first, one note per book before any book gets a second.
+async function dailyOffline(n){
+  const mem = await libLoad(), byBook = {}, used = daily.used ||= {}, out = [];
+  mem.forEach(c => (byBook[c.b] ||= []).push(c));
+  const order = libBooks.filter(b => byBook[b.id]?.length).sort((x, y) => (used[x.id] || 0) - (used[y.id] || 0) || Math.random() - .5);
+  for (let round = 0; round < 3 && out.length < n; round++) for (const bk of order){
+    if (out.length >= n) break;
+    const all = byBook[bk.id], good = all.filter(c => c.t.length > 300), pool = good.length ? good : all;
+    const liked = pool.filter(c => SKIN_RE.test(c.t) || PHARM_RE.test(c.t));
+    for (let t = 0; t < 12; t++){
+      const from = liked.length && t < 8 ? liked : pool, note = noteFrom(from[Math.floor(Math.random() * from.length)]);
+      if (note && !out.some(o => o.note === note.note)){ out.push(note); used[bk.id] = now() + out.length; break; }
+    }
+  }
+  saveDaily(); return out;
 }
 async function dailyEnsure(){
   if (daily.day === dayKey(now())) return;
