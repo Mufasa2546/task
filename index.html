@@ -1417,7 +1417,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.4.1";
+const APP_VERSION = "2.5";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1464,6 +1464,122 @@ function viewStock(){
 const num = id => { const v = parseFloat(($(id)?.value || "").replace(",", ".")); return isFinite(v) ? v : null; };
 const r1 = n => Math.round(n * 10) / 10;
 let ixText = "";
+/* ---------- Extemporaneous preparation ---------- */
+// Scales a prescription to the quantity you need to make, shows what to weigh or measure, and the method for each kind of preparation.
+const EXT_TYPES = {
+  ointment: {label: "Ointment", unit: "g", liquid: false, base: "White soft paraffin or emulsifying ointment",
+    steps: ["If the base has to be made (waxes, paraffins), melt by fusion: highest melting point first, then the rest, and stir until it cools and sets.",
+      "Reduce solid powders to a fine powder in a mortar, or pass them through a sieve.",
+      "On an ointment tile, levigate the powder with a small amount of base (or a drop of liquid paraffin) using a spatula until completely smooth.",
+      "Add the rest of the base in portions of about the same size as what is already there (geometric dilution), mixing until uniform with no grit.",
+      "Pack into a suitable jar, filling from the bottom to avoid air pockets."],
+    labels: ["For external use only", "Name and strength of each active ingredient", "Expiry date and batch number"]},
+  cream: {label: "Cream", unit: "g", liquid: false, base: "Aqueous cream or another suitable cream base",
+    steps: ["Check each ingredient is compatible with the cream's emulsifier and preservative before you start.",
+      "Dissolve water-soluble solids in the smallest amount of purified water. Grind insoluble powders finely.",
+      "On a tile, mix the powder or solution with a small amount of cream until smooth.",
+      "Add the rest of the cream in equal portions (geometric dilution). Mix gently without heat, so the emulsion doesn't break or trap air.",
+      "Pack into a jar or tube."],
+    labels: ["For external use only", "Name and strength of each active ingredient", "Expiry date and batch number"]},
+  lotion: {label: "Lotion", unit: "mL", liquid: true, base: "Purified water, calamine lotion base or another suitable vehicle",
+    steps: ["Dissolve soluble ingredients in part of the vehicle.",
+      "In a mortar, triturate insoluble powders to a smooth paste with a wetting agent such as glycerol, or a little vehicle.",
+      "Gradually add more vehicle while mixing, then transfer to a calibrated container.",
+      "Rinse the mortar with vehicle and add the rinsings, then make up to the final volume and mix well.",
+      "Pack into a fluted or plain bottle as your guidelines require."],
+    labels: ["For external use only", "Shake the bottle", "Expiry date and batch number"]},
+  syrup: {label: "Syrup or oral liquid", unit: "mL", liquid: true, base: "Syrup BP, simple syrup or a suitable suspending vehicle",
+    steps: ["Dissolve soluble drugs in a portion of purified water or vehicle. Warm gently only if the drug is stable to heat.",
+      "For insoluble drugs (e.g. crushed tablets), triturate the powder with a little suspending vehicle to a smooth paste.",
+      "Add the syrup or vehicle gradually while mixing. Add preservative and flavouring if they are in the formula.",
+      "Transfer to a calibrated amber bottle, rinse the mortar with vehicle, make up to volume and mix well.",
+      "Check the dose per 5 mL against the patient's dose before labelling."],
+    labels: ["Dose and how often", "Shake the bottle (if it is a suspension)", "Storage (often in a fridge) and expiry date"]}
+};
+const EXT_UNITS = [["pct", "% (w/w, w/v)"], ["pctv", "% v/v"], ["g", "g"], ["mg", "mg"], ["mL", "mL"], ["mg5", "mg / 5 mL"], ["qs", "Base / vehicle"]];
+let ext = {type: "cream", make: "100", master: "", ov: "", have: "", ai: "", rows: [{name: "", amt: "", unit: "pct"}, {name: "", amt: "", unit: "qs"}], ...lsGet("task.ext", {})};
+const saveExt = () => lsSet("task.ext", ext);
+const fmtQty = (n, unit) => { if (unit === "g" && n < 1) return r1(n * 1000) + " mg"; return (Math.round(n * 1000) / 1000).toLocaleString() + " " + unit; };
+function extCalc(){
+  const T = EXT_TYPES[ext.type] || EXT_TYPES.cream, make = parseFloat(ext.make) || 0, master = parseFloat(ext.master) || 0;
+  const factor = master ? make / master : 1, ov = 1 + Math.max(0, parseFloat(ext.ov) || 0) / 100;
+  const lines = [], warn = []; let grams = 0, mls = 0, base = null;
+  for (const r of ext.rows){
+    const name = (r.name || "").trim(), a = parseFloat(String(r.amt).replace(",", "."));
+    if (!name && !r.amt) continue;
+    if (r.unit === "qs"){ base = name || T.base; continue; }
+    if (!isFinite(a) || a < 0){ warn.push(`Enter an amount for ${name || "each ingredient"}.`); continue; }
+    let qty, unit;
+    if (r.unit === "pct"){ if (a > 100) warn.push(`${name}: a percentage can't be over 100.`); qty = a * make / 100; unit = "g"; }
+    else if (r.unit === "pctv"){ qty = a * make / 100; unit = "mL"; }
+    else if (r.unit === "g"){ qty = a * factor; unit = "g"; }
+    else if (r.unit === "mg"){ qty = a * factor / 1000; unit = "g"; }
+    else if (r.unit === "mL"){ qty = a * factor; unit = "mL"; }
+    else if (r.unit === "mg5"){ if (!T.liquid) warn.push(`${name}: mg per 5 mL is for liquids. Use % for ${T.label.toLowerCase()}s.`); qty = a * make / 5 / 1000; unit = "g"; }
+    if (unit === "g") grams += qty; else mls += qty;
+    lines.push({name: name || "Ingredient", qty, unit});
+    if (unit === "g" && qty > 0 && qty < 0.1) warn.push(`${name}: ${fmtQty(qty, "g")} is below what most dispensing balances weigh accurately. Weigh more and dilute (trituration), or check your balance's minimum.`);
+  }
+  if (!T.liquid){
+    const b = make - grams - mls;
+    if (b < 0) warn.push("The ingredients add up to more than the total. Check the amounts or the quantity to make.");
+    else if (base !== null || lines.length) lines.push({name: base || T.base, qty: b, unit: "g", base: true});
+  } else {
+    if (grams + mls > make) warn.push("The ingredients look larger than the final volume. Check the amounts.");
+    lines.push({name: base || T.base, qty: null, unit: "mL", base: true});
+  }
+  return {T, make, factor, ov, lines: lines.map(l => ({...l, qty: l.qty == null ? null : l.qty * ov})), warn};
+}
+function extResult(){
+  const c = extCalc();
+  if (!c.make) return `<div class="calc-out placeholder">Enter the amount to make.</div>`;
+  if (!c.lines.length || (c.lines.length === 1 && c.lines[0].base)) return `<div class="calc-out placeholder">Add the ingredients from the prescription.</div>`;
+  const total = fmtQty(c.make * c.ov, c.T.unit);
+  return `<div class="calc-out"><b>To make ${esc(total)}${c.ov > 1 ? ` (${esc(c.make + " " + c.T.unit)} + ${Math.round((c.ov - 1) * 100)}% extra)` : ""}</b>${c.factor !== 1 ? `<br><span style="color:var(--muted)">Formula scaled × ${r1(c.factor)}</span>` : ""}
+    <ul class="list" style="margin-top:6px">${c.lines.map(l => `<li class="row"><div class="row-main"><div class="row-title">${esc(l.name)}</div></div><b style="font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap">${l.qty == null ? "to " + esc(total) : esc(fmtQty(l.qty, l.unit))}</b></li>`).join("")}</ul></div>
+    ${c.warn.length ? `<ul class="tips" style="margin-top:10px">${c.warn.map(w => `<li style="background:color-mix(in srgb,var(--bad) 10%,transparent)">${esc(w)}</li>`).join("")}</ul>` : ""}`;
+}
+function extHTML(){
+  const T = EXT_TYPES[ext.type] || EXT_TYPES.cream;
+  return `<section class="card">
+    <div class="seg" style="margin-bottom:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%">${Object.entries(EXT_TYPES).map(([k, t]) => `<button data-exttype="${k}" aria-pressed="${ext.type === k}">${esc(t.label.split(" ")[0])}</button>`).join("")}</div>
+    <div class="form" style="padding:0">
+      <label class="field">Amount to make (${T.unit})<input data-extf="make" inputmode="decimal" value="${esc(ext.make)}" placeholder="100"></label>
+      <label class="field">Prescription formula is for (${T.unit})<input data-extf="master" inputmode="decimal" value="${esc(ext.master)}" placeholder="Optional, e.g. 30"></label>
+      <label class="field">Extra for losses (%)<input data-extf="ov" inputmode="decimal" value="${esc(ext.ov)}" placeholder="0, or 5 to 10"></label></div>
+    <div class="group-head" style="margin-top:14px">Ingredients on the prescription</div>
+    <div style="display:grid;gap:8px;margin-top:6px">${ext.rows.map((r, i) => `<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--line)">
+      <input style="grid-column:1/-1" data-extr="${i}" data-k="name" value="${esc(r.name)}" placeholder="${r.unit === "qs" ? "Base, e.g. " + esc(T.base.split(" or ")[0]) : "e.g. Salicylic acid"}" aria-label="Ingredient">
+      <input data-extr="${i}" data-k="amt" inputmode="decimal" value="${esc(r.amt)}" placeholder="${r.unit === "qs" ? "–" : "2"}" aria-label="Amount" ${r.unit === "qs" ? "disabled" : ""}>
+      <select data-extr="${i}" data-k="unit" aria-label="Unit">${EXT_UNITS.map(([k, l]) => `<option value="${k}" ${r.unit === k ? "selected" : ""}>${l}</option>`).join("")}</select>
+      <button class="icon-btn" data-extdel="${i}" aria-label="Remove ingredient">${IC.close}</button></div>`).join("")}</div>
+    <button class="btn sm" data-extadd="1" style="margin-top:8px">${IC.plus}Add ingredient</button>
+    <div id="ext-res" style="margin-top:14px">${extResult()}</div></section>
+  <section class="card"><div class="card-head"><div><h2>How to make it</h2><p class="sub">Standard method for a${/^[aeiou]/i.test(T.label) ? "n" : ""} ${esc(T.label.toLowerCase())}</p></div></div>
+    <ol class="steps"><li>Check the prescription: strengths and doses are in the usual range, the ingredients are compatible, and it suits the patient.</li><li>Check your calculations above, then weigh or measure each ingredient accurately.</li>${T.steps.map(x => `<li>${esc(x)}</li>`).join("")}<li>Label: ${esc(T.labels.join("; "))}. Record the formula, quantities, batch, and who made and checked it. Set the expiry from your formulary or a published stability reference.</li></ol></section>
+  <section class="card"><div class="card-head"><div><h2>Safety and ingredient check</h2><p class="sub">AI checks safety, effectiveness and stability, and suggests ingredients from what you have</p></div></div>
+    <label class="field">What you have in stock (optional)<textarea data-extf="have" placeholder="e.g. aqueous cream, emulsifying ointment, glycerol, syrup BP, methylparaben">${esc(ext.have)}</textarea></label>
+    <div class="btn-row" style="margin-top:10px"><button class="btn primary" id="ext-ai">${IC.ai}Check with AI</button></div>
+    <div class="brief ${ext.ai ? "" : "placeholder"}" id="ext-out" style="margin-top:12px">${esc(ext.ai || "AI reviews the formula: safe strengths, compatibility, the best base or vehicle, preservative, storage, expiry, and which of your stock to use. Always confirm with your references.")}</div></section>`;
+}
+const extAI = btn => { const c = extCalc();
+  const formula = c.lines.map(l => `${l.name}: ${l.qty == null ? "to " + c.make + " " + c.T.unit : fmtQty(l.qty, l.unit)}`).join("\n");
+  const rx = ext.rows.filter(r => r.name || r.amt).map(r => `${r.name} ${r.unit === "qs" ? "(base, to make up)" : r.amt + " " + (EXT_UNITS.find(u => u[0] === r.unit)?.[1] || r.unit)}`).join("; ");
+  return runInto(btn, "#ext-out", `You are an experienced compounding pharmacist helping a registered pharmacist prepare an extemporaneous ${c.T.label.toLowerCase()}.
+Prescription as written: ${rx}
+Quantity to make: ${c.make} ${c.T.unit}${c.ov > 1 ? ` plus ${Math.round((c.ov - 1) * 100)}% overage` : ""}.
+Calculated amounts:
+${formula}
+${ext.have.trim() ? "Ingredients and bases the pharmacist has in stock: " + ext.have.trim() : "The pharmacist did not list their stock."}
+
+Reply in plain text with short numbered sections:
+1. Safety and effectiveness: are the strengths within usual ranges for this preparation and route? Flag anything unsafe or unusual.
+2. Compatibility and stability: physical or chemical incompatibilities (with each other and with the base or vehicle), pH or light sensitivity.
+3. Best base or vehicle and any needed excipients (preservative, suspending agent, wetting agent, buffer), with typical amounts. ${ext.have.trim() ? "Prefer what they have in stock and say which item to use instead of what is missing." : ""}
+4. Method: any changes or extra steps to the standard method for this formula.
+5. Storage, container, expiry guidance and labels.
+Check the arithmetic of the calculated amounts and point out any error. Don't invent references; say "check your formulary" where unsure. Under 300 words.`, t => { ext.ai = t; saveExt(); }); };
+
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
       <div class="form" style="padding:0">
@@ -1487,12 +1603,14 @@ function viewTools(){
         <label class="field">Weight (kg)<input id="b-wt" inputmode="decimal" placeholder="72"></label>
         <label class="field">Height (cm)<input id="b-ht" inputmode="decimal" placeholder="170"></label></div>
       <div class="brief placeholder calc-out" id="bmi-out">Enter weight and height.</div></section>`;
+  const extPanel = panel("tool-ext", "tools", "Extemporaneous preparation", "Creams, ointments, lotions, syrups", extHTML(), "Amounts, method and safety check");
   const t3 = `<section class="card"><div class="card-head"><div><h2>Interaction check</h2><p class="sub">AI reviews a list of medicines for interactions</p></div></div>
       <form class="form" id="ix-form" style="padding:0"><label class="field wide">Medicines (one per line or separated by commas)<textarea id="ix-in" placeholder="warfarin, clarithromycin, omeprazole"></textarea></label>
         <div class="btn-row"><button class="btn primary" type="submit" id="ix-go">${IC.ai}Check interactions</button></div></form>
       <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>`;
   return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
   <div class="pgrid">
+    ${extPanel}
     ${panel("tool-dose", "tools", "Weight-based dose", "mg/kg dosing", t0)}
     ${panel("tool-crcl", "tools", "Creatinine clearance", "Cockcroft-Gault", t1)}
     ${panel("tool-bmi", "tools", "BMI and BSA", "Mosteller formula", t2)}
@@ -1774,6 +1892,9 @@ document.addEventListener("click", async ev => {
   if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.pop){ openPop(d.pop); return; }
+  if (d.exttype){ ext.type = d.exttype; saveExt(); render(); return; }
+  if (d.extadd){ const qs = ext.rows.findIndex(r => r.unit === "qs"); ext.rows.splice(qs < 0 ? ext.rows.length : qs, 0, {name: "", amt: "", unit: "pct"}); saveExt(); render(); return; }
+  if (d.extdel != null){ ext.rows.splice(+d.extdel, 1); if (!ext.rows.length) ext.rows.push({name: "", amt: "", unit: "pct"}); saveExt(); render(); return; }
   if (d.popclose){ closePop(); return; }
   if (d.nav){ editing = null; return go(d.nav); }
   if (d.go){ editing = null; return go(d.go, {open: d.open}); }
@@ -1823,6 +1944,7 @@ document.addEventListener("click", async ev => {
     case "lock-now": lockNow(); break;
     case "au-switch": authMode = authMode === "signup" ? "signin" : "signup"; authMsg = ""; renderAuth(); break;
     case "au-skip": if (!signedIn()) lsSet("task.noAccount", true); authOpen = false; authMsg = ""; renderAuth(); render(); break;
+    case "ext-ai": extAI(t); break;
     case "sync-now": await syncNow(); toast(syncErr || "Synced."); break;
     case "web-refresh": t.disabled = true; await loadWeb(true); if (web.err) toast(web.err); break;
     case "web-check": t.disabled = true; t.textContent = "Checking…"; await checkWeb(); render(); break;
@@ -1866,6 +1988,9 @@ document.addEventListener("click", async ev => {
 document.addEventListener("input", ev => {
   if (ev.target.id === "card-search"){ cardSearch = ev.target.value; render(); }
   if (ev.target.closest?.(".calc")) calc();
+  const ed = ev.target.dataset || {};
+  if (ed.extf){ ext[ed.extf] = ev.target.value; saveExt(); const o = $("#ext-res"); if (o) o.innerHTML = extResult(); }
+  if (ed.extr != null && ext.rows[+ed.extr]){ ext.rows[+ed.extr][ed.k] = ev.target.value; saveExt(); const o = $("#ext-res"); if (o) o.innerHTML = extResult(); if (ed.k === "unit"){ render(); if (popKey) fillPop(); } }
   if (ev.target.id === "global-search"){ globalQ = ev.target.value; render(); }
 });
 document.addEventListener("change", async ev => {
