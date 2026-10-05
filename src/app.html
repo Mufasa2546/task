@@ -1298,7 +1298,7 @@ function keyCard(){
   const ks = aiKeys(), order = aiOrder(), models = lsGet("task.aiModels", {});
   const rows = Object.entries(AI_PROV).filter(([p]) => ks[p]).map(([p, P]) => { const main = order[0] === p, list = models[p] || [], m = aiModel(p);
     return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${main ? `<span class="pill s-good">Main</span>` : ""}</div>
-      <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span>${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<span>Model: auto</span>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></div>
+      <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span>${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></div>
       <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div></li>`; }).join("");
   return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}` : "Add a key from Claude, ChatGPT, Gemini or OpenRouter. It's saved only on this device and never put in backups."}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
     ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
@@ -1514,7 +1514,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.11";
+const APP_VERSION = "2.11.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2835,7 +2835,7 @@ async function aiPickModel(p){
 }
 // OpenAI-style chat (OpenAI, Gemini and OpenRouter all speak it), with the same page tools.
 async function openaiSample(p, input, opts = {}){
-  const P = AI_PROV[p], model = aiModel(p) || await aiPickModel(p);
+  const P = AI_PROV[p]; let model = aiModel(p) || await aiPickModel(p);
   const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: String(m.content)}));
   const apiTools = (opts.tools || []).map(t => ({type: "function", function: {name: t.name, description: t.description, parameters: t.inputSchema || {type: "object", properties: {}}}}));
   let all = "";
@@ -2847,6 +2847,8 @@ async function openaiSample(p, input, opts = {}){
         headers: {"content-type": "application/json", authorization: "Bearer " + aiKeys()[p], ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
         body: JSON.stringify({model, messages, ...(apiTools.length ? {tools: apiTools} : {})})});
     } catch { throw {code: opts.signal?.aborted ? "cancelled" : "offline", text: all}; }
+    // No OpenRouter credit: switch to its free models (they don't need credit) and try again.
+    if (res.status === 402 && p === "openrouter" && model !== "openrouter/free"){ model = "openrouter/free"; lsSet("task.aiModel", {...lsGet("task.aiModel", {}), openrouter: model}); toast("No OpenRouter credit, so Task switched to its free models."); round--; continue; }
     if (!res.ok){ const why = await res.text().catch(() => "");
       throw {code: res.status === 401 || res.status === 403 || /api.?key/i.test(why) ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 402 ? "no_credit" : res.status === 404 || /model/i.test(why) ? "model_missing" : "upstream_error", text: all}; }
     const j = await res.json(), ch = j.choices?.[0] || {}, msg = ch.message || {};
