@@ -443,7 +443,21 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .today-grid .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}
   .today-grid .pbtn{flex-direction:column;align-items:flex-start;gap:5px;padding:9px 10px}
   .today-grid .pbtn b{font-size:12.5px}.today-grid .pbtn small{font-size:11px}
-  .copyright{padding:8px 16px calc(var(--nav-h) + 10px + env(safe-area-inset-bottom,0px));font-size:11px;border-top:0}
+  .copyright{display:none}
+  .today-hero{padding:11px 14px}.today-hero h2{font-size:18px}.today-hero p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+  .notice p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+  .site-actions .lbl{display:none}.site-actions{flex-wrap:nowrap}
+  .card-head:has(.site-actions){flex-wrap:nowrap;align-items:flex-start}
+  .pgrid:has(> :nth-child(4)){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .pgrid:has(> :nth-child(4)) .pbtn{flex-direction:column;align-items:flex-start;gap:5px;padding:9px 10px}
+  .pgrid:has(> :nth-child(4)) .pbtn b{font-size:12.5px}.pgrid:has(> :nth-child(4)) .pbtn small{font-size:11px}
+  /* Phone: the screen itself never scrolls and shows no scroll bar; each page is laid out to fit */
+  html,body{height:100%;overflow:hidden}
+  .shell{height:100dvh;min-height:0}
+  .main{height:100dvh;min-height:0;overflow:hidden}
+  .content{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+  .content::-webkit-scrollbar{display:none}
+  .content.swipe-l{animation:swl .22s ease-out}.content.swipe-r{animation:swr .22s ease-out}
   .card-head{margin-bottom:8px}
   .hero .btn-row{display:none}
   .hero h2{font-size:19px}
@@ -472,6 +486,22 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .time-chip{width:52px}
 }
 @media (max-width:420px){ .row-actions .icon-btn{width:30px} }
+/* Shorter phones: tighten so pages still fit without scrolling */
+@media (max-width:900px) and (max-height:780px){
+  .today-hero{display:none}
+  .content{padding-top:12px;gap:10px}
+  .stat{padding:8px 9px 7px}.stat .n{font-size:20px;min-height:22px}
+  .vc-plot,.vc-y{height:70px}
+  .card{padding:12px}
+  .card-head:has(.site-actions) .link-btn{display:none}
+  .stat .l{font-size:10.5px}
+}
+@media (max-width:900px) and (max-height:700px){
+  .today-grid .list > .row:nth-child(n+2){display:none}
+  .today-grid .pbtn small{display:none}
+  .notice{padding:8px 10px;font-size:12.5px}
+}
+@keyframes swl{from{transform:translateX(36px);opacity:.4}}@keyframes swr{from{transform:translateX(-36px);opacity:.4}}
 @media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{transform:translateY(6px);opacity:.3}}}
 </style>
 
@@ -978,7 +1008,7 @@ function go(k, opts = {}){
   view = k; document.body.classList.remove("sheet-open"); closePop();
   try { localStorage.setItem("jarvis.view", k); } catch {}
   if (opts.open) openForm = opts.open;
-  render(); window.scrollTo(0, 0);
+  render(); window.scrollTo(0, 0); $("#views").scrollTop = 0;
   if (opts.open === "key"){ openForm = null; openPop("ai-key"); setTimeout(() => $("#api-key")?.focus({preventScroll: true}), 60); return; }
   if (opts.open) setTimeout(() => { const f = document.querySelector(`details[data-form="${opts.open}"]`); if (f){ f.open = true; f.querySelector("input,textarea")?.focus(); } }, 30);
 }
@@ -994,8 +1024,8 @@ function adder(key, title, body, open){
   return `<details class="adder" data-form="${key}" ${(open && editing) || openForm === key ? "open" : ""}><summary><span class="plus">${IC.plus}</span>${esc(title)}</summary>${body}</details>`;
 }
 function notifBanner(){
-  if (!("Notification" in window) || Notification.permission === "granted") return "";
-  if (!inClaude) return `<div class="notice"><p>Turn on alerts so Task can remind you before meetings and goals.</p><button class="btn sm primary" id="notif-btn">Turn on</button></div>`;
+  if (!("Notification" in window) || Notification.permission !== "default") return "";
+  if (!inClaude) return `<div class="notice"><p>Turn on alerts for meeting and goal reminders.</p><button class="btn sm primary" id="notif-btn">Turn on</button></div>`;
   return `<div class="notice"><p>Reminders pop up inside Task while it's open. For alerts when it's closed, tap the calendar icon on a goal or appointment to add an alarm to your phone's calendar.</p></div>`;
 }
 
@@ -1045,12 +1075,12 @@ function viewToday(){
   const next = [nextAppt && {t: nextAppt.start, s: `${nextAppt.client} at ${fmtWhen(nextAppt.start)}`}, nextTask && {t: nextTask.due, s: `${nextTask.title}, ${fmtWhen(nextTask.due)}`}].filter(Boolean).sort((a, b) => a.t - b.t)[0];
   const h = new Date().getHours();
   return `
-  <section class="card hero">
+  <section class="card hero today-hero">
     <div class="hero-top"><div><h2>${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}${firstName() ? ", " + esc(firstName()) : ""}.</h2>
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
     <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
-  ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
+  ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your API key to turn it on.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Meetings today</div></button>
@@ -1476,7 +1506,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.8.2";
+const APP_VERSION = "2.9";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2212,7 +2242,7 @@ function viewSite(){
   const range = `Last ${web.days} days`;
   return `<section class="card"><div class="card-head"><div><h2 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(web.site)}${(web.sites || []).length > 1 ? `<span class="seg">${web.sites.map(x => `<button data-vsite="${esc(x.domain)}" aria-pressed="${x.domain === web.site}">${esc(x.domain)}</button>`).join("")}</span>` : ""}</h2>
       <div class="row-meta">${status}${up}${linkBtn("https://" + web.site)}</div></div>
-      <div class="btn-row"><button class="btn sm" id="web-refresh" ${web.loading ? "disabled" : ""}>${IC.refresh}${web.loading ? "Refreshing…" : "Refresh"}</button><button class="btn sm" id="web-check">${IC.check}Check site</button></div></div>
+      <div class="btn-row site-actions"><button class="btn sm" id="web-refresh" ${web.loading ? "disabled" : ""} aria-label="Refresh">${IC.refresh}<span class="lbl">${web.loading ? "Refreshing…" : "Refresh"}</span></button><button class="btn sm" id="web-check" aria-label="Check site">${IC.check}<span class="lbl">Check site</span></button></div></div>
       ${web.err ? `<p class="sub" style="color:var(--bad);margin:0">${esc(web.err)} Showing the last numbers saved on this device.</p>` : ""}
       ${installed ? "" : `<div class="notice" style="margin-top:10px"><p>Visits start once the counter line is on ${esc(web.site)}.</p><button class="btn sm primary" data-pop="v-code">See how</button></div>`}</section>
     <div class="stats">
@@ -2803,6 +2833,25 @@ async function setupOffline(){
     if ("periodicSync" in swReg){ try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * MIN}); } catch {} }
   } catch {}
 }
+/* ---------- Swipe sideways between Today, Goals, Clients and Meetings (phone) ---------- */
+(() => {
+  let sx = 0, sy = 0, st = 0, ok = false;
+  const views = document.getElementById("views");
+  views.addEventListener("touchstart", e => {
+    const t = e.touches[0], el = e.target;
+    ok = e.touches.length === 1 && innerWidth <= 900 && TAB_KEYS.includes(view) && $("#pop").hidden && !document.body.classList.contains("sheet-open")
+      && !el.closest("input,textarea,select,[contenteditable],.chips,.seg,.vc-plot,.bars,[data-noswipe]");
+    sx = t.clientX; sy = t.clientY; st = Date.now();
+  }, {passive: true});
+  views.addEventListener("touchend", e => {
+    if (!ok) return; ok = false;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * .6 || Date.now() - st > 700) return;
+    const i = TAB_KEYS.indexOf(view), j = i + (dx < 0 ? 1 : -1); if (j < 0 || j >= TAB_KEYS.length) return;
+    go(TAB_KEYS[j]); views.classList.remove("swipe-l", "swipe-r"); void views.offsetWidth; views.classList.add(dx < 0 ? "swipe-l" : "swipe-r");
+  }, {passive: true});
+  views.addEventListener("animationend", () => views.classList.remove("swipe-l", "swipe-r"));
+})();
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
 loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb(); checkApi();
