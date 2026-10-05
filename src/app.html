@@ -475,7 +475,7 @@ function acceptSession(r){
   if (!profile.name && r.user.name) patch.name = r.user.name;
   if (other?.name) patch.partner = other.name.split(/\s+/)[0];
   if (r.team?.name && !profile.company) patch.company = r.team.name;
-  if (Object.keys(patch).length) saveProfile(patch);
+  if (Object.keys(patch).length) saveProfile(patch, true);
   // Once a partner has joined, re-send items that still say "me"/"partner" so they carry real emails.
   if (other){ let n = 0; items.forEach(x => { if ((x.who === "me" || x.who === "partner") && spaceOf(x) === "team"){ pending[x.id] = 1; n++; } }); if (n) lsSet(PKEY, pending); }
 }
@@ -518,6 +518,8 @@ async function syncNow(){
       more = r.more || Object.keys(pending).length > 0 && guard < 3;
       if (changed && !more) render();
     }
+    if (applyRemoteProfile()) render();
+    else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync();
     lastSync = now(); lsSet("task.lastSync", lastSync);
   } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
   syncing = false;
@@ -623,7 +625,24 @@ const PROFILE_KEY = "task.profile";
 let profile = {};
 try { profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); } catch {}
 profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", bg: "navy", watermark: true, ...profile};
-function saveProfile(patch){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); return true; } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; } }
+function saveProfile(patch, quiet){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; }
+  if (!quiet && Object.keys(patch).some(k => PROFILE_SYNC.includes(k))) queueProfileSync();
+  return true; }
+// Signed in, your name, photo, logo and background follow you to every device (the PIN and API key stay on each device).
+const PROFILE_SYNC = ["name", "role", "company", "partner", "currency", "photo", "bg", "bgPhoto", "watermark", "logo"];
+const profileItemId = () => (typeof session !== "undefined" && session?.user?.id) ? "profile-" + session.user.id : null;
+function queueProfileSync(){
+  const id = profileItemId(); if (!id) return;
+  const p = {}; PROFILE_SYNC.forEach(k => { if (profile[k] !== undefined) p[k] = profile[k]; });
+  if (JSON.stringify(p).length > 190000) delete p.bgPhoto; // a very large background photo stays on this device
+  const rec = {id, kind: "meta", sub: "profile", profile: p, updatedAt: now()};
+  const i = items.findIndex(x => x.id === id); if (i >= 0) items[i] = rec; else items.push(rec);
+  saveLocal(); saveProfile({_at: rec.updatedAt}, true); markDirty(id);
+}
+function applyRemoteProfile(){
+  const x = byId(profileItemId()); if (!x?.profile || (x.updatedAt || 0) <= (profile._at || 0)) return false;
+  saveProfile({...x.profile, _at: x.updatedAt}, true); applyLook(); return true;
+}
 const firstName = () => (profile.name || "").trim().split(/\s+/)[0] || "";
 const partner = () => (profile.partner || "").trim() || "Partner";
 // "who" is stored as an email once signed in, so it reads the same on both partners' phones.
@@ -1270,6 +1289,7 @@ function viewSettings(){
       ${session.team?.code && (session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Invite code for ${esc(partner())}</b><span>${esc(partner())} opens Task, taps Create account and enters this code.</span></div><div class="btn-row"><span class="code">${esc(session.team.code)}</span><button class="btn" data-copy="Join me on Task: open https://task.brandbridgeacademy.workers.dev, tap Create account and enter invite code ${esc(session.team.code)}">${IC.copy}Copy invite</button></div></div>` : ""}
       ${(session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Have a code from your partner?</b><span>Join their team instead</span></div><div class="btn-row"><input id="join-code" placeholder="Invite code" style="max-width:150px" autocapitalize="characters"><button class="btn" id="join-btn">Join</button></div></div>` : ""}
       <div class="set-row"><div class="t"><b>Sync</b><span>${syncing ? "Syncing..." : syncErr ? esc(syncErr) : lastSync ? "Last synced " + esc(ago(lastSync)) : "Not synced yet"}${Object.keys(pending).length ? " · " + Object.keys(pending).length + " change(s) waiting" : ""}</span></div><div class="btn-row"><button class="btn" id="sync-now">Sync now</button><button class="btn ghost" id="sign-out">Sign out</button></div></div>
+      <p class="sub" style="color:var(--muted);margin:10px 0 0">Your laptop and phone: sign in with ${esc(session.user.email)} on each one and everything stays the same on both, including your name, photo, logo and background. The PIN and AI key are set separately on each device.</p>
       <p class="sub" style="color:var(--muted);margin:10px 0 0">Shared with your team: clients and deals, projects, goals for ${esc(partner())} or both, Brandbridge log entries, and anything you tick "Share". Everything else stays private to you.</p></section>`
     : `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Sign in to back up online, use Task on more than one device, and share Brandbridge work with ${esc(partner())}.</p></div><span class="pill s-warn">Not signed in</span></div>
       <div class="btn-row"><button class="btn primary" data-acct="signup">${IC.user}Create account</button><button class="btn" data-acct="signin">Sign in</button></div></section>`;
@@ -1308,7 +1328,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.2.2";
+const APP_VERSION = "2.3";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2094,7 +2114,9 @@ async function setupOffline(){
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
 loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb(); checkApi();
-setInterval(() => { if (!document.hidden){ syncNow(); if (view === "site" || view === "today") loadWeb(); } }, 30000);
+setInterval(() => { if (!document.hidden) syncNow(); }, 15000);
+setInterval(() => { if (!document.hidden && (view === "site" || view === "today")) loadWeb(); }, 30000);
+addEventListener("focus", () => syncNow());
 addEventListener("online", () => syncNow());
 document.addEventListener("visibilitychange", () => { if (!document.hidden) syncNow(); });
 setInterval(() => { updateTitle(); checkReminders(); }, 15000);
