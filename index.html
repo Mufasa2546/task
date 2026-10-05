@@ -94,7 +94,8 @@ a.btn.ghost{color:var(--muted)}
 .icon-btn{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;border:0;background:none;color:var(--muted);flex:none}
 .icon-btn:hover{background:var(--sunk);color:var(--fg)}
 .icon-btn svg{width:17px;height:17px}
-.icon-btn.armed{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent);width:auto;padding:0 10px;font-size:12px;font-weight:700}
+.icon-btn.armed,.row-actions .icon-btn.armed{display:inline-flex;align-items:center;gap:5px;color:#fff;background:var(--bad);width:auto;min-width:0;padding:0 12px;font-size:13px;font-weight:700;white-space:nowrap;border-radius:99px}
+.icon-btn.armed svg{width:15px;height:15px}
 .menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px;min-width:210px;display:grid;z-index:40}
 .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:10px 12px;border-radius:var(--r-sm);font-weight:600;font-size:14px;text-align:left}
 .menu button:hover{background:var(--sunk)}
@@ -533,7 +534,7 @@ async function syncNow(){
       if (changed && !more) render();
     }
     if (applyRemoteProfile()) render();
-    else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync();
+    else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync(true);
     lastSync = now(); lsSet("task.lastSync", lastSync);
   } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
   syncing = false;
@@ -638,16 +639,18 @@ async function toggleTask(r){
 const PROFILE_KEY = "task.profile";
 let profile = {};
 try { profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); } catch {}
-profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", bg: "navy", watermark: true, ...profile};
+profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", bg: "navy", watermark: false, ...profile};
+// v2.3.1: the Brandbridge watermark is off for everyone (it can be turned back on in Settings).
+if (!profile._wmOff){ profile.watermark = false; profile._wmOff = 1; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {} }
 function saveProfile(patch, quiet){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; }
   if (!quiet && Object.keys(patch).some(k => PROFILE_SYNC.includes(k))) queueProfileSync();
   return true; }
 // Signed in, your name, photo, logo and background follow you to every device (the PIN and API key stay on each device).
-const PROFILE_SYNC = ["name", "role", "company", "partner", "currency", "photo", "bg", "bgPhoto", "watermark", "logo"];
+const PROFILE_SYNC = ["name", "role", "company", "partner", "currency", "photo", "bg", "bgPhoto", "logo"];
 const profileItemId = () => (typeof session !== "undefined" && session?.user?.id) ? "profile-" + session.user.id : null;
-function queueProfileSync(){
+function queueProfileSync(first){
   const id = profileItemId(); if (!id) return;
-  const p = {}; PROFILE_SYNC.forEach(k => { if (profile[k] !== undefined) p[k] = profile[k]; });
+  const p = {}; PROFILE_SYNC.forEach(k => { if (profile[k] !== undefined && !(first && profile[k] === "")) p[k] = profile[k]; });
   if (JSON.stringify(p).length > 190000) delete p.bgPhoto; // a very large background photo stays on this device
   const rec = {id, kind: "meta", sub: "profile", profile: p, updatedAt: now()};
   const i = items.findIndex(x => x.id === id); if (i >= 0) items[i] = rec; else items.push(rec);
@@ -1342,7 +1345,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.3";
+const APP_VERSION = "2.3.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1670,8 +1673,8 @@ document.addEventListener("click", async ev => {
   if (d.toggle){ const r = byId(d.toggle); if (r) toggleTask(r); return; }
   if (d.del){
     if (t.classList.contains("armed")){ if (editing?.id === d.del) editing = null; remove(d.del); return; }
-    t.classList.add("armed"); t.textContent = "Delete?";
-    setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.innerHTML = IC.trash; } }, 3000);
+    t.classList.add("armed"); t.innerHTML = IC.trash + "<span>Delete</span>"; t.setAttribute("aria-label", "Tap again to delete");
+    setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.innerHTML = IC.trash; t.setAttribute("aria-label", "Delete"); } }, 3000);
     return;
   }
   if (d.edit){ editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library"; render(); window.scrollTo(0, 0);
@@ -2115,10 +2118,14 @@ async function setupOffline(){
     swReg = await navigator.serviceWorker.register("sw.js");
     let shown = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => { if (!hadController || shown) return; shown = true;
+      // Update straight away unless you're in the middle of typing or editing something.
+      const busy = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "") || !!document.querySelector("details.adder[open]") || locked;
+      if (!busy()){ location.reload(); return; }
       const el = document.createElement("div"); el.className = "toast";
       el.innerHTML = `<span>A new version of Task is ready.</span><button id="reload-app">Reload</button><button aria-label="Dismiss">✕</button>`;
       el.addEventListener("click", e => { if (e.target.tagName === "BUTTON") el.remove(); }); $("#toasts").append(el); });
-    setInterval(() => swReg.update().catch(() => {}), 30 * MIN);
+    setInterval(() => swReg.update().catch(() => {}), 10 * MIN);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) swReg.update().catch(() => {}); });
     navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified"){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
     try { const db = await idb(); const req = db.transaction("kv").objectStore("kv").get("sent");
       req.onsuccess = () => (req.result || []).forEach(id => { const r = byId(id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
