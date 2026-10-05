@@ -108,7 +108,7 @@ a.btn.ghost{color:var(--muted)}
 .hero .btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);color:#fff}
 .hero .btn:hover{background:rgba(255,255,255,.26)}
 .hero .btn-row{display:none}
-.stat-money{font-size:clamp(17px,2.4vw,22px)!important;overflow-wrap:anywhere}
+.stat-money{font-size:clamp(17px,2.4vw,22px)!important;overflow-wrap:normal;word-break:keep-all;flex-wrap:wrap;column-gap:4px}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;min-width:0}
 button.stat:hover{border-color:var(--accent)}
@@ -347,6 +347,20 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .snippet{display:block;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;overflow-wrap:anywhere;white-space:pre-wrap;margin:0 0 10px;user-select:all}
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
 /* Panels: extra detail opens in a pop-up so pages fit the screen */
+.client-link{all:unset;cursor:pointer;display:inline;font-weight:600;color:inherit;overflow-wrap:anywhere}.client-link svg{width:14px;height:14px;vertical-align:-2px;margin-left:2px;opacity:.55}
+.client-link:hover{color:var(--accent)}.client-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.cp-card .row-meta{flex-wrap:wrap}.cp-contact{margin:10px 0 0;font-family:var(--f-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cp-actions{margin-top:10px;flex-wrap:wrap}.btn.wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.btn.wa:hover{background:#1a8a4a}
+.pay-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.pay-grid>div{background:var(--sunk);border-radius:var(--r-sm);padding:10px 12px;min-width:0}
+.pay-grid span{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.pay-grid b{display:block;font-family:var(--f-num);font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin-top:2px}
+.pay-grid .owe b{color:var(--bad)}.pay-grid .ok b{color:var(--good)}.cp-next{margin:0 0 12px}
+.rx-img{all:unset;display:block;width:100%;max-height:52vh;overflow:hidden;border-radius:var(--r-sm);background:var(--sunk);cursor:zoom-in;margin-bottom:6px}
+.rx-img img{display:block;width:100%;max-height:52vh;object-fit:contain;transition:transform .2s}
+.rx-img.zoom{cursor:zoom-out}.rx-img.zoom img{transform:scale(2.5)}
+.rx-img.enh img{filter:grayscale(1) contrast(1.9) brightness(1.08)}.rx-tip{margin:0 0 10px}
+label.btn{cursor:pointer}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:10px}
 .pbtn{display:flex;align-items:center;gap:12px;width:100%;min-width:0;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;color:var(--fg)}
 .pbtn:hover{border-color:var(--accent)}
@@ -632,7 +646,7 @@ let pending = lsGet(PKEY, {});
 let apiOk = false, syncing = false, lastSync = lsGet("task.lastSync", 0), syncErr = "", authOpen = false, authMode = "signin", authMsg = "";
 const signedIn = () => !!session?.token;
 function spaceOf(x){
-  if (x.kind === "deal" || x.kind === "project") return "team";
+  if (x.kind === "deal" || x.kind === "project" || x.kind === "pay") return "team";
   if (x.kind === "task") return !isMe(x.who) || x.shared ? "team" : "me";
   if (x.kind === "biz" || x.kind === "appt") return x.shared ? "team" : "me";
   if (x.kind === "log") return x.shared || /brandbridge/i.test(x.tag || "") || (profile.company && x.tag === profile.company) ? "team" : "me";
@@ -856,6 +870,8 @@ const WHO = () => { const pm = myEmail() && partnerMember(); return pm ? [[myEma
 function whoLabel(w){ if (w === "both") return "Both"; if (isMe(w)) return firstName() || "Me"; if (w === "partner") return partner();
   const m = ((typeof session !== "undefined" && session?.members) || []).find(x => x.email === w); return m ? (m.name || m.email).split(/\s+/)[0] : partner(); }
 const money = n => n ? `${esc(profile.currency || "")} ${Number(n).toLocaleString()}`.trim() : "";
+// Short form for the small stat tiles, so big amounts don't break across lines (490,000 shows as 490K).
+const moneyK = n => { const a = Math.abs(+n || 0); if (!a) return "0"; const t = a >= 1e6 ? +(n / 1e6).toFixed(a >= 1e7 ? 0 : 1) + "M" : a >= 1e4 ? Math.round(n / 1e3) + "K" : Number(n).toLocaleString(); return `${esc(profile.currency || "")} ${t}`.trim(); };
 const initials = () => (profile.name || "T").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 const avatar = (cls = "") => profile.photo ? `<img class="avatar ${cls}" src="${profile.photo}" alt="">` : `<span class="avatar ${cls}" aria-hidden="true">${esc(initials())}</span>`;
 const WORDMARK = `<svg viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M30 18h34c18 0 28 8 28 21 0 8-4 14-11 17 9 3 15 10 15 20 0 15-11 24-31 24H30zm18 34h14c8 0 12-3 12-9s-4-9-12-9H48zm0 34h16c9 0 13-3 13-10s-4-10-13-10H48z"/><text x="112" y="72" font-family="Plus Jakarta Sans,system-ui,sans-serif" font-size="42" font-weight="800" letter-spacing="2">BRANDBRIDGE</text><rect x="114" y="86" width="220" height="5" rx="2.5"/></g></svg>`;
@@ -984,7 +1000,14 @@ const IC = {
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   download: I('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   upload: I('<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>'),
-  plus: I('<path d="M12 5v14M5 12h14"/>', 'stroke-width="2.6"')
+  plus: I('<path d="M12 5v14M5 12h14"/>', 'stroke-width="2.6"'),
+  cream: I('<rect x="5" y="10" width="14" height="11" rx="3"/><path d="M6.5 10V7a1.5 1.5 0 0 1 1.5-1.5h8A1.5 1.5 0 0 1 17.5 7v3M9 15h6"/>'),
+  phone: I('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'),
+  wa: I('<path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/><path d="M9.2 9.2c.2 2.9 2.7 5.4 5.6 5.6l1-1.4-1.9-1-.9.7a4 4 0 0 1-2-2l.7-.9-1-1.9z"/>'),
+  mail: I('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5L12 13l8.5-6.5"/>'),
+  camera: I('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  pay: I('<rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v5M17.5 9.5v5"/>'),
+  rx: I('<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 16V8h2.5a2 2 0 0 1 0 4H9M11 12l4 5M15 12.5l-3 4"/>')
 };
 
 /* ---------- Navigation ---------- */
@@ -1000,6 +1023,7 @@ const SECTIONS = {
   books: {label: "Library", icon: "book", group: "Pharmacy"},
   tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Pharmacy"},
   stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Pharmacy"},
+  creams: {label: "Cream business", short: "Creams", icon: "cream", group: "Personal"},
   log: {label: "Activity log", short: "Log", icon: "log", group: "Personal"},
   insights: {label: "Insights", icon: "insights", group: "Personal"},
   ai: {label: "Task AI", icon: "ai", group: "Assistant"},
@@ -1034,7 +1058,7 @@ function renderChrome(){
   $("#sheet-grid").innerHTML = Object.keys(SECTIONS).filter(k => !TAB_KEYS.includes(k)).map(k =>
     `<button data-nav="${k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span></button>`).join("");
   const ma = $("#m-avatar"); if (ma) ma.innerHTML = avatar();
-  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["deal","deals","Client or deal"],["appt","appts","Meeting or appointment"],["log","log","Log an update"],["card","learn","Drug card"],["stock","stock","Stock expiry"]]
+  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["deal","deals","Client or deal"],["appt","appts","Meeting or appointment"],["log","log","Log an update"],["card","learn","Drug card"],["stock","stock","Stock expiry"],["cream","cream","Cream order"]]
     .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
 }
 function go(k, opts = {}){
@@ -1099,8 +1123,8 @@ function apptRow(a, showDay = true){
 // Built from your own data, so it works offline. With an AI key it is also written up in a sentence or two.
 let upd = lsGet("task.upd", {seen: 0, ai: "", aiFor: "", aiAt: 0});
 const saveUpd = () => lsSet("task.upd", upd);
-const KIND_WORD = {task: ["goal", "goals"], deal: ["client", "clients"], appt: ["meeting", "meetings"], card: ["drug card", "drug cards"], log: ["log entry", "log entries"], project: ["project", "projects"], biz: ["business", "businesses"], stock: ["stock item", "stock items"]};
-const nameOf = x => String(x.title || x.client || x.name || x.drug || x.text || "").slice(0, 40);
+const KIND_WORD = {task: ["goal", "goals"], deal: ["client", "clients"], appt: ["meeting", "meetings"], card: ["drug card", "drug cards"], log: ["log entry", "log entries"], project: ["project", "projects"], biz: ["business", "businesses"], stock: ["stock item", "stock items"], pay: ["payment", "payments"]};
+const nameOf = x => x.kind === "pay" ? `${money(x.amount)} from ${byId(x.dealId)?.client || "a client"}` : String(x.title || x.client || x.name || x.drug || x.text || "").slice(0, 40);
 const plural = (n, k) => `${n} ${KIND_WORD[k]?.[n === 1 ? 0 : 1] || "items"}`;
 // Each line: {t: text, go: view, news: true when it's something that changed rather than a standing reminder}
 function updLines(){
@@ -1110,7 +1134,7 @@ function updLines(){
   const byWho = {};
   theirs.forEach(x => { const k = x._by + "|" + x.kind + "|" + ((x.createdAt || 0) > since ? "added" : x.done || x.stage === "done" ? "finished" : "updated"); (byWho[k] ||= []).push(x); });
   Object.entries(byWho).forEach(([k, xs]) => { const [who, kind, verb] = k.split("|");
-    L.push({t: `${who.split(/\s+/)[0]} ${verb} ${xs.length === 1 ? KIND_WORD[kind][0] + " " + nameOf(xs[0]) : plural(xs.length, kind) + ": " + xs.slice(0, 2).map(nameOf).join(", ") + (xs.length > 2 ? "…" : "")}.`, go: {task: "tasks", deal: "deals", appt: "appts", card: "learn", log: "log", project: "projects", biz: "biz", stock: "stock"}[kind], news: true}); });
+    L.push({t: `${who.split(/\s+/)[0]} ${verb} ${xs.length === 1 ? KIND_WORD[kind][0] + " " + nameOf(xs[0]) : plural(xs.length, kind) + ": " + xs.slice(0, 2).map(nameOf).join(", ") + (xs.length > 2 ? "…" : "")}.`, go: {task: "tasks", deal: "deals", appt: "appts", card: "learn", log: "log", project: "projects", biz: "biz", stock: "stock", pay: "deals"}[kind], news: true}); });
   const won = of("deal").filter(d => d.stage === "done" && (d.doneAt || 0) > since && !d._by);
   if (won.length) L.push({t: `Delivered: ${won.slice(0, 2).map(nameOf).join(", ")}.`, go: "deals", news: true});
   // Website visits
@@ -1622,7 +1646,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.17.1";
+const APP_VERSION = "2.18";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1663,6 +1687,118 @@ function viewStock(){
     <div class="stat"><div class="n">${all.filter(x => !x.cleared).length}</div><div class="l">Items tracked</div></div></div>
   <section class="card"><div class="card-head"><h2>Stock by expiry</h2><div class="seg">${[["active", "Active"], ["soon", "Alerts"], ["all", "All"]].map(([k, l]) => `<button data-sfilter="${k}" aria-pressed="${stockFilter === k}">${l}</button>`).join("")}</div></div>
     ${list.length ? shortList("stock-all", "Stock by expiry", list.map(stockRow), 3) : empty(all.length ? "Nothing here." : "No stock tracked yet.", all.length ? "Try another filter." : "Add short-dated items and Task will alert you before they expire.")}</section>`;
+}
+
+/* ---------- Cream business (his own, private: never shared with the Brandbridge team) ---------- */
+const creamProfit = x => (+x.price || 0) - (+x.cost || 0);
+const creamOwed = x => Math.max(0, (+x.price || 0) - (+x.paid || 0));
+const monthStart = (back = 0) => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); d.setMonth(d.getMonth() - back); return d.getTime(); };
+function creamSub(){ const n = of("cream").filter(x => x.at >= monthStart()).length; return `${n} order${n === 1 ? "" : "s"} this month · private to you`; }
+function creamRow(x){
+  const pr = creamProfit(x), owe = creamOwed(x);
+  return `<li class="row"><div class="row-main"><div class="row-title">${esc(x.client || "Client")}</div>
+    <div class="row-meta"><span>${esc(x.product || "Cream")}</span><span class="pill ${pr >= 0 ? "s-good" : "s-bad"}">Profit ${money(pr) || "0"}</span>${owe ? `<span class="pill s-bad">Owes ${money(owe)}</span>` : ""}<span>${esc(fmtDay(x.at))}</span>${x.price ? `<span>${money(x.price)}</span>` : ""}</div>
+    ${x.regimen ? `<div class="row-notes">${esc(x.regimen)}</div>` : ""}${x.notes ? `<div class="row-notes">${esc(x.notes)}</div>` : ""}
+    ${owe || x.phone ? `<div class="btn-row" style="margin-top:8px">${owe ? `<button class="btn sm" data-creampaid="${x.id}">${IC.check}Paid in full</button>` : ""}${contactBtns(x.phone, true)}</div>` : ""}</div>
+    <div class="row-actions">${editBtn(x.id)}${delBtn(x.id)}</div></li>`;
+}
+let creamFilter = "recent";
+function viewCreams(){
+  const e = editing?.kind === "cream" ? editing : null, all = of("cream").sort((a, b) => b.at - a.at), cur = esc(profile.currency || "amount");
+  const mo = all.filter(x => x.at >= monthStart()), sum = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
+  const owed = sum(all, creamOwed), list = creamFilter === "unpaid" ? all.filter(x => creamOwed(x) > 0) : creamFilter === "month" ? mo : all;
+  const names = [...new Set(all.map(x => x.product).filter(Boolean))];
+  const months = Array.from({length: 12}, (_, i) => { const a = monthStart(i), b = i ? monthStart(i - 1) : Infinity, xs = all.filter(x => x.at >= a && x.at < b);
+    return {label: new Date(a).toLocaleDateString([], {month: "long", year: "numeric"}), n: xs.length, sales: sum(xs, x => +x.price || 0), cost: sum(xs, x => +x.cost || 0), profit: sum(xs, creamProfit)}; }).filter((m, i) => m.n || i === 0);
+  const monthHTML = `<section class="card"><ul class="list">${months.map(m => `<li class="row"><div class="row-main"><div class="row-title">${esc(m.label)}</div><div class="row-meta"><span>${m.n} order${m.n === 1 ? "" : "s"}</span><span>Sales ${money(m.sales) || "0"}</span><span>Costs ${money(m.cost) || "0"}</span><span class="pill ${m.profit >= 0 ? "s-good" : "s-bad"}">Profit ${money(m.profit) || "0"}</span></div></div></li>`).join("")}</ul>
+    <p class="sub" style="margin-top:10px">All time: ${all.length} orders, sales ${money(sum(all, x => +x.price || 0)) || "0"}, profit ${money(sum(all, creamProfit)) || "0"}.</p></section>`;
+  return `${adder("cream", e ? "Edit order" : "New cream order", `<form class="form" id="cream-form">
+    <label class="field">Client name<input id="cr-client" required value="${esc(e?.client)}" placeholder="Rudo M." autocomplete="off"></label>
+    <label class="field">Client phone<input id="cr-phone" value="${esc(e?.phone)}" placeholder="Optional, for WhatsApp" inputmode="tel" autocomplete="off"></label>
+    <label class="field">Cream name<input id="cr-product" required value="${esc(e?.product)}" placeholder="Night brightening cream" list="cream-names" autocomplete="off"><datalist id="cream-names">${names.map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
+    <label class="field">Date<input id="cr-at" type="date" value="${dateVal(e?.at)}"></label>
+    <label class="field">Price charged (${cur})<input id="cr-price" inputmode="decimal" value="${esc(e?.price || "")}" placeholder="25"></label>
+    <label class="field">Cost of ingredients and jar<input id="cr-cost" inputmode="decimal" value="${esc(e?.cost || "")}" placeholder="8"></label>
+    <label class="field">Paid so far<input id="cr-paid" inputmode="decimal" value="${e && creamOwed(e) ? String(+e.paid || 0) : ""}" placeholder="Leave empty if paid in full"></label>
+    <label class="field wide">Regimen and formula<textarea id="cr-regimen" placeholder="Ingredients and strengths, base and amount, how to apply and for how long">${esc(e?.regimen)}</textarea></label>
+    <label class="field wide">Notes<textarea id="cr-notes" placeholder="Skin type, review date, reactions">${esc(e?.notes)}</textarea></label>
+    <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Save order"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
+  <div class="stats">
+    <div class="stat"><div class="n ${sum(mo, x => +x.price || 0) ? "stat-money" : ""}">${moneyK(sum(mo, x => +x.price || 0))}</div><div class="l">Sales this month</div></div>
+    <div class="stat"><div class="n ${sum(mo, creamProfit) ? "stat-money" : ""}">${moneyK(sum(mo, creamProfit))}</div><div class="l">Profit this month</div></div>
+    <div class="stat"><div class="n ${sum(all, creamProfit) ? "stat-money" : ""}">${moneyK(sum(all, creamProfit))}</div><div class="l">Profit all time</div></div>
+    <button class="stat" data-crfilter="unpaid"><div class="n ${owed ? "stat-money" : ""}" ${owed ? 'style="color:var(--bad)"' : ""}>${moneyK(owed)}</div><div class="l">Owed to you</div></button></div>
+  <section class="card"><div class="card-head"><div><h2>Orders</h2><p class="sub">Your own business, kept apart from Brandbridge</p></div><div class="seg">${[["recent", "All"], ["month", "This month"], ["unpaid", "Unpaid"]].map(([k, l]) => `<button data-crfilter="${k}" aria-pressed="${creamFilter === k}">${l}</button>`).join("")}</div></div>
+    ${list.length ? shortList("cream-all", "Cream orders", list.map(creamRow), 3) : empty(all.length ? "Nothing here." : "No orders yet.", all.length ? "Try another filter." : "Add each cream you make: who it's for, the regimen, what you charged and what it cost. Task works out your profit.")}</section>
+  ${all.length ? `<div class="pgrid">${panel("cream-months", "insights", "Profit by month", months[0].label + ": " + (money(months[0].profit) || "0"), monthHTML, "Sales, costs and profit")}</div>` : ""}`;
+}
+
+/* ---------- Prescription check: photo, then AI reads it ---------- */
+let rxImg = "", rxOut = "", rxEnh = false, rxBusy = false;
+function rxHTML(){
+  return `<section class="card"><div class="card-head"><div><h2>Prescription check</h2><p class="sub">Take a clear photo in good light, flat and in focus</p></div></div>
+    ${rxImg ? `<button class="rx-img ${rxEnh ? "enh" : ""}" id="rx-zoom" aria-label="Zoom in or out"><img src="${rxImg}" alt="Prescription photo"></button><p class="sub rx-tip">Tap the photo to zoom in on a spot.</p>` : ""}
+    <div class="btn-row">
+      <label class="btn ${rxImg ? "" : "primary"}">${IC.camera}${rxImg ? "Retake" : "Take photo"}<input type="file" id="rx-cam" accept="image/*" capture="environment" hidden></label>
+      <label class="btn">${IC.upload}Choose photo<input type="file" id="rx-file" accept="image/*" hidden></label>
+      ${rxImg ? `<button class="btn" id="rx-enh">${rxEnh ? "Normal view" : "Sharpen view"}</button><button class="btn ghost" id="rx-clear">${IC.trash}Remove</button>` : ""}</div>
+    ${rxImg ? `<label class="field wide" style="margin-top:12px">Anything the photo doesn't show (optional)<input id="rx-note" placeholder="Age, weight, pregnancy, allergies, other medicines" autocomplete="off"></label>
+      <div class="btn-row" style="margin-top:10px"><button class="btn primary" id="rx-go" ${rxBusy ? "disabled" : ""}>${IC.ai}${rxOut ? "Check again" : "Check with AI"}</button></div>
+      <div class="brief ${rxOut ? "" : "placeholder"}" id="rx-out" style="margin-top:12px">${esc(rxOut || "The AI reads every line, points out anything unclear, and flags problems with doses, interactions and missing details.")}</div>` : ""}
+    <p class="caution" style="margin:12px 0 0">The photo goes only to your own AI provider and isn't saved in Task. Confirm anything flagged before you dispense.</p></section>`;
+}
+const RX_PROMPT = note => `You are a senior clinical pharmacist checking a prescription from a photo before it is dispensed.${note ? " Extra details from the pharmacist: " + note + "." : ""}
+Write plain text with no markdown, asterisks or # signs. Use short headings ending with a colon and "• " for list items:
+What it says: transcribe every line you can read (patient name, age or weight, date, prescriber and facility, each medicine with strength, form, dose, route, frequency, duration and quantity).
+Hard to read: any part that is faint, cut off, smudged or ambiguous. Give your best reading, the likely alternatives, and how sure you are.
+Problems: doses that look wrong for the patient, interactions, duplications, contraindications, unsafe abbreviations, look-alike or sound-alike risks, missing legal details (date, signature, prescriber details, patient details, quantity, controlled-drug requirements) and anything that looks altered.
+Ask the prescriber: the questions to settle before dispensing.
+If everything looks fine, say so plainly. If the photo is not a prescription or can't be read, say so and how to retake it. Keep it under 350 words. End with: Confirm before dispensing.`;
+// Which AIs can read a photo, best first, and the model each uses for it.
+const VISION = ["anthropic", "openai", "gemini", "openrouter", "mistral", "groq", "cohere"];
+async function visionModel(p){
+  if (p === "openrouter") return aiModel(p) === "openrouter/free" ? "openrouter/free" : "openrouter/auto";
+  if (p === "mistral") return "mistral-medium-latest";
+  if (p === "cohere") return "command-a-vision-07-2025";
+  if (p === "groq"){ try { const r = await fetch(AI_PROV.groq.base + "/models", {headers: {authorization: "Bearer " + aiKeys().groq}}); const ids = ((await r.json()).data || []).map(m => m.id); return ids.find(i => /llama-4-maverick/.test(i)) || ids.find(i => /llama-4|vision/.test(i)) || "meta-llama/llama-4-scout-17b-16e-instruct"; } catch { return "meta-llama/llama-4-scout-17b-16e-instruct"; } }
+  return aiModel(p) || await aiPickModel(p);
+}
+async function visionAsk(prompt, img){
+  const ks = aiKeys(), order = aiOrder("study").filter(p => VISION.includes(p) && ks[p]);
+  if (!order.length) throw {code: "no_vision"};
+  const mt = img.slice(5, img.indexOf(";")), b64 = img.slice(img.indexOf(",") + 1); let last = {code: "no_vision"};
+  for (const p of order){
+    try {
+      let text = "";
+      if (p === "anthropic"){
+        const {default: Anthropic} = await import("https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0/+esm");
+        const r = await new Anthropic({apiKey: ks.anthropic, dangerouslyAllowBrowser: true}).beta.messages.create({model: "claude-opus-5-5", max_tokens: 4000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+          messages: [{role: "user", content: [{type: "image", source: {type: "base64", media_type: mt, data: b64}}, {type: "text", text: prompt}]}]});
+        if (r.stop_reason === "refusal") throw {code: "refused"};
+        text = r.content.filter(b => b.type === "text").map(b => b.text).join("");
+      } else {
+        const res = await fetch(AI_PROV[p].base + "/chat/completions", {method: "POST", headers: {"content-type": "application/json", authorization: "Bearer " + ks[p], ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
+          body: JSON.stringify({model: await visionModel(p), messages: [{role: "user", content: [{type: "text", text: prompt}, {type: "image_url", image_url: {url: img}}]}]})});
+        if (!res.ok) throw {code: res.status === 401 || res.status === 403 ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 402 ? "no_credit" : "upstream_error"};
+        const j = await res.json(); text = j.choices?.[0]?.message?.content || "";
+      }
+      if (!text) throw {code: "upstream_error"};
+      if (p !== order[0]) toast(`Used ${AI_PROV[p].short} because ${AI_PROV[order[0]].short} couldn't read the photo.`);
+      return text;
+    } catch (e){ if (e?.code === "refused") throw e; last = e?.code ? e : {code: navigator.onLine ? "upstream_error" : "offline"}; }
+  }
+  throw last;
+}
+async function rxCheck(btn){
+  if (!rxImg || rxBusy) return;
+  const set = t => { rxOut = t; const o = $("#rx-out"); if (o){ o.classList.remove("placeholder"); o.textContent = t; } };
+  if (inClaude){ set("Photo checks work in the installed Task app with your own AI key."); return; }
+  if (!navigator.onLine){ set("You're offline. Connect to the internet to check the photo."); return; }
+  if (!Object.keys(aiKeys()).some(p => VISION.includes(p))){ set("Reading photos needs a Claude, ChatGPT, Gemini, OpenRouter, Mistral, Groq or Cohere key. Add one in Task AI, AI settings. Gemini and Groq keys are free."); return; }
+  rxBusy = true; btn.disabled = true; set("Reading the prescription...");
+  try { set(plain(await visionAsk(RX_PROMPT(($("#rx-note")?.value || "").trim()), rxImg))); }
+  catch (e){ set(e?.code === "no_vision" ? "None of your AI keys can read photos." : errCopy(e)); }
+  rxBusy = false; const b = $("#rx-go"); if (b){ b.disabled = false; b.innerHTML = IC.ai + "Check again"; }
 }
 
 /* ---------- Pharmacy tools ---------- */
@@ -2278,6 +2414,7 @@ function viewTools(){
       <div class="brief ${ixText ? "" : "placeholder"}" id="ix-out" style="margin-top:12px">${esc(ixText || "Results show here. AI can miss things, so confirm with an interaction reference.")}</div></section>`;
   return `<p class="caution">Calculators support your judgement. Always check results against the product information and your local guidelines.</p>
   <div class="pgrid">
+    ${panel("tool-rx", "rx", "Prescription check", rxImg ? (rxOut ? "Checked" : "Photo ready") : "Photo, then AI checks it", rxHTML(), "AI reads it and flags problems")}
     ${extPanel}
     ${panel("tool-dose", "tools", "Weight-based dose", "mg/kg dosing", t0)}
     ${panel("tool-crcl", "tools", "Creatinine clearance", "Cockcroft-Gault", t1)}
@@ -2323,13 +2460,72 @@ function dealRow(d, compact){
   const nextStage = {lead: "proposal", proposal: "active", active: "done"}[d.stage];
   const late = d.nextAt && d.nextAt < now() && isOpenDeal(d);
   return `<li class="row ${d.stage === "lost" ? "done" : ""}">${compact ? `<span class="time-chip">${esc(fmtTime(d.nextAt))}</span>` : ""}
-    <div class="row-main"><div class="row-title">${esc(d.client)}${d.company && d.company !== d.client ? ` · <span style="font-weight:500">${esc(d.company)}</span>` : ""}</div>
-      <div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
+    <div class="row-main"><div class="row-title"><button class="client-link" data-client="${d.id}">${esc(d.client)}${d.company && d.company !== d.client ? ` · <span style="font-weight:500">${esc(d.company)}</span>` : ""}${IC.chev}</button></div>
+      <div class="row-meta">${stagePill(d.stage)}${balPill(d)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
       ${d.nextStep || d.nextAt ? `<div class="row-meta"><span ${late ? 'style="color:var(--bad);font-weight:600"' : ""}>Next: ${esc(d.nextStep || "Follow up")}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</span></div>` : ""}
       ${d.contact ? `<div class="row-meta"><span style="font-family:var(--f-num);font-variant-numeric:tabular-nums">${esc(d.contact)}</span><button class="btn ghost sm" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>` : ""}
       ${!compact && d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}${d._by ? `<div class="by">Updated by ${esc(d._by)}</div>` : ""}
       ${!compact && nextStage ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-stage="${d.id}" data-to="${nextStage}">${IC.check}${nextStage === "done" ? "Mark delivered" : "Move to " + esc(stageLabel(nextStage))}</button>${d.stage !== "active" ? `<button class="btn sm ghost" data-stage="${d.id}" data-to="lost">Lost</button>` : ""}</div>` : ""}</div>
     <div class="row-actions">${editBtn(d.id)}${compact ? "" : delBtn(d.id)}</div></li>`;
+}
+/* ---------- Payments: an initial fee, then a monthly fee ---------- */
+// Task adds each month's charge on its own from the first monthly date, so the balance is always current.
+const addMonths = (t, n) => { const d = new Date(t), day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return d.getTime(); };
+const paysOf = id => of("pay").filter(p => p.dealId === id).sort((a, b) => b.at - a.at);
+const hasPlan = d => (+d.setupFee || 0) > 0 || (+d.monthly || 0) > 0;
+function billing(d, t = now()){
+  const setup = +d.setupFee || 0, monthly = +d.monthly || 0, end = Math.min(t, d.billStop || Infinity);
+  let months = 0; if (monthly && d.billStart) while (months < 600 && addMonths(d.billStart, months) <= end) months++;
+  const charged = setup + monthly * months, paid = paysOf(d.id).reduce((s, p) => s + (+p.amount || 0), 0);
+  return {setup, monthly, months, charged, paid, balance: charged - paid, nextDue: monthly && d.billStart && !d.billStop ? addMonths(d.billStart, months) : null};
+}
+const owedClients = () => of("deal").filter(hasPlan).map(d => ({d, b: billing(d)})).filter(x => x.b.balance > 0);
+const balPill = d => { if (!hasPlan(d)) return ""; const b = billing(d); return b.balance > 0 ? `<span class="pill s-bad">Owes ${money(b.balance)}</span>` : `<span class="pill s-good">Paid up</span>`; };
+const amt = sel => parseFloat(($(sel)?.value || "").replace(/[^\d.]/g, "")) || 0;
+function planFrom(setupSel, monthlySel, startSel){
+  const setupFee = amt(setupSel), monthly = amt(monthlySel), day = $(startSel)?.value;
+  let billStart = day ? new Date(day + "T09:00").getTime() : null;
+  if (monthly && !billStart) billStart = addMonths(new Date().setHours(9, 0, 0, 0), 1); // monthly payments usually start a month after the initial fee
+  return {setupFee, monthly, billStart};
+}
+// Phone numbers saved without a country code get the one for where this phone is, so WhatsApp links work.
+const DIAL = {"Africa/Harare": "263", "Africa/Nairobi": "254", "Africa/Johannesburg": "27", "Africa/Lusaka": "260", "Africa/Kampala": "256", "Africa/Dar_es_Salaam": "255", "Africa/Lagos": "234", "Africa/Accra": "233", "Africa/Gaborone": "267", "Africa/Maputo": "258", "Africa/Blantyre": "265", "Africa/Kigali": "250", "Europe/London": "44"};
+const phoneOf = c => { const m = String(c || "").match(/\+?\d[\d\s().-]{6,}\d/); return m ? m[0].replace(/[^\d+]/g, "") : ""; };
+const emailOf = c => (String(c || "").match(/[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}/i) || [""])[0];
+function waLink(p){ let n = p.replace(/\D/g, ""); if (!p.startsWith("+") && n.startsWith("0")){ let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {} if (DIAL[tz]) n = DIAL[tz] + n.slice(1); } return "https://wa.me/" + n; }
+function contactBtns(c, sm){
+  const p = phoneOf(c), m = emailOf(c), z = sm ? " sm" : "";
+  return (p ? `<a class="btn${z} wa" href="${waLink(p)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a><a class="btn${z}" href="tel:${esc(p)}">${IC.phone}Call</a>` : "") + (m ? `<a class="btn${z}" href="mailto:${esc(m)}">${IC.mail}Email</a>` : "");
+}
+let clientId = null;
+const dateVal = t => toInput(t || now()).slice(0, 10);
+function clientPop(d){
+  const b = billing(d), pays = paysOf(d.id), cur = esc(profile.currency || "amount");
+  const head = `<section class="card cp-card"><div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
+    ${d.contact ? `<p class="cp-contact">${esc(d.contact)}</p><div class="btn-row cp-actions">${contactBtns(d.contact)}<button class="btn" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>`
+      : `<p class="sub">Add a phone number to WhatsApp or call ${esc(d.client)} from here.</p><div class="btn-row"><button class="btn" data-edit="${d.id}">${IC.edit}Add phone number</button></div>`}</section>`;
+  const money0 = n => money(n) || "0";
+  const pay = hasPlan(d) ? `<div class="pay-grid">
+      <div><span>Initial fee</span><b>${money0(b.setup)}</b></div><div><span>Monthly</span><b>${money0(b.monthly)}</b></div>
+      <div><span>Paid so far</span><b>${money0(b.paid)}</b></div><div class="${b.balance > 0 ? "owe" : "ok"}"><span>${b.balance > 0 ? "Balance due" : b.balance < 0 ? "Paid ahead" : "Balance"}</span><b>${money0(Math.abs(b.balance))}</b></div></div>
+    <p class="sub cp-next">${b.nextDue ? `Next monthly payment ${esc(fmtDay(b.nextDue))}. ${b.months} month${b.months === 1 ? "" : "s"} charged so far.` : d.billStop ? `Monthly payments stopped ${esc(fmtDay(d.billStop))}.` : b.monthly ? "Set the first monthly payment date to start the monthly charges." : "Initial fee only."}</p>
+    <form class="form" id="pay-form" data-deal="${d.id}" style="padding:0">
+      <label class="field">Amount (${cur})<input id="py-amt" inputmode="decimal" required value="${b.balance > 0 ? b.balance : b.monthly || ""}"></label>
+      <label class="field">Date paid<input id="py-at" type="date" value="${dateVal()}"></label>
+      <label class="field wide">Note<input id="py-note" placeholder="EcoCash, bank transfer, cash" autocomplete="off"></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${IC.check}Record payment</button>${b.monthly && d.billStart ? `<button class="btn ghost" type="button" data-billing="${d.id}" data-to="${d.billStop ? "on" : "off"}">${d.billStop ? "Restart monthly" : "Stop monthly"}</button>` : ""}</div></form>`
+    : `<p class="sub">Add the initial fee and the monthly fee. Task then adds each month's charge on its own and keeps the balance up to date.</p>
+    <form class="form" id="plan-form" data-deal="${d.id}" style="padding:0">
+      <label class="field">Initial fee (${cur})<input id="pl-setup" inputmode="decimal" placeholder="Paid once"></label>
+      <label class="field">Monthly fee (${cur})<input id="pl-monthly" inputmode="decimal" placeholder="Every month"></label>
+      <label class="field">First monthly payment<input id="pl-start" type="date" value="${dateVal(addMonths(now(), 1))}"></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${IC.pay}Save payment plan</button></div></form>`;
+  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span>${x.note ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
+  const more = d.nextStep || d.notes ? `<section class="card">${d.nextStep ? `<p><b>Next:</b> ${esc(d.nextStep)}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</p>` : ""}${d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}</section>` : "";
+  return {title: d.client, sub: [d.company !== d.client && d.company, d.service].filter(Boolean).join(" · ") || "Client", html: `${head}
+    <section class="card"><div class="card-head"><div><h2>Payments</h2></div>${hasPlan(d) ? `<button class="btn sm ghost" data-edit="${d.id}">${IC.edit}Change plan</button>` : ""}</div>${pay}</section>
+    <section class="card"><div class="card-head"><div><h2>Payment history</h2><p class="sub">${pays.length} payment${pays.length === 1 ? "" : "s"}</p></div></div>${hist}</section>
+    ${more}<div class="btn-row"><button class="btn" data-edit="${d.id}">${IC.edit}Edit client</button></div>`};
 }
 let dealFilter = "open";
 function viewDeals(){
@@ -2337,12 +2533,15 @@ function viewDeals(){
   const open = all.filter(isOpenDeal), pipeline = open.reduce((s, d) => s + (+d.value || 0), 0);
   const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
   const wonMonth = all.filter(d => d.stage === "done" && (d.doneAt || 0) >= m0.getTime()).reduce((s, d) => s + (+d.value || 0), 0);
-  const closed = all.filter(d => ["done", "lost"].includes(d.stage)), winRate = closed.length ? Math.round(closed.filter(d => d.stage === "done").length / closed.length * 100) : null;
+  const collected = of("pay").filter(p => p.at >= m0.getTime()).reduce((s, p) => s + (+p.amount || 0), 0), owing = owedClients(), owed = owing.reduce((s, x) => s + x.b.balance, 0);
   const n = dealDefaultNext();
   let body = "";
   if (dealFilter === "open"){
     const r = STAGES.slice(0, 3).flatMap(([k]) => open.filter(d => d.stage === k).sort((a, b) => (a.nextAt || 9e15) - (b.nextAt || 9e15)));
     if (r.length) body = shortList("deals-all", "Open deals", r.map(d => dealRow(d)), 3);
+  } else if (dealFilter === "owing"){
+    const r = owing.sort((a, b) => b.b.balance - a.b.balance).map(x => x.d);
+    if (r.length) body = shortList("deals-all", "Clients who owe", r.map(d => dealRow(d)), 3, money(owed) + " still owed");
   } else {
     const r = all.filter(d => dealFilter === "all" || d.stage === dealFilter).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     if (r.length) body = shortList("deals-all", ({done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter], r.map(d => dealRow(d)), 3);
@@ -2354,6 +2553,9 @@ function viewDeals(){
       <label class="field">Service<select id="dl-service">${SERVICES.map(x => `<option ${(e?.service || SERVICES[0]) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label class="field">Stage<select id="dl-stage">${STAGES.map(([k, l]) => `<option value="${k}" ${(e?.stage || "lead") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}" placeholder="150000"></label>
+      <label class="field">Initial fee<input id="dl-setup" inputmode="decimal" value="${esc(e?.setupFee || "")}" placeholder="Paid once, at the start"></label>
+      <label class="field">Monthly fee<input id="dl-monthly" inputmode="decimal" value="${esc(e?.monthly || "")}" placeholder="Paid every month"></label>
+      <label class="field">First monthly payment<input id="dl-billstart" type="date" value="${e?.billStart ? toInput(e.billStart).slice(0, 10) : ""}"></label>
       <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
       <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" placeholder="Send proposal" list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
       <label class="field">When<input id="dl-at" type="datetime-local" value="${toInput(e ? e.nextAt : n)}"></label>
@@ -2362,12 +2564,12 @@ function viewDeals(){
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add client"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
     <div class="stats">
       <div class="stat"><div class="n">${open.length}</div><div class="l">Open deals</div></div>
-      <div class="stat"><div class="n ${pipeline ? "stat-money" : ""}">${pipeline ? money(pipeline) : "0"}</div><div class="l">In the pipeline</div></div>
-      <div class="stat"><div class="n ${wonMonth ? "stat-money" : ""}">${wonMonth ? money(wonMonth) : "0"}</div><div class="l">Delivered this month</div></div>
-      <div class="stat"><div class="n">${winRate == null ? "–" : winRate + "%"}</div><div class="l">Win rate</div></div></div>
-    <section class="card"><div class="card-head"><div><h2>${({open: "Open deals", done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter]}</h2><p class="sub">${esc(profile.company || "Brandbridge")} · web, AI automation and digital ads</p></div>
-      <div class="seg">${[["open", "Open"], ["done", "Delivered"], ["lost", "Lost"], ["all", "All"]].map(([k, l]) => `<button data-dfilter="${k}" aria-pressed="${dealFilter === k}">${l}</button>`).join("")}</div></div>
-      ${body || empty(all.length ? "Nothing here." : "No clients yet.", all.length ? "Try another filter." : "Add a lead above. Task reminds you of each next step so no client goes cold.")}</section>`;
+      <div class="stat"><div class="n ${pipeline ? "stat-money" : ""}">${moneyK(pipeline)}</div><div class="l">In the pipeline</div></div>
+      <div class="stat"><div class="n ${collected ? "stat-money" : ""}">${moneyK(collected)}</div><div class="l">Paid this month</div></div>
+      <button class="stat" data-dfilter="owing"><div class="n ${owed ? "stat-money" : ""}" ${owed ? 'style="color:var(--bad)"' : ""}>${moneyK(owed)}</div><div class="l">Still owed</div></button></div>
+    <section class="card"><div class="card-head"><div><h2>${({open: "Open deals", owing: "Clients who owe", done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter]}</h2><p class="sub">${esc(profile.company || "Brandbridge")} · web, AI automation and digital ads</p></div>
+      <div class="seg">${[["open", "Open"], ["owing", "Owing"], ["done", "Delivered"], ["all", "All"]].map(([k, l]) => `<button data-dfilter="${k}" aria-pressed="${dealFilter === k}">${l}</button>`).join("")}</div></div>
+      ${body || empty(all.length ? (dealFilter === "owing" ? "Nobody owes you anything." : "Nothing here.") : "No clients yet.", all.length ? "Try another filter." : "Add a lead above. Task reminds you of each next step so no client goes cold.")}</section>`;
 }
 /* ---------- Website visits ---------- */
 // The official site loads /t.js from this app; the Worker counts visits (no cookies, no stored IPs) and Task shows them here.
@@ -2514,17 +2716,18 @@ function shortList(key, title, rows, n = 3, sub = ""){
 }
 function openPop(k){ if (!POPS[k]) return; popKey = k; fillPop(); $("#pop").hidden = false; document.body.classList.add("pop-open"); }
 function fillPop(){ const p = POPS[popKey]; if (!p) return closePop(); $("#pop-title").textContent = p.title; $("#pop-sub").textContent = p.sub || ""; $("#pop-sub").hidden = !p.sub; $("#pop-body").innerHTML = p.html; }
-function closePop(){ popKey = null; const el = $("#pop"); if (!el || el.hidden) return; el.hidden = true; $("#pop-body").innerHTML = ""; document.body.classList.remove("pop-open"); }
+function closePop(){ if (popKey === "client") clientId = null; popKey = null; const el = $("#pop"); if (!el || el.hidden) return; el.hidden = true; $("#pop-body").innerHTML = ""; document.body.classList.remove("pop-open"); }
 document.querySelector("#pop [data-popclose]").innerHTML = IC.close;
 document.getElementById("pop").addEventListener("click", e => { if (e.target.id === "pop") closePop(); });
 
-const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, books: viewBooks, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
+const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, books: viewBooks, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, creams: viewCreams, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
   const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   const openStates = [...document.querySelectorAll("details.adder")].map(d => [d.dataset.form, d.open]);
   POPS = {};
+  if (clientId){ const c = byId(clientId); if (c?.kind === "deal") POPS.client = clientPop(c); else clientId = null; }
   $("#views").innerHTML = VIEWS[view]();
   // Keep an open pop-up current, unless you're typing in it.
   if (popKey){ const a = document.activeElement; if (!POPS[popKey]) closePop(); else if (!($("#pop").contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) fillPop(); }
@@ -2543,7 +2746,7 @@ function updateTitle(){
     tasks: `${c.tasks} open`, deals: `${c.deals} open · ${followUps().length} follow-up${followUps().length === 1 ? "" : "s"} due`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
-    insights: "Patterns from your own data", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Doses, kidneys, BMI, interactions", books: libBooks.length ? `${libBooks.length} book${libBooks.length === 1 ? "" : "s"} on this device` : "Your own books, searchable offline", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
+    insights: "Patterns from your own data", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Prescriptions, doses, kidneys, interactions", books: libBooks.length ? `${libBooks.length} book${libBooks.length === 1 ? "" : "s"} on this device` : "Your own books, searchable offline", stock: `${stockAlerts().length} need attention`, creams: creamSub(), search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -2557,7 +2760,7 @@ document.addEventListener("click", async ev => {
   if (t.id === "scrim"){ document.body.classList.remove("sheet-open"); return; }
   const d = t.dataset;
   if (t.id === "new-btn"){ const m = $("#new-menu"); m.hidden = !m.hidden; t.setAttribute("aria-expanded", String(!m.hidden)); return; }
-  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
+  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals", cream: "creams"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.pop){ openPop(d.pop); return; }
   if (d.dailyi != null){ dailyGo(+d.dailyi); return; }
@@ -2590,7 +2793,8 @@ document.addEventListener("click", async ev => {
     setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.innerHTML = IC.trash; t.setAttribute("aria-label", "Delete"); } }, 3000);
     return;
   }
-  if (d.edit){ closePop(); editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library"; render(); window.scrollTo(0, 0);
+  if (d.edit){ closePop(); clientId = null; editing = byId(d.edit) || null; if (editing?.kind === "card") learnTab = "library";
+    const home = {deal: "deals", cream: "creams"}[editing?.kind]; if (home && view !== home){ view = home; try { localStorage.setItem("jarvis.view", home); } catch {} } render(); window.scrollTo(0, 0);
     setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 0); return; }
   if (t.hasAttribute("data-cancel")){ editing = null; draftCard = null; openForm = null; render(); return; }
   if (d.checked){ const r = byId(d.checked); if (r) put({...r, checkedAt: now()}); return; }
@@ -2609,6 +2813,15 @@ document.addEventListener("click", async ev => {
   if (d.link){ ev.preventDefault(); openLinkMenu(d.link); return; }
   if (d.linkgo){ if (d.linkgo === "close") closeLinkMenu(); else linkGo(d.linkgo, d.url); return; }
   if (d.dfilter){ dealFilter = d.dfilter; render(); return; }
+  if (d.client){ const c = byId(d.client); if (c){ clientId = c.id; POPS.client = clientPop(c); openPop("client"); } return; }
+  if (d.billing){ const c = byId(d.billing); if (c){ put({...c, billStop: d.to === "off" ? now() : null}); toast(d.to === "off" ? "Monthly charges stopped. The balance so far stays." : "Monthly charges restarted."); } return; }
+  if (d.creampaid){ const c = byId(d.creampaid); if (c){ put({...c, paid: +c.price || 0}); toast(`${c.client} has paid in full.`); } return; }
+  if (d.crfilter){ creamFilter = d.crfilter; render(); return; }
+  if (t.id === "rx-go"){ rxCheck(t); return; }
+  if (t.id === "rx-enh"){ rxEnh = !rxEnh; render(); return; }
+  if (t.id === "rx-clear"){ rxImg = ""; rxOut = ""; rxEnh = false; render(); return; }
+  if (t.id === "rx-zoom"){ const r = t.getBoundingClientRect(), img = t.querySelector("img"); t.classList.toggle("zoom");
+    if (img) img.style.transformOrigin = `${((ev.clientX - r.left) / r.width * 100).toFixed(0)}% ${((ev.clientY - r.top) / r.height * 100).toFixed(0)}%`; return; }
   if (d.stage){ const r = byId(d.stage); if (r){ put({...r, stage: d.to, ...(d.to === "done" ? {doneAt: now()} : {})}); toast(`${r.client}: ${stageLabel(d.to)}`); } return; }
   if (d.key){ pressKey(d.key); return; }
   if (d.bg){ if (d.bg === "photo" && !profile.bgPhoto){ $("#bg-file").click(); return; } saveProfile({bg: d.bg}); applyLook(); render(); return; }
@@ -2682,12 +2895,15 @@ document.addEventListener("input", ev => {
     const li = document.querySelectorAll(".ext-rows .ext-pick")[i]; if (li){ li.querySelector("b").textContent = ext.rows[i].name || (ext.rows[i].unit === "qs" ? "Base / vehicle" : "New ingredient"); li.querySelector("small").textContent = extRowSummary(ext.rows[i]); }
     if (ed.k === "unit" || ed.k === "src"){ render(); if (popKey) fillPop(); } }
   if (ev.target.id === "global-search"){ globalQ = ev.target.value; render(); }
+  if (ev.target.id === "cr-product"){ const n = ev.target.value.trim().toLowerCase(), last = n && of("cream").filter(x => (x.product || "").toLowerCase() === n).sort((a, b) => b.at - a.at)[0];
+    if (last) [["#cr-regimen", last.regimen], ["#cr-price", last.price || ""], ["#cr-cost", last.cost || ""]].forEach(([s, val]) => { const el = $(s); if (el && !el.value) el.value = val; }); }
 });
 document.addEventListener("change", async ev => {
   const id = ev.target.id, f = ev.target.files?.[0];
   if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
+  if ((id === "rx-cam" || id === "rx-file") && f){ try { rxImg = await readImage(f, 1800, "image/jpeg", .88); rxOut = ""; rxEnh = false; } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
   if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(ev.target.value === "auto" ? "Task now picks the best AI for each job." : `Task AI now answers with ${AI_PROV[ev.target.value].short}.`); render(); }
   if (ev.target.dataset?.aimodel){ aiSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
@@ -2733,10 +2949,28 @@ document.addEventListener("submit", ev => {
   } else if (f === "ix-form") checkInteractions();
   else if (f === "deal-form"){
     const nextAt = fromInput($("#dl-at").value), val = parseFloat(v("#dl-value").replace(/[^\d.]/g, "")) || 0;
-    const data = {client: v("#dl-client"), company: v("#dl-company"), contact: v("#dl-contact"), service: $("#dl-service").value, stage: $("#dl-stage").value, value: val, who: $("#dl-who").value, nextStep: v("#dl-next"), nextAt, remind: $("#dl-remind").checked && !!nextAt, notes: v("#dl-notes")};
+    const data = {client: v("#dl-client"), company: v("#dl-company"), contact: v("#dl-contact"), service: $("#dl-service").value, stage: $("#dl-stage").value, value: val, who: $("#dl-who").value, nextStep: v("#dl-next"), nextAt, remind: $("#dl-remind").checked && !!nextAt, notes: v("#dl-notes"),
+      ...planFrom("#dl-setup", "#dl-monthly", "#dl-billstart")};
     if (data.stage === "done" && editing?.stage !== "done") data.doneAt = now();
     if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else add("deal", data);
     toast(`${editing ? "Updated" : "Added"} ${data.client}${nextAt && data.remind ? ", reminder " + fmtWhen(nextAt) : ""}`); editing = null; openForm = null;
+  }
+  else if (f === "pay-form"){
+    const dl = byId(ev.target.dataset.deal), a = amt("#py-amt"); if (!dl || !a){ toast("Type the amount paid."); return; }
+    const day = $("#py-at").value, at = day ? new Date(day + "T12:00").getTime() : now();
+    const left = billing(dl).balance - a; add("pay", {dealId: dl.id, amount: a, at, note: v("#py-note")}); document.activeElement?.blur(); toast(`Recorded ${money(a)} from ${dl.client}. ${left > 0 ? "Still owes " + money(left) + "." : "All paid up."}`); return;
+  }
+  else if (f === "plan-form"){
+    const dl = byId(ev.target.dataset.deal); if (!dl) return; const plan = planFrom("#pl-setup", "#pl-monthly", "#pl-start");
+    if (!plan.setupFee && !plan.monthly){ toast("Type the initial fee, the monthly fee, or both."); return; }
+    document.activeElement?.blur(); put({...dl, ...plan}); toast(`Payment plan saved for ${dl.client}.`); return;
+  }
+  else if (f === "cream-form"){
+    const price = amt("#cr-price"), paidTxt = v("#cr-paid"), day = $("#cr-at").value;
+    const data = {client: v("#cr-client"), phone: v("#cr-phone"), product: v("#cr-product"), regimen: v("#cr-regimen"), at: day ? new Date(day + "T12:00").getTime() : now(), price, cost: amt("#cr-cost"), paid: paidTxt === "" ? price : amt("#cr-paid"), notes: v("#cr-notes")};
+    editing?.kind === "cream" ? put({...editing, ...data}) : add("cream", data);
+    toast(`${editing ? "Updated" : "Saved"} ${data.product || "order"} for ${data.client}. Profit ${money(data.price - data.cost) || "0"}.`); editing = null; openForm = null;
+    setTimeout(() => { const dt = document.querySelector('details[data-form="cream"]'); if (dt) dt.open = false; }, 0);
   }
   else if (f === "auth-form"){ submitAuth(); return; }
   else if (f === "pin-form"){
@@ -2873,6 +3107,10 @@ function snapshot(){
     clientsAndDeals: of("deal").map(d => ({id: d.id, client: d.client, company: d.company, service: d.service, stage: d.stage, value: d.value, who: whoLabel(d.who), nextStep: d.nextStep, nextAt: d.nextAt ? new Date(d.nextAt).toString() : null, notes: d.notes})),
     stockExpiry: of("stock").filter(x => !x.cleared).map(x => ({name: x.name, batch: x.batch, expires: new Date(x.expiry).toDateString(), daysLeft: stockLeft(x)})),
     officialWebsite: (() => { const S = webSummary(); return web.site && S ? {site: web.site, visitorsToday: S.today.uv, pageViewsToday: S.today.pv, onSiteNow: S.live, visitorsLast7Days: S.uv7, topPages: web.stats.top.path.slice(0, 5), sources: web.stats.top.ref.slice(0, 5), countries: web.stats.top.country.slice(0, 5).map(([c, n]) => [countryName(c), n])} : undefined; })(),
+    clientPayments: of("deal").filter(hasPlan).map(d => { const b = billing(d); return {client: d.client, initialFee: b.setup, monthlyFee: b.monthly, paid: b.paid, balanceDue: b.balance, nextMonthlyDue: b.nextDue ? new Date(b.nextDue).toDateString() : null}; }),
+    myCreamBusiness: (() => { const c = of("cream"); if (!c.length) return undefined; const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0); const mo = c.filter(x => x.at >= m0.getTime());
+      return {note: "Personal side business, separate from Brandbridge", ordersThisMonth: mo.length, salesThisMonth: mo.reduce((s, x) => s + (+x.price || 0), 0), profitThisMonth: mo.reduce((s, x) => s + creamProfit(x), 0), profitAllTime: c.reduce((s, x) => s + creamProfit(x), 0), owedToMe: c.reduce((s, x) => s + creamOwed(x), 0),
+        recent: c.sort((a, b) => b.at - a.at).slice(0, 20).map(x => ({date: new Date(x.at).toDateString(), client: x.client, cream: x.product, price: x.price, cost: x.cost, paid: x.paid}))}; })(),
     learnedPatterns: learnPatterns().tips
   });
 }
