@@ -389,6 +389,21 @@ body.pop-open{overflow:hidden}
 .pop-body:has(.ext){padding:12px}
 .pop-body > .card:first-child > .card-head:first-child > div:first-child:has(h2){display:none}
 .pop-body > .card:first-child > .card-head:first-child:not(:has(button,.pill,.seg)){display:none}
+/* Library */
+.lib-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lib-form .search{flex:1 1 220px;min-width:0}.lib-form .search input{width:100%}
+.lib-form select{flex:0 1 auto;max-width:190px}
+.lib-status{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:var(--r-sm);padding:8px 10px}
+.lib-hits{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lib-hit{display:grid;gap:4px;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;color:var(--fg);font:inherit}
+.lib-src{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lib-src svg{width:14px;height:14px;flex:none}
+.lib-snip{font-size:13.5px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lib-hit.full .lib-snip{-webkit-line-clamp:7}
+mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.lib-read{white-space:pre-wrap;font-size:14.5px;line-height:1.6}
+.lib-tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;flex:none;margin-right:10px;align-self:center}.lib-tick.on{background:var(--good);border-color:var(--good);color:#fff}.lib-tick svg{width:14px;height:14px}
+.lib-shelf .row{padding:8px 0}.lib-shelf .row-title{font-size:14px}
+.lib-books select{margin-top:6px;max-width:220px;font-size:13px;padding:4px 8px;min-height:0}
 .copyright{margin-top:auto;text-align:center;font-size:12px;color:var(--muted);padding:8px 16px 12px}
 
 @media (max-width:900px){
@@ -445,7 +460,7 @@ body.pop-open{overflow:hidden}
 
 <div class="wm" id="wm" aria-hidden="true"></div>
 <!-- File pickers live outside the views so a re-render while the picker is open can't drop the chosen file. -->
-<div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"></div>
+<div class="vh" aria-hidden="true"><input type="file" id="photo-file" accept="image/*" tabindex="-1"><input type="file" id="bg-file" accept="image/*" tabindex="-1"><input type="file" id="logo-file" accept="image/*" tabindex="-1"><input type="file" id="restore-file" accept="application/json,.json,text/plain" tabindex="-1"><input type="file" id="lib-file" accept=".pdf,.docx,.txt,.md,.html,.htm,application/pdf" multiple tabindex="-1"></div>
 <div class="linkmenu" id="linkmenu" role="dialog" aria-label="Open link" hidden></div>
 <div class="pop" id="pop" role="dialog" aria-modal="true" hidden><div class="pop-box"><div class="pop-head"><div><h3 id="pop-title"></h3><p id="pop-sub"></p></div><button class="icon-btn" data-popclose="1" aria-label="Close"></button></div><div class="pop-body" id="pop-body"></div></div></div>
 <div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
@@ -874,6 +889,7 @@ const IC = {
   close: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   cal: I('<rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2.5v3M16 2.5v3M12 12v6M9 15h6"/>'),
   check: I('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  book: I('<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6"/>'),
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   copy: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
@@ -901,6 +917,7 @@ const SECTIONS = {
   projects: {label: "Projects & websites", short: "Projects", side: "Projects & sites", icon: "projects", group: "Brandbridge"},
   biz: {label: "Businesses", icon: "biz", group: "Brandbridge"},
   learn: {label: "Learning", short: "Learn", icon: "learn", group: "Pharmacy"},
+  books: {label: "Library", icon: "book", group: "Pharmacy"},
   tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Pharmacy"},
   stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Pharmacy"},
   log: {label: "Activity log", short: "Log", icon: "log", group: "Personal"},
@@ -1149,13 +1166,13 @@ function viewLearn(){
     const list = cards.filter(c => !q || [c.drug, c.cls, c.indication].join(" ").toLowerCase().includes(q)).sort((a, b) => a.drug.localeCompare(b.drug));
     body = `${adder("card", e ? "Edit drug card" : "New drug card", cardForm(e), !!(e || draftCard))}
       <section class="card"><div class="card-head"><h2>Drug cards</h2><label class="search">${IC.search}<input id="card-search" placeholder="Search drug, class or use" value="${esc(cardSearch)}" aria-label="Search drug cards"></label></div>
-      ${list.length ? `<ul class="list">${list.map(c => `<li class="row"><div class="row-main"><details><summary style="cursor:pointer;list-style:none"><div class="row-title">${esc(c.drug)}</div><div class="row-meta">${c.cls ? `<span>${esc(c.cls)}</span>` : ""}${boxDots(c.box)}<span>${(c.nextReview || 0) <= now() ? "Due now" : "Next " + esc(fmtDay(c.nextReview))}</span></div></summary><div style="margin-top:10px">${cardFacts(c)}</div></details></div><div class="row-actions">${editBtn(c.id)}${delBtn(c.id)}</div></li>`).join("")}</ul>`
+      ${list.length ? `<ul class="list">${list.map(c => `<li class="row"><div class="row-main"><details><summary style="cursor:pointer;list-style:none"><div class="row-title">${esc(c.drug)}</div><div class="row-meta">${c.cls ? `<span>${esc(c.cls)}</span>` : ""}${boxDots(c.box)}<span>${(c.nextReview || 0) <= now() ? "Due now" : "Next " + esc(fmtDay(c.nextReview))}</span></div></summary><div style="margin-top:10px">${cardFacts(c)}${libBooks.length ? `<button class="btn sm" data-libask="${esc(c.drug)}" style="margin-top:8px">${IC.book}Look up in Library</button>` : ""}</div></details></div><div class="row-actions">${editBtn(c.id)}${delBtn(c.id)}</div></li>`).join("")}</ul>`
         : empty(cards.length ? "No cards match." : "No drug cards yet.", cards.length ? "Try another word." : "Add your first one above, or let AI fill it in from the drug name.")}
       ${!cards.length ? `<button class="btn" id="starter-deck">Load starter deck</button>` : ""}</section>`;
   } else {
-    body = `<section class="card"><div class="card-head"><div><h2>Quiz me</h2><p class="sub">Multiple-choice questions written by AI on any topic or on your own cards.</p></div></div>
+    body = `<section class="card"><div class="card-head"><div><h2>Quiz me</h2><p class="sub">Questions from AI and your Library. With no AI, the quiz comes from your books.</p></div></div>
       <form class="form" id="quiz-form" style="padding:0">
-        <label class="field">Topic<input id="q-topic" list="topics" placeholder="Anticoagulants" value="${esc(quiz?.topic || "")}"><datalist id="topics"><option>My drug cards</option><option>Antibiotics</option><option>Antihypertensives</option><option>Diabetes medicines</option><option>Anticoagulants</option><option>Drug interactions</option><option>Paediatric dosing</option><option>Pharmacy law and ethics</option><option>Pharmacokinetics</option></datalist></label>
+        <label class="field">Topic<input id="q-topic" list="topics" placeholder="Anticoagulants" value="${esc(quiz?.topic || "")}"><datalist id="topics"><option>My drug cards</option><option>Antibiotics</option><option>Antihypertensives</option><option>Diabetes medicines</option><option>Anticoagulants</option><option>Drug interactions</option><option>Paediatric dosing</option><option>Pharmacy law and ethics</option><option>Medicines and Allied Substances Control Act</option><option>Dangerous Drugs Act</option><option>EDLIZ treatment guidelines</option><option>Skin conditions and cosmetics</option><option>Pharmacokinetics</option></datalist></label>
         <label class="field">Questions<select id="q-n">${[5, 10].map(n => `<option>${n}</option>`).join("")}</select></label>
         <div class="btn-row"><button class="btn primary" type="submit" id="quiz-go">${IC.ai}Make quiz</button></div></form>
       <p class="caution" style="margin-top:12px">AI questions can contain mistakes. Check anything you'll use in practice against your references.</p></section>
@@ -1440,7 +1457,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.6.1";
+const APP_VERSION = "2.7";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1647,6 +1664,205 @@ Reply in plain text, short numbered sections:
 4. Method changes for this formula.
 5. Storage, container, expiry guidance and labels.
 Check the arithmetic and point out any error. Don't invent references; say "check your formulary" where unsure. Under 250 words.`, t => { ext.ai = t; saveExt(); }); };
+
+/* ---------- Library: your own books and documents, read and searched on this device (works offline) ---------- */
+const LIB_CATS = [["clinical", "Treatment guidelines"], ["law", "Law & regulation"], ["pharmacology", "Pharmacology"], ["practice", "Pharmacy practice"], ["anatomy", "Anatomy & physiology"], ["cosmetic", "Cosmetics & skin"], ["other", "Other"]];
+const libCatOf = n => /\b(act|regulations?|statutory|mcaz|masca|council|code of conduct|chapter \d)/i.test(n) ? "law" : /edliz|guideline|treatment|formulary|bnf|martindale|protocol/i.test(n) ? "clinical"
+  : /anatom|physiol|tortora|gray/i.test(n) ? "anatomy" : /cosmet|derma|skin|baran|harry/i.test(n) ? "cosmetic" : /pharmacolog|katzung|rang|goodman/i.test(n) ? "pharmacology" : /practice|pharmaceutic|aulton|remington|compound|dispens/i.test(n) ? "practice" : "other";
+const LIB_STOP = new Set("the and for are but not you all any can had her was one our out has have this that with from they will what when which their there been were into than them then some such only also more most other these those about after before over under between while where does each both very should would could must may might used use using how why who its it's per of in on at to by an or as is be if it no so do up we he she his".split(" "));
+let libBooks = lsGet("task.lib", []), libMem = null, libQ = "", libFilter = "", libHits = null, libRead = null, libAns = "", libUsage = null, libBusy = false;
+const saveLib = () => lsSet("task.lib", libBooks);
+let libDB = null;
+const libOpen = () => libDB ||= new Promise((res, rej) => { const r = indexedDB.open("task-library", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("chunks", {autoIncrement: true}).createIndex("book", "b"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function libPut(rows){ const db = await libOpen(); await new Promise((res, rej) => { const tx = db.transaction("chunks", "readwrite"), s = tx.objectStore("chunks"); rows.forEach(x => s.add(x)); tx.oncomplete = res; tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); }
+async function libLoad(){
+  if (libMem) return libMem;
+  const db = await libOpen(); const all = await new Promise((res, rej) => { const q = db.transaction("chunks").objectStore("chunks").getAll(); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  const known = new Set(libBooks.map(b => b.id));
+  return libMem = all.filter(c => known.has(c.b)).map(c => ({...c, l: libNorm(c.t)}));
+}
+async function libDelBook(id){
+  const db = await libOpen();
+  await new Promise(res => { const tx = db.transaction("chunks", "readwrite"); const q = tx.objectStore("chunks").index("book").openKeyCursor(IDBKeyRange.only(id));
+    q.onsuccess = () => { const c = q.result; if (c){ tx.objectStore("chunks").delete(c.primaryKey); c.continue(); } }; tx.oncomplete = res; tx.onerror = res; });
+  libBooks = libBooks.filter(b => b.id !== id); saveLib(); libMem = null; libHits = null; libUsageCheck();
+}
+const libNorm = s => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
+const libStem = w => w.length > 5 ? w.replace(/(ies|es|s|ing|ed|al|ic)$/, "") : w;
+const libTok = s => [...new Set((libNorm(s).match(/[a-z0-9]+(?:[.\-][a-z0-9]+)*/g) || []).filter(w => w.length > 1 && !LIB_STOP.has(w)).map(libStem))];
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const libBook = id => libBooks.find(b => b.id === id);
+const libWhere = c => { const b = libBook(c.b); return `${b?.title || "Book"}, ${b?.label === "part" ? "part" : "p."} ${c.p}`; };
+async function libSearch(q, n = 20, cat = ""){
+  const terms = libTok(q).slice(0, 12); if (!terms.length) return [];
+  const mem = await libLoad(); const pool = cat ? mem.filter(c => libBook(c.b)?.cat === cat) : mem; if (!pool.length) return [];
+  const res = terms.map(t => new RegExp("(^|[^a-z0-9])" + reEsc(t), "g")), phrase = libNorm(q).trim();
+  const tf = [], df = terms.map(() => 0); let totalLen = 0;
+  for (const c of pool){
+    totalLen += c.l.length;
+    let row = null;
+    terms.forEach((t, i) => { if (!c.l.includes(t)) return; const k = (c.l.match(res[i]) || []).length; if (k){ (row ||= {c, f: terms.map(() => 0)}).f[i] = k; df[i]++; } });
+    if (row) tf.push(row);
+  }
+  const N = pool.length, avg = totalLen / N || 1;
+  const idf = df.map(d => Math.log(1 + (N - d + .5) / (d + .5)));
+  const out = tf.map(r => { const len = r.c.l.length / avg; let s = 0, hit = 0;
+    r.f.forEach((k, i) => { if (k){ hit++; s += idf[i] * k * 2.2 / (k + 1.2 * (.25 + .75 * len)); } });
+    s *= 1 + hit / terms.length; if (phrase.length > 6 && r.c.l.includes(phrase)) s += 4;
+    return {c: r.c, score: s, hit}; });
+  const best = Math.max(0, ...out.map(h => h.hit)), min = best >= 3 ? best - 1 : best >= 2 ? 2 : 1;
+  return out.filter(h => h.hit >= min).sort((a, b) => b.score - a.score).slice(0, n).map(h => ({...h, terms}));
+}
+function libMark(text, terms){
+  let h = esc(text); if (!terms?.length) return h;
+  const re = new RegExp("(" + terms.map(t => reEsc(esc(t))).sort((a, b) => b.length - a.length).join("|") + ")[a-z0-9]*", "gi");
+  return h.replace(re, m => `<mark>${m}</mark>`);
+}
+function libSnip(c, terms, len = 260){
+  const pos = terms.map(t => c.l.indexOf(t)).filter(k => k >= 0), first = pos.length ? Math.min(...pos) : 0;
+  const start = Math.max(0, first - 70), s = c.t.slice(start, start + len).trim();
+  return (start ? "…" : "") + s + (start + len < c.t.length ? "…" : "");
+}
+function libSplit(text, size = 1200){
+  const out = []; text = text.replace(/-\n(?=[a-z])/g, "").replace(/[ \t\f\r]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+  while (text.length > size * 1.4){ let cut = text.lastIndexOf(". ", size); if (cut < size * .5) cut = text.lastIndexOf(" ", size); if (cut < 1) cut = size; out.push(text.slice(0, cut + 1).trim()); text = text.slice(cut + 1).trim(); }
+  if (text) out.push(text); return out;
+}
+const libVendor = f => inClaude ? ({"pdf.min.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs", "mammoth.browser.min.js": "https://cdn.jsdelivr.net/npm/mammoth@1.13.0/mammoth.browser.min.js"})[f] : new URL("vendor/" + f, location.href).href;
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("load")); document.head.append(s); });
+async function libExtract(file, prog){
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (ext === "pdf"){
+    const pdfjs = await import(libVendor("pdf.min.mjs")); pdfjs.GlobalWorkerOptions.workerSrc = libVendor("pdf.worker.min.mjs");
+    const doc = await pdfjs.getDocument({data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false}).promise, pages = [];
+    for (let i = 1; i <= doc.numPages; i++){ const pg = await doc.getPage(i); const tc = await pg.getTextContent();
+      pages.push(tc.items.map(x => (x.str || "") + (x.hasEOL ? "\n" : " ")).join("")); pg.cleanup(); if (i % 5 === 0 || i === doc.numPages) prog(`page ${i} of ${doc.numPages}`); }
+    await doc.destroy(); return {pages, label: "page"};
+  }
+  let text;
+  if (ext === "docx"){ if (!window.mammoth) await loadScript(libVendor("mammoth.browser.min.js")); text = (await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()})).value; }
+  else if (["html", "htm"].includes(ext)){ const d = new DOMParser().parseFromString(await file.text(), "text/html"); d.querySelectorAll("script,style").forEach(e => e.remove()); text = d.body?.textContent || ""; }
+  else if (["txt", "md", "csv", "text"].includes(ext) || file.type.startsWith("text/")) text = await file.text();
+  else throw new Error("unsupported");
+  return {pages: libSplit(text, 1500), label: "part"};
+}
+async function libImport(files){
+  if (libBusy || !files.length) return; libBusy = true;
+  const st = m => { const el = $("#lib-status"); if (el){ el.hidden = false; el.textContent = m; } };
+  try { await navigator.storage?.persist?.(); } catch {}
+  let added = 0;
+  for (const file of files){
+    const title = file.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").trim();
+    if (libBooks.some(b => b.title === title && b.size === file.size)){ toast(`${title} is already in your library.`); continue; }
+    st(`Reading ${title}…`);
+    try {
+      const {pages, label} = await libExtract(file, m => st(`Reading ${title}: ${m}`));
+      const id = uid(), rows = []; let chars = 0;
+      pages.forEach((p, i) => libSplit(p).forEach(t => { if (t.length > 20){ rows.push({b: id, p: i + 1, t}); chars += t.length; } }));
+      if (!rows.length){ toast(`${title} has no readable text. It may be scanned pictures of pages. Try a typed PDF or Word copy.`); continue; }
+      st(`Saving ${title}…`); await libPut(rows);
+      libBooks.push({id, title, cat: libCatOf(file.name), label, pages: pages.length, chunks: rows.length, chars, size: file.size, addedAt: now()}); saveLib(); libMem = null; added++;
+      if (label === "page" && chars < pages.length * 150) toast(`${title} added, but many pages had little text. Scanned pages can't be searched.`);
+    } catch (e){ toast(e?.message === "unsupported" ? `${file.name}: use PDF, Word (.docx) or text files.` : e?.name === "QuotaExceededError" ? "Your device is out of space for more books." : `Couldn't read ${file.name}. Try saving it as a PDF again.`); }
+  }
+  libBusy = false; if (added) toast(`${added} book${added > 1 ? "s" : ""} added to your library.`); libUsageCheck(); render();
+}
+async function libUsageCheck(){ try { const e = await navigator.storage.estimate(); libUsage = e.usage; if (view === "books") render(); } catch {} }
+async function libRun(q){
+  libQ = q; libAns = ""; if (!q.trim()){ libHits = null; render(); return; }
+  if (!libBooks.length){ toast("Add a book first."); return; }
+  const st = $("#lib-status"); if (st && !libMem){ st.hidden = false; st.textContent = "Opening your books…"; }
+  libHits = await libSearch(q, 20, libFilter); render();
+}
+// Passages for Task AI and quizzes: only clearly relevant ones, kept short.
+async function libContext(q, n = 5){
+  if (!libBooks.length) return [];
+  try { return (await libSearch(q, n)).filter(h => h.hit >= Math.min(2, h.terms.length)); } catch { return []; }
+}
+const libCite = hits => hits.map((h, i) => `[${i + 1}] ${libWhere(h.c)}:\n${h.c.t.slice(0, 1100)}`).join("\n\n");
+function libAsk(btn){
+  const hits = (libHits || []).slice(0, 6); if (!hits.length) return;
+  return runInto(btn, "#lib-ai", `${RULES()}\n\nQuestion: ${libQ}\n\nPassages from my own books:\n${libCite(hits)}\n\nAnswer the question from these passages. Cite each point like [Book, p. N]. Where they apply, give the regimen, diagnosis, management and any Zimbabwean legal requirement. If the passages don't fully answer it, say what's missing, then add general knowledge clearly marked "Not from your library". Plain text, under 250 words.`, t => libAns = t);
+}
+function libQuiz(topic, hits, n){
+  const terms = new Set(libTok(topic)), sents = [];
+  hits.forEach(h => h.c.t.replace(/\s+/g, " ").split(/(?<=[.;])\s+(?=[A-Z0-9])/).forEach(s => { if (s.length >= 50 && s.length <= 260) sents.push({s, h}); }));
+  const NUM = /\b\d+(?:\.\d+)?\s?(?:mg\/kg|mg|micrograms?|mcg|g|mL|ml|%|hours?|days?|weeks?|months?|years?|mmol\/L|units?)(?![a-z])/i;
+  const vocab = [...new Set(hits.flatMap(h => h.c.t.match(/\b[A-Za-z][a-z]{6,}\b/g) || []).filter(w => !LIB_STOP.has(w.toLowerCase()) && !terms.has(libStem(w.toLowerCase()))))];
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const qs = [], used = new Set();
+  for (const {s, h} of shuffle(sents)){
+    if (qs.length >= n) break;
+    const raw = s.match(NUM)?.[0]; let ans, wrong = [];
+    if (raw){ const v = parseFloat(raw), unit = raw.replace(/^[\d.\s]+/, ""), fmt = x => `${+x.toFixed(2)}${unit === "%" ? "" : " "}${unit}`;
+      ans = fmt(v); wrong = [...new Set([v * 2, v / 2, v * 10, v + (v >= 10 ? 10 : 1)].map(fmt))].filter(x => x !== ans).slice(0, 3);
+    } else {
+      ans = (s.match(/\b[A-Za-z][a-z]{6,}\b/g) || []).filter(w => vocab.includes(w)).sort((a, b) => b.length - a.length)[0]; if (!ans) continue;
+      const cap = /^[A-Z]/.test(ans), fit = w => cap ? w[0].toUpperCase() + w.slice(1) : w.toLowerCase();
+      wrong = [...new Set(shuffle(vocab.filter(w => w.toLowerCase() !== ans.toLowerCase() && Math.abs(w.length - ans.length) <= 4 && !s.includes(w))).map(fit))].slice(0, 3);
+    }
+    if (wrong.length < 3 || used.has(ans.toLowerCase())) continue; used.add(ans.toLowerCase());
+    const blank = s.replace(raw || ans, "_____");
+    const options = shuffle([ans, ...wrong]);
+    qs.push({q: `Fill the gap: ${blank}`, options, answer: options.indexOf(ans), why: `From ${libWhere(h.c)}.`});
+  }
+  return qs;
+}
+const ZIM_SHELF = [
+  ["Law", [
+    ["Medicines & Allied Substances Control Act (15:03)", /allied substances|masca|15[:.]03/i, "zimlii.org or veritaszim.net"],
+    ["Dangerous Drugs Act (15:02)", /dangerous drugs|15[:.]02/i, "zimlii.org or veritaszim.net"],
+    ["Health Professions Act (27:19)", /health professions|27[:.]19/i, "zimlii.org"],
+    ["MCAZ guidelines", /mcaz|medicines control/i, "mcaz.co.zw"],
+    ["Pharmacists Council code of conduct", /pharmacists council|pcz|code of conduct/i, "Pharmacists Council of Zimbabwe"]]],
+  ["Guidelines", [
+    ["EDLIZ: Zimbabwe treatment guidelines", /edliz|essential medicines list|standard treatment/i, "Ministry of Health and Child Care"],
+    ["HIV, TB and malaria guidelines", /hiv|art guideline|tuberculosis|malaria/i, "Ministry of Health and Child Care"],
+    ["BNF or Martindale", /bnf|british national formulary|martindale/i, "Your own copy"]]],
+  ["Textbooks", [
+    ["Katzung: Basic & Clinical Pharmacology", /katzung|basic (and|&) clinical pharmacology/i, "Your own copy"],
+    ["Rang & Dale's Pharmacology", /rang/i, "Your own copy"],
+    ["Aulton's Pharmaceutics", /aulton|pharmaceutics/i, "Your own copy"],
+    ["Anatomy & physiology (e.g. Tortora)", /anatom|physiol|tortora/i, "Your own copy"],
+    ["Cosmetic dermatology (e.g. Baran & Maibach)", /cosmet|derma/i, "Your own copy"]]]
+];
+let libShelfTab = 0;
+function libShelf(){
+  const [, rows] = ZIM_SHELF[libShelfTab];
+  return `<div class="seg ext-tabs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ZIM_SHELF.map(([g], i) => `<button data-libshelf="${i}" aria-pressed="${i === libShelfTab}">${g}</button>`).join("")}</div>
+    <ul class="list lib-shelf">${rows.map(([t, re, where]) => { const has = libBooks.some(b => re.test(b.title)); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library" : esc(where)}</span></div></div></li>`; }).join("")}</ul>
+    <p class="sub" style="margin:0">Download the ones you have, then tap Add books. Typed PDFs work best. Scanned pages can't be searched.</p>`;
+}
+const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e6).toFixed(1) + " MB";
+function libBooksHTML(){
+  return `<div class="btn-row" style="justify-content:space-between;align-items:center"><span class="sub">${libBooks.length} book${libBooks.length === 1 ? "" : "s"}${libUsage ? " · " + fmtMB(libUsage) + " used on this device" : ""}</span><label class="btn sm primary" for="lib-file" role="button">${IC.plus}Add books</label></div>
+    ${libBooks.length ? `<ul class="list lib-books">${[...libBooks].sort((a, b) => a.title.localeCompare(b.title)).map(b => `<li class="row"><div class="row-main"><div class="row-title">${esc(b.title)}</div>
+      <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span></div>
+      <select data-libcat="${b.id}" aria-label="Category for ${esc(b.title)}">${LIB_CATS.map(([k, l]) => `<option value="${k}" ${b.cat === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      <div class="row-actions"><button class="icon-btn" data-libdel="${b.id}" aria-label="Remove ${esc(b.title)}">${IC.trash}</button></div></li>`).join("")}</ul>` : empty("No books yet.", "Add PDFs, Word files or text notes.")}
+    <p class="caution" style="margin:0">Books stay on this device only. They aren't uploaded, synced or included in backups, so add them on each device you use.</p>`;
+}
+function viewBooks(){
+  if (libUsage == null) libUsageCheck();
+  const hits = libHits || [], cats = [...new Set(libBooks.map(b => b.cat))];
+  const hitRow = (h, i, full) => `<li><button class="lib-hit ${full ? "full" : ""}" data-libread="${i}"><span class="lib-src">${IC.book}${esc(libWhere(h.c))}</span><span class="lib-snip">${libMark(libSnip(h.c, h.terms, full ? 420 : 240), h.terms)}</span></button></li>`;
+  if (hits.length) POPS["lib-hits"] = {title: "Results", sub: `${hits.length} passages for “${libQ}”`, html: `<ul class="lib-hits">${hits.map((h, i) => hitRow(h, i, true)).join("")}</ul>`};
+  if (libRead != null && hits[libRead]){ const h = hits[libRead]; POPS["lib-read"] = {title: libBook(h.c.b)?.title || "Passage", sub: (libBook(h.c.b)?.label === "part" ? "Part " : "Page ") + h.c.p, html: `<div class="lib-read">${libMark(h.c.t, h.terms)}</div>`}; }
+  POPS["lib-answer"] = {title: "Answer from your books", sub: libQ, html: `<div class="brief ext-ai ${libAns ? "" : "placeholder"}" id="lib-ai">${esc(libAns || "Press Answer with AI.")}</div><p class="caution" style="margin:0">Check doses and legal points against the source before you act on them.</p>`};
+  const canAI = inClaude || !!apiKey();
+  const ask = `<section class="card"><div class="card-head"><div><h2>Ask your library</h2><p class="sub">Answers from your own books, even with no internet or API key</p></div></div>
+    <form id="lib-form" class="lib-form"><label class="search">${IC.search}<input id="lib-q" type="search" enterkeyhint="search" placeholder="${libBooks.length ? "e.g. management of scabies" : "Add a book to start"}" value="${esc(libQ)}" aria-label="Search your books"></label>
+      ${cats.length > 1 ? `<select id="lib-filter" aria-label="Which books"><option value="">All books</option>${LIB_CATS.filter(([k]) => cats.includes(k)).map(([k, l]) => `<option value="${k}" ${libFilter === k ? "selected" : ""}>${l}</option>`).join("")}</select>` : ""}
+      <button class="btn primary" type="submit">Search</button></form>
+    <div id="lib-status" class="lib-status" ${libBusy ? "" : "hidden"}>${libBusy ? "Reading your book…" : ""}</div>
+    ${libHits ? hits.length ? `<ul class="lib-hits">${hits.slice(0, 3).map((h, i) => hitRow(h, i)).join("")}</ul>
+      <div class="btn-row" style="justify-content:space-between">${hits.length > 3 ? `<button class="btn sm" data-pop="lib-hits">See all ${hits.length}${IC.chev}</button>` : "<span></span>"}${canAI ? `<button class="btn sm primary" data-libai="1">${IC.ai}Answer with AI</button>` : `<span class="sub">Add an API key for written answers</span>`}</div>`
+      : empty("Nothing found.", "Try other words, or a drug or condition name.") : !libBooks.length ? `<div class="btn-row"><label class="btn primary" for="lib-file" role="button">${IC.plus}Add your first book</label></div>` : ""}
+  </section>`;
+  return ask + `<div class="pgrid">${panel("lib-books", "book", "My books", libBooks.length ? `${libBooks.length} on this device` : "Add PDFs or Word files", libBooksHTML(), "On this device only")}
+    ${panel("lib-zim", "tools", "Suggested books", "Zimbabwe law, EDLIZ, textbooks", libShelf(), "What to add")}</div>`;
+}
 
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
@@ -1918,7 +2134,7 @@ function closePop(){ popKey = null; const el = $("#pop"); if (!el || el.hidden) 
 document.querySelector("#pop [data-popclose]").innerHTML = IC.close;
 document.getElementById("pop").addEventListener("click", e => { if (e.target.id === "pop") closePop(); });
 
-const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
+const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, books: viewBooks, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
@@ -1943,7 +2159,7 @@ function updateTitle(){
     tasks: `${c.tasks} open`, deals: `${c.deals} open · ${followUps().length} follow-up${followUps().length === 1 ? "" : "s"} due`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
-    insights: "Learned from your own data, on this device", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Dose, kidney function, BMI and interactions", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
+    insights: "Learned from your own data, on this device", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Dose, kidney function, BMI and interactions", books: libBooks.length ? `${libBooks.length} book${libBooks.length === 1 ? "" : "s"} on this device` : "Your own books, searchable offline", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -1960,6 +2176,11 @@ document.addEventListener("click", async ev => {
   if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.pop){ openPop(d.pop); return; }
+  if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
+  if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
+  if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
+  if (d.libdel){ const b = libBook(d.libdel); if (b && confirm(`Remove ${b.title} from this device?`)){ await libDelBook(d.libdel); toast("Book removed."); render(); } return; }
+  if (d.libask){ closePop(); go("books"); libRun(d.libask); return; }
   if (d.exttype){ ext.type = d.exttype; ext.rows.forEach(r => { if (EXT_TYPES[ext.type].liquid ? r.unit === "pct" : ["mg5", "mgml"].includes(r.unit)) r.unit = EXT_TYPES[ext.type].liquid ? "mg5" : "pct"; }); saveExt(); render(); return; }
   if (d.exttab){ ext.tab = d.exttab; ext.edit = -1; ext.mp = 0; saveExt(); render(); return; }
   if (d.extmp != null){ ext.mp = +d.extmp; render(); return; }
@@ -2072,12 +2293,16 @@ document.addEventListener("change", async ev => {
   if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
+  if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
+  if (ev.target.dataset?.libcat){ const b = libBook(ev.target.dataset.libcat); if (b){ b.cat = ev.target.value; saveLib(); } }
+  if (id === "lib-filter"){ libFilter = ev.target.value; if (libQ) libRun(libQ); }
   if (id === "wm-toggle"){ saveProfile({watermark: ev.target.checked}); applyLook(); }
   if (["pf-name", "pf-role", "pf-company", "pf-partner", "pf-currency"].includes(id)){ saveProfile({[id.slice(3)]: ev.target.value.trim()}); renderChrome(); updateTitle(); } if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
   const f = ev.target.id, v = id => ($(id)?.value || "").trim();
+  if (f === "lib-form"){ $("#lib-q")?.blur(); libRun(v("#lib-q")); return; }
   if (f === "site-form"){ connectSite(v("#site-domain")); return; }
   if (f === "task-form"){
     const due = fromInput($("#t-due").value);
@@ -2328,10 +2553,11 @@ async function sendChat(){
   const log = $("#chat-log"); log.querySelector(".msg.sys")?.remove();
   log.insertAdjacentHTML("beforeend", `<div class="msg me">${esc(text)}</div><div class="msg ai" id="pending">Thinking...</div>`); log.scrollTop = log.scrollHeight;
   const sample = await getSample(), bubble = () => $("#pending");
-  if (!sample){ if (bubble()){ bubble().textContent = aiOffText(); bubble().removeAttribute("id"); } return; }
+  const libHelp = await libContext(text);
+  if (!sample){ if (bubble()){ bubble().textContent = libHelp.length ? `${aiOffText()}\n\nFrom your library:\n\n${libHelp.slice(0, 3).map(h => `• ${libWhere(h.c)}: ${libSnip(h.c, h.terms, 320)}`).join("\n\n")}` : aiOffText(); bubble().removeAttribute("id"); } return; }
   aiCtl = new AbortController(); $("#chat-send").disabled = true; $("#chat-stop").hidden = false;
   const lim = await sample.limits().catch(() => null);
-  const input = [{role: "user", content: RULES() + "\n\nCurrent data (JSON):\n" + snapshot()}, ...chat.slice(-16)];
+  const input = [{role: "user", content: RULES() + "\n\nCurrent data (JSON):\n" + snapshot() + (libHelp.length ? "\n\nPassages from my own books that may help with my latest message. Use them where relevant and cite like [Book, p. N]:\n" + libCite(libHelp) : "")}, ...chat.slice(-16)];
   try {
     const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
       onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
@@ -2372,11 +2598,14 @@ async function makeQuiz(){
   const mine = topic.toLowerCase() === "my drug cards";
   if (mine && !of("card").length){ toast("Add some drug cards first."); return; }
   quiz = {topic, status: "Writing your questions..."}; render();
-  const sample = await getSample();
-  if (!sample){ quiz.status = aiOffText(); render(); return; }
+  const sample = await getSample(), libHelp = mine ? [] : await libContext(topic, 8);
+  if (!sample){
+    const qs = libHelp.length ? libQuiz(topic, libHelp, n) : [];
+    quiz = qs.length ? {topic: topic + " (from your library)", qs} : {topic, status: aiOffText() + (libBooks.length ? " Your library had nothing on this topic for an offline quiz." : " Add books to the Library to get offline quizzes.")};
+    render(); return; }
   try {
     const src = mine ? "these drugs from my study cards: " + of("card").map(c => c.drug).join(", ") : topic;
-    const qs = await askJson(sample, `Write ${n} multiple-choice questions for a practising pharmacist on ${src}. Mix clinical scenarios, dosing, interactions, adverse effects and counselling. Return a JSON array of objects: {"q": question, "options": [4 short options], "answer": index 0-3 of the correct option, "why": one-sentence explanation}. Vary the correct option's position.`);
+    const qs = await askJson(sample, `Write ${n} multiple-choice questions for a practising pharmacist on ${src}. Mix clinical scenarios, dosing, interactions, adverse effects and counselling. ${libHelp.length ? `Base the questions on these passages from my own books where you can, and name the source in "why":\n${libCite(libHelp)}\n\n` : ""}Return a JSON array of objects: {"q": question, "options": [4 short options], "answer": index 0-3 of the correct option, "why": one-sentence explanation}. Vary the correct option's position.`);
     const clean = (Array.isArray(qs) ? qs : []).filter(q => q && q.q && Array.isArray(q.options) && q.options.length >= 2 && Number.isInteger(+q.answer)).map(q => ({q: String(q.q), options: q.options.map(String), answer: +q.answer, why: String(q.why || "")}));
     quiz = clean.length ? {topic, qs: clean} : {topic, status: "Couldn't make a quiz on that. Try another topic."};
   } catch (e){ quiz = {topic, status: errCopy(e)}; }
