@@ -1601,6 +1601,8 @@ function viewSettings(){
         : `<div class="set-row"><div class="t"><b>Install Task</b><span>${isIOS() ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu (⋮), then Install app or Add to Home screen."}</span></div></div>`}
       <div class="set-row"><div class="t"><b>Appearance</b><span>Brandbridge light or dark</span></div><div class="seg">${[["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div></div>
       <div class="set-row"><div class="t"><b>Notifications</b><span>${esc(notif)}</span></div>${!inClaude && "Notification" in window && Notification.permission === "default" ? `<button class="btn" id="notif-btn">Turn on</button>` : ""}</div>
+      ${inClaude ? "" : `<div class="set-row"><div class="t"><b>Alerts when Task is closed</b><span>${!signedIn() ? "Sign in to get reminders on this phone even when Task is closed." : pushState === "on" && Notification.permission === "granted" ? "On for this device. Reminders arrive like any other app." : isIOS() && !isInstalled() ? "On iPhone, add Task to your Home Screen first, then turn this on there." : "Get meeting, goal and client reminders even when Task is closed."}</span></div>${signedIn() ? (pushState === "on" && Notification.permission === "granted" ? `<button class="btn" id="push-test">Test alert</button>` : `<button class="btn primary" id="push-on">Turn on</button>`) : ""}</div>
+      <div class="set-row"><div class="t"><b>Reminder sound</b><span>Plays when a reminder is due while Task is open</span></div><div class="seg">${[["alarm", "Alarm"], ["chime", "Chime"], ["off", "Off"]].map(([k, l]) => `<button data-sound="${k}" aria-pressed="${lsGet("task.sound", "alarm") === k}">${l}</button>`).join("")}</div></div>`}
       <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? (signedIn() ? "AI keys synced to your devices" : "AI key saved on this device") : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>`;
   const dangerSec = `<section class="card"><div class="card-head"><div><h2>Danger zone</h2><p class="sub">Download a backup first. This can't be undone.</p></div></div>
       <div class="set-row"><div class="t"><b>Erase all data</b><span>Removes every goal, client, card and note from this device.</span></div><button class="btn danger" id="wipe-btn">Erase all data</button></div></section>`;
@@ -1620,7 +1622,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.16.1";
+const APP_VERSION = "2.17";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2565,6 +2567,7 @@ document.addEventListener("click", async ev => {
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
+  if (d.sound){ lsSet("task.sound", d.sound); unlockAudio(); lastRing = 0; ring(); render(); return; }
   if (d.aimain){ aiSet("task.aiMain", d.aimain); toast(d.aimain === "auto" ? "Task now picks the best AI for each job." : `Task now uses ${AI_PROV[d.aimain].short} for everything.`); render(); return; }
   if (d.aitest){ testKey(t, d.aitest); return; }
   if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key${signedIn() ? " from all your devices" : " from this device"}?`)){ delete ks[d.aidel]; aiSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
@@ -2660,9 +2663,12 @@ document.addEventListener("click", async ev => {
     case "upd-seen": upd.seen = now(); saveUpd(); closePop(); render(); break;
     case "chat-stop": aiCtl?.abort(); break;
     case "key-test": testKey(t); break;
+    case "push-on": unlockAudio(); if (Notification.permission !== "granted"){ const p = await Notification.requestPermission().catch(() => "denied"); if (p !== "granted"){ toast(isIOS() && !isInstalled() ? "On iPhone, add Task to your Home Screen first (Share, then Add to Home Screen), then turn alerts on from there." : "Alerts are blocked for this site. Allow notifications in your browser settings, then try again."); render(); break; } }
+      if (await pushSetup()) toast("Alerts are on, even when Task is closed."); else if (pushState !== "failed") toast(!apiOk ? "You're offline. Connect to the internet and try again." : "This browser can't get alerts when Task is closed. Try Chrome, or install Task to your home screen."); render(); break;
+    case "push-test": unlockAudio(); ring(); try { const r = await api("push/test", {}); toast(r.sent ? "Test alert sent. It should arrive in a few seconds." : "No device has alerts on yet. Tap Turn on first."); } catch { toast("Couldn't send a test alert. Check your connection."); } break;
     case "notif-btn":
       unlockAudio();
-      try { const p = await Notification.requestPermission(); toast(p === "granted" ? "Notifications are on." : "Notifications are blocked, so reminders will pop up inside Task instead."); }
+      try { const p = await Notification.requestPermission(); if (p === "granted") await pushSetup(true); toast(p === "granted" ? (pushState === "on" ? "Alerts are on, even when Task is closed." : "Notifications are on.") : "Notifications are blocked, so reminders will pop up inside Task instead."); }
       catch { toast("Notifications are blocked, so reminders will pop up inside Task instead."); }
       render(); break;
   }
@@ -2776,11 +2782,40 @@ function chime(){
       g.gain.setValueAtTime(0.0001, t0 + i * .18); g.gain.exponentialRampToValueAtTime(0.2, t0 + i * .18 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * .18 + .4); o.start(t0 + i * .18); o.stop(t0 + i * .18 + .45); });
   } catch {}
 }
+// Alarm: quick beeps in three bursts (t-t-t-t-t … t-t-t-t-t), like a phone alarm. Settings can switch to a soft chime or off.
+let lastRing = 0;
+function ring(){
+  const mode = lsGet("task.sound", "alarm"); if (mode === "off" || now() - lastRing < 4000) return; lastRing = now();
+  if (mode === "chime") return chime();
+  try { if (!audioCtx) return; const t0 = audioCtx.currentTime + .02;
+    for (let burst = 0; burst < 3; burst++) for (let i = 0; i < 5; i++){
+      const at = t0 + burst * 1.05 + i * .13, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "square"; o.frequency.value = 1050; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.16, at + .008); g.gain.setValueAtTime(0.16, at + .07); g.gain.exponentialRampToValueAtTime(0.0001, at + .085);
+      o.start(at); o.stop(at + .09);
+    }
+    navigator.vibrate?.([180, 90, 180, 90, 180, 90, 180, 90, 180, 400, 180, 90, 180, 90, 180, 90, 180, 90, 180]);
+  } catch {}
+}
+// Alerts when Task is closed: this device subscribes to Web Push, and the server sends each reminder at its time.
+let pushState = lsGet("task.push", "");
+async function pushSetup(quiet){
+  if (inClaude || !signedIn() || !apiOk || !swReg?.pushManager || !("Notification" in window) || Notification.permission !== "granted") return false;
+  try {
+    const {key} = await api("push/key");
+    let sub = await swReg.pushManager.getSubscription();
+    const want = Uint8Array.from(atob(key.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((key.length + 3) % 4)), c => c.charCodeAt(0));
+    if (sub && sub.options?.applicationServerKey && new Uint8Array(sub.options.applicationServerKey).join() !== want.join()){ await sub.unsubscribe(); sub = null; }
+    sub ||= await swReg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: want});
+    await api("push/subscribe", {sub: sub.toJSON(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone});
+    pushState = "on"; lsSet("task.push", pushState); return true;
+  } catch (e){ pushState = "failed"; lsSet("task.push", pushState); if (!quiet) toast("This browser couldn't turn on alerts when Task is closed. Install Task to your home screen and try again."); return false; }
+}
 function checkReminders(){
   for (const x of items){
     const at = remindAt(x);
     if (at && at <= now() && !x.notified && (now() - at < DAY || x.kind === "stock")){
-      put({...x, notified: now()}); chime();
+      put({...x, notified: now()}); ring();
       toast((x.kind === "deal" ? "Client: " : x.kind === "stock" ? "Expiry: " : x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
       showSystemNotification(x);
     }
@@ -3178,9 +3213,10 @@ async function setupOffline(){
       el.addEventListener("click", e => { if (e.target.tagName === "BUTTON") el.remove(); }); $("#toasts").append(el); });
     setInterval(() => swReg.update().catch(() => {}), 10 * MIN);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) swReg.update().catch(() => {}); });
-    navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "notified"){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "push"){ if (e.data.alarm) ring(); if (e.data.id){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } return; } if (e.data?.type === "notified"){ const r = byId(e.data.id); if (r && !r.notified) put({...r, notified: now()}); } });
     try { const db = await idb(); const req = db.transaction("kv").objectStore("kv").get("sent");
       req.onsuccess = () => (req.result || []).forEach(id => { const r = byId(id); if (r && !r.notified) put({...r, notified: now()}); }); } catch {}
+    setTimeout(() => { if (pushState === "on" || Notification.permission === "granted") pushSetup(true); }, 4000);
     if ("periodicSync" in swReg){ try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * MIN}); } catch {} }
   } catch {}
 }

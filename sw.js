@@ -1,5 +1,5 @@
 // Task service worker: offline cache + reminder notifications.
-const CACHE = "task-v40";
+const CACHE = "task-v41";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -46,7 +46,18 @@ async function checkDue() {
   await set(db, "sent", [...sent].slice(-500));
 }
 self.addEventListener("periodicsync", e => { if (e.tag === "task-reminders") e.waitUntil(checkDue()); });
-self.addEventListener("push", e => e.waitUntil(checkDue()));
+// Alerts sent by the Task server: shown even when the app is closed, with an alarm-style buzz for meetings and goals.
+const ALARM_BUZZ = [180, 90, 180, 90, 180, 90, 180, 90, 180, 400, 180, 90, 180, 90, 180, 90, 180, 90, 180];
+self.addEventListener("push", e => {
+  let m = null; try { m = e.data && e.data.json(); } catch {}
+  if (!m) { e.waitUntil(checkDue()); return; }
+  e.waitUntil((async () => {
+    const cs = await self.clients.matchAll({type: "window", includeUncontrolled: true});
+    cs.forEach(c => c.postMessage({type: "push", ...m}));
+    await self.registration.showNotification(m.title || "Task", {body: m.body || "", tag: m.tag || "task", renotify: true, requireInteraction: !!m.alarm, silent: false,
+      vibrate: m.alarm ? ALARM_BUZZ : [200, 100, 200], icon: "icon-192.png", badge: "icon-192.png", data: {id: m.id}});
+  })());
+});
 
 self.addEventListener("notificationclick", e => {
   e.notification.close();

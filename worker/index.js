@@ -36,6 +36,48 @@ async function hashKey(clientKey, salt) {
   const k = await crypto.subtle.importKey("raw", enc.encode(clientKey), "PBKDF2", false, ["deriveBits"]);
   return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode(salt), iterations: 5000 }, k, 256));
 }
+// ---------- Web Push: alerts that reach your phone even when Task is closed ----------
+// Standard Web Push (VAPID + aes128gcm). Keys are made once and kept in this Durable Object, so there is nothing to configure.
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+const cat = (...a) => { const out = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of a) { out.set(x, o); o += x.length; } return out; };
+async function hkdf(salt, ikm, info, bytes) {
+  const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info }, k, bytes * 8));
+}
+// RFC 8291 message encryption for one subscription.
+async function encryptPush(sub, payload) {
+  const ua = unb64u(sub.p256dh), auth = unb64u(sub.auth);
+  const eph = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+  const uaKey = await crypto.subtle.importKey("raw", ua, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const secret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaKey }, eph.privateKey, 256));
+  const ikm = await hkdf(auth, secret, cat(enc.encode("WebPush: info\0"), ua, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, enc.encode("Content-Encoding: aes128gcm\0"), 16);
+  const nonce = await hkdf(salt, ikm, enc.encode("Content-Encoding: nonce\0"), 12);
+  const key = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, cat(enc.encode(payload), new Uint8Array([2]))));
+  const head = new Uint8Array(21); head.set(salt); new DataView(head.buffer).setUint32(16, 4096); head[20] = 65;
+  return cat(head, asPub, ct);
+}
+const SERVER_MIN = 6e4, SERVER_DAY = 864e5;
+// Same rules as remindAt() in the app.
+function remindAtServer(x) {
+  if (x.kind === "task" && x.remind && !x.done && x.due) return x.due;
+  if (x.kind === "appt" && x.status === "scheduled" && x.start && x.lead != null && x.lead >= 0) return x.start - x.lead * SERVER_MIN;
+  if (x.kind === "deal" && x.remind && x.nextAt && ["lead", "proposal", "active"].includes(x.stage)) return x.nextAt;
+  if (x.kind === "stock" && !x.cleared && x.expiry) return x.expiry - (x.alertDays ?? 30) * SERVER_DAY;
+  return null;
+}
+function pushText(x, tz) {
+  const f = (t, o) => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: tz || "UTC", ...o }).format(new Date(t)); } catch { return new Date(t).toISOString().slice(11, 16); } };
+  const time = t => f(t, { hour: "2-digit", minute: "2-digit" }), day = t => f(t, { weekday: "short", day: "numeric", month: "short" });
+  if (x.kind === "deal") return ["Client follow-up", `${x.client}: ${x.nextStep || "follow up"}`];
+  if (x.kind === "stock") return ["Stock expiry", `${x.name}${x.batch ? " (batch " + x.batch + ")" : ""} expires ${day(x.expiry)}`];
+  if (x.kind === "appt") return ["Meeting", `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${time(x.start)}`];
+  return ["Task reminder", `${x.title}${x.due ? " · " + time(x.due) : ""}`];
+}
 function same(a, b) { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; }
 const cleanEmail = e => String(e || "").trim().toLowerCase();
 const okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 200;
@@ -65,6 +107,8 @@ export class Store extends DurableObject {
       CREATE TABLE IF NOT EXISTS stats (site TEXT, day TEXT, dim TEXT, key TEXT, n INTEGER, PRIMARY KEY (site, day, dim, key));
       CREATE TABLE IF NOT EXISTS uv (site TEXT, day TEXT, h TEXT, last INTEGER, PRIMARY KEY (site, day, h));
       CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+      CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL, p256dh TEXT, auth TEXT, tz TEXT, created INTEGER);
+      CREATE TABLE IF NOT EXISTS push_sent (item_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (item_id, at));
     `);
     // Everyone in a team is a co-owner (Brandbridge has two equal owners).
     this.sql.exec("UPDATE members SET role = 'owner' WHERE role != 'owner'");
@@ -88,7 +132,11 @@ export class Store extends DurableObject {
       if (path === "me") return json(this.me(user));
       if (path === "team/join") return this.join(user, body);
       if (path === "team/rename") return this.renameTeam(user, body);
-      if (path === "sync") return this.sync(user, body);
+      if (path === "sync") { const r = this.sync(user, body); await this.reschedule(); return r; }
+      if (path === "push/key") return json({ key: (await this.vapid()).pub });
+      if (path === "push/subscribe") return this.subscribe(user, body);
+      if (path === "push/unsubscribe") { this.sql.exec("DELETE FROM push_subs WHERE endpoint = ? AND user_id = ?", String(body.endpoint || ""), user.id); return json({ ok: true }); }
+      if (path === "push/test") { const n = await this.pushTo([user.id], { title: "Task alert", body: "Alerts are working. You'll get these even when Task is closed.", tag: "task-test" }); return json({ sent: n }); }
       if (path === "sites") return req.method === "POST" ? this.addSite(user, body) : json({ sites: this.sitesOf(user) });
       if (path === "sites/remove") return this.removeSite(user, body);
       if (path === "sites/check") return this.checkSite(user, body);
@@ -206,6 +254,79 @@ export class Store extends DurableObject {
       accepted, cursor, more, gone: more ? [] : gone.map(g => g.id),
       items: rows.map(r => ({ id: r.id, space: r.space === mine ? "me" : "team", deleted: !!r.deleted, updatedAt: r.updated, by: r.by_user === user.id ? null : names[r.by_user] || null, data: r.deleted ? null : JSON.parse(r.data) }))
     });
+  }
+
+  // ---------- Push alerts ----------
+  async vapid() {
+    const row = this.one("SELECT v FROM meta WHERE k = 'vapid'");
+    if (row) return JSON.parse(row.v);
+    const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+    const v = { pub: b64u(await crypto.subtle.exportKey("raw", kp.publicKey)), priv: await crypto.subtle.exportKey("jwk", kp.privateKey) };
+    this.sql.exec("INSERT OR IGNORE INTO meta (k, v) VALUES ('vapid', ?)", JSON.stringify(v));
+    return JSON.parse(this.one("SELECT v FROM meta WHERE k = 'vapid'").v);
+  }
+  async subscribe(user, b) {
+    const s = b.sub || {}, ep = String(s.endpoint || "");
+    if (!/^https:\/\//.test(ep) || ep.length > 800 || !s.keys?.p256dh || !s.keys?.auth) return json({ error: "bad_sub" }, 400);
+    this.sql.exec("INSERT INTO push_subs (endpoint, user_id, p256dh, auth, tz, created) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, tz = excluded.tz",
+      ep, user.id, String(s.keys.p256dh), String(s.keys.auth), String(b.tz || "UTC").slice(0, 64), Date.now());
+    await this.reschedule();
+    return json({ ok: true });
+  }
+  // Sends one alert to every device the given users have turned alerts on for. Returns how many were accepted.
+  async pushTo(userIds, msg, textFor) {
+    if (!userIds.length) return 0;
+    const subs = this.all(`SELECT * FROM push_subs WHERE user_id IN (${userIds.map(() => "?").join(",")})`, ...userIds);
+    if (!subs.length) return 0;
+    const v = await this.vapid(), key = await crypto.subtle.importKey("jwk", v.priv, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+    let ok = 0;
+    for (const s of subs) {
+      try {
+        const aud = new URL(s.endpoint).origin;
+        const unsigned = b64u(enc.encode(JSON.stringify({ typ: "JWT", alg: "ES256" }))) + "." + b64u(enc.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: "https://task.brandbridgeacademy.workers.dev" })));
+        const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, enc.encode(unsigned));
+        const m = textFor ? { ...msg, ...textFor(s.tz) } : msg;
+        const res = await fetch(s.endpoint, { method: "POST", body: await encryptPush(s, JSON.stringify(m)),
+          headers: { authorization: `vapid t=${unsigned}.${b64u(sig)}, k=${v.pub}`, "content-encoding": "aes128gcm", "content-type": "application/octet-stream", ttl: "86400", urgency: "high", topic: String(m.tag || "task").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) } });
+        if (res.status === 404 || res.status === 410) this.sql.exec("DELETE FROM push_subs WHERE endpoint = ?", s.endpoint); // phone dropped it
+        else if (res.ok) ok++;
+      } catch {}
+    }
+    return ok;
+  }
+  // Who should hear about an item: its owner, or for shared items the person it's for (both partners if "both").
+  targetsOf(row, data) {
+    if (row.space.startsWith("u:")) return [row.space.slice(2)];
+    const members = this.all("SELECT u.id, u.email FROM members m JOIN users u ON u.id = m.user_id WHERE m.team_id = ?", row.space.slice(2));
+    const who = String(data.who || "");
+    const one = members.find(m => m.email === who);
+    return one ? [one.id] : members.map(m => m.id);
+  }
+  dueItems() {
+    const out = [];
+    for (const r of this.all("SELECT id, space, data FROM items WHERE deleted = 0 AND data IS NOT NULL")) {
+      let d; try { d = JSON.parse(r.data); } catch { continue; }
+      const at = remindAtServer(d); if (at) out.push({ row: r, d, at });
+    }
+    return out;
+  }
+  async reschedule() {
+    if (!this.one("SELECT 1 AS x FROM push_subs LIMIT 1")) return;
+    const next = this.dueItems().map(x => x.at).filter(t => t > Date.now()).sort((a, b) => a - b)[0];
+    const cur = await this.ctx.storage.getAlarm();
+    if (next && (!cur || next < cur || cur < Date.now())) await this.ctx.storage.setAlarm(next);
+  }
+  async alarm() {
+    const t = Date.now();
+    for (const { row, d, at } of this.dueItems()) {
+      if (at > t || t - at > (d.kind === "stock" ? SERVER_DAY : 6 * 3600e3)) continue;
+      if (this.one("SELECT 1 AS x FROM push_sent WHERE item_id = ? AND at = ?", row.id, at)) continue;
+      this.sql.exec("INSERT OR IGNORE INTO push_sent (item_id, at) VALUES (?, ?)", row.id, at);
+      await this.pushTo(this.targetsOf(row, d), { tag: row.id, id: row.id, alarm: d.kind !== "stock" }, tz => { const [title, body] = pushText(d, tz); return { title, body }; });
+    }
+    this.sql.exec("DELETE FROM push_sent WHERE at < ?", t - 30 * SERVER_DAY);
+    await this.ctx.storage.deleteAlarm();
+    await this.reschedule();
   }
 
   // ---------- Website visits ----------
