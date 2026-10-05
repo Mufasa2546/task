@@ -14,7 +14,7 @@
 <body>
 <title>Task</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: grouped sidebar + sticky top bar on desktop; top bar + 5-tab bottom bar + "More" sheet on phones. Content in a single centered column of cards. */
 :root{
@@ -24,6 +24,8 @@
   --shadow:0 1px 2px rgba(11,35,64,.05),0 4px 16px rgba(11,35,64,.06);
   --f-body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  /* Numbers: Apple's own font on iPhone/Mac, Inter (its closest match) everywhere else. Plain zeros, no dots or slashes. */
+  --f-num:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Inter","Plus Jakarta Sans",system-ui,sans-serif;
   --r:14px; --r-sm:10px; --nav-h:64px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -58,7 +60,7 @@ a{color:var(--accent)}
 .nav-btn:hover{background:var(--sunk);color:var(--fg)}
 .nav-btn[aria-current="true"]{background:var(--accent-soft);color:var(--accent);box-shadow:inset 3px 0 0 var(--gold)}
 .nav-btn svg{width:19px;height:19px;flex:none}
-.nav-count{margin-left:auto;font-family:var(--f-mono);font-size:11px;background:var(--sunk);color:var(--muted);border-radius:99px;padding:1px 7px}
+.nav-count{margin-left:auto;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:11px;background:var(--sunk);color:var(--muted);border-radius:99px;padding:1px 7px}
 .nav-btn[aria-current="true"] .nav-count{background:var(--panel);color:var(--accent)}
 .side-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:0 10px;display:flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
@@ -118,7 +120,7 @@ a.btn.ghost{color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;min-width:0}
 button.stat:hover{border-color:var(--accent)}
-.stat .n{font-family:var(--f-mono);font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .n{font-family:var(--f-num);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
 .stat .l{font-size:12.5px;color:var(--muted);margin-top:4px}
 .notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--accent-soft);border-radius:var(--r);padding:12px 16px;font-size:14px}
 .notice p{margin:0;flex:1 1 240px}
@@ -133,7 +135,7 @@ button.stat:hover{border-color:var(--accent)}
 .row-notes{font-size:14px;color:var(--muted);margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
 .row-actions{display:flex;gap:2px;flex:none;align-items:center}
 .done .row-title{text-decoration:line-through;color:var(--muted)}
-.time-chip{flex:none;width:62px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
+.time-chip{flex:none;width:62px;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
 .tick{appearance:none;-webkit-appearance:none;width:22px;height:22px;border:2px solid var(--line-strong);border-radius:7px;flex:none;margin:1px 0 0;background:var(--panel);cursor:pointer}
 .tick:checked{background:var(--good);border-color:var(--good);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 6.5' fill='none' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E")}
 .kind-ic{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
@@ -153,7 +155,7 @@ button.stat:hover{border-color:var(--accent)}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:14px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
 .tile h3{margin:0;font-size:16px;font-weight:700;overflow-wrap:anywhere}
-.tile a{font-family:var(--f-mono);font-size:12.5px;overflow-wrap:anywhere}
+.tile a{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;overflow-wrap:anywhere}
 .tile-top,.tile-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 
 /* Forms */
@@ -231,7 +233,7 @@ textarea{resize:vertical;min-height:80px}
 .bar-row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-track{height:10px;background:var(--sunk);border-radius:99px;overflow:hidden}
 .bar-track span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:99px}
-.bar-row b{font-weight:700;color:var(--fg);text-align:right;font-family:var(--f-mono);font-size:12.5px}
+.bar-row b{font-weight:700;color:var(--fg);text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px}
 .tips{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .tips li{display:flex;gap:10px;align-items:flex-start;background:var(--sunk);border-radius:var(--r-sm);padding:12px 14px;font-size:14px}
 .tips li::before{content:"";flex:none;width:8px;height:8px;margin-top:7px;border-radius:50%;background:var(--gold)}
@@ -312,13 +314,13 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .linkmenu-box{width:100%;max-width:420px;background:var(--panel);border-radius:20px;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);display:grid;gap:8px}
 @media (min-width:901px){.linkmenu{align-items:center}}
 .linkmenu-box h3{margin:0;font-size:16px;font-weight:800}
-.linkmenu-box .url{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:6px}
+.linkmenu-box .url{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:6px}
 .linkmenu-box .btn{width:100%;justify-content:flex-start;min-height:48px;font-size:15px}
 .linkmenu-box .btn svg{width:18px;height:18px}
-.link-btn{border:0;background:none;padding:0;color:var(--accent);font-family:var(--f-mono);font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.link-btn{border:0;background:none;padding:0;color:var(--accent);font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
 /* Website visits */
 .vchart{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;margin-top:4px}
-.vc-y{display:flex;flex-direction:column;justify-content:space-between;height:180px;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right;margin:-7px 0}
+.vc-y{display:flex;flex-direction:column;justify-content:space-between;height:180px;font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);text-align:right;margin:-7px 0}
 .vc-plot{position:relative;height:180px;border-bottom:1px solid var(--line-strong);background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 50%}
 .vc-cols{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px}
 .vc-col{flex:1 1 0;height:100%;display:flex;align-items:flex-end;justify-content:center;border:0;background:none;padding:0;min-width:0;cursor:pointer}
@@ -326,7 +328,7 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .vc-cols:hover .vc-col:not(:hover) span,.vc-cols.picked .vc-col:not(.on) span{opacity:.4}
 .vc-x{grid-column:2;display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .vc-tip{position:absolute;z-index:5;pointer-events:none;background:var(--fg);color:var(--bg);border-radius:10px;padding:7px 10px;font-size:12.5px;line-height:1.35;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.2);transform:translate(-50%,calc(-100% - 8px))}
-.vc-tip b{font-family:var(--f-mono);font-weight:600}
+.vc-tip b{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:600}
 .snippet{display:block;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;overflow-wrap:anywhere;white-space:pre-wrap;margin:0 0 10px;user-select:all}
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
@@ -876,7 +878,7 @@ function apptRow(a, showDay = true){
     <span class="time-chip">${esc(fmtTime(a.start))}</span>
     <div class="row-main"><div class="row-title">${esc(a.client)}${a.purpose ? ` · <span style="font-weight:500">${esc(a.purpose)}</span>` : ""}</div>
       <div class="row-meta">${showDay ? `<span>${esc(fmtDay(a.start))}</span>` : ""}<span>${a.duration || 30} min</span>${a.location ? `<span>${esc(a.location)}</span>` : ""}${apptStatus(a)}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
-      ${a.phone ? `<div class="row-meta"><span style="font-family:var(--f-mono)">${esc(a.phone)}</span><button class="btn ghost sm" data-copy="${esc(a.phone)}">${IC.copy}Copy</button>${inClaude ? "" : `<a class="btn ghost sm" href="tel:${esc(a.phone.replace(/[^\d+]/g, ""))}">Call</a>`}</div>` : ""}
+      ${a.phone ? `<div class="row-meta"><span style="font-family:var(--f-num);font-variant-numeric:tabular-nums">${esc(a.phone)}</span><button class="btn ghost sm" data-copy="${esc(a.phone)}">${IC.copy}Copy</button>${inClaude ? "" : `<a class="btn ghost sm" href="tel:${esc(a.phone.replace(/[^\d+]/g, ""))}">Call</a>`}</div>` : ""}
       ${a.notes ? `<div class="row-notes">${esc(a.notes)}</div>` : ""}
       ${a.status === "scheduled" && a.start <= now() + HOUR ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-appt="${a.id}" data-to="done">${IC.check}Mark done</button><button class="btn sm ghost" data-appt="${a.id}" data-to="noshow">No-show</button></div>` : ""}</div>
     <div class="row-actions">${a.status === "scheduled" && a.start > now() ? calBtn(a.id) : ""}${editBtn(a.id)}${delBtn(a.id)}</div></li>`;
@@ -1121,7 +1123,7 @@ try { chat = JSON.parse(localStorage.getItem("jarvis.chat") || "[]").slice(-30);
 let aiState = "unknown";
 function keyCard(){
   const k = apiKey();
-  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${k ? `Task AI is on. Key ending in <b style="font-family:var(--f-mono)">…${esc(k.slice(-4))}</b> is saved on this device only.` : "Task AI needs your own Anthropic API key. It's saved only on this device and is never put in backups."}</p></div>${k ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${k ? `Task AI is on. Key ending in <b style="font-family:var(--f-num);font-variant-numeric:tabular-nums">…${esc(k.slice(-4))}</b> is saved on this device only.` : "Task AI needs your own Anthropic API key. It's saved only on this device and is never put in backups."}</p></div>${k ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
     ${k ? "" : `<ol class="steps"><li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a> and sign in.</li><li>Add a little credit under Billing if you haven't.</li><li>Tap <b>Create Key</b>, name it "Task", and copy it. It starts with sk-ant-.</li><li>Paste it below and tap Save. Task checks that it works.</li></ol>`}
     <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${k ? "Paste a new key to replace it" : "sk-ant-..."}" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button>${k ? `<button class="btn" type="button" id="key-test">Test</button><button class="btn ghost" type="button" id="key-clear">Remove</button>` : ""}</form>
     <p class="caution" style="margin-top:12px">Never share your key or post it anywhere. Anyone who has it can spend your credit. If it leaks, delete it in the console and make a new one.</p></section>`;
@@ -1320,7 +1322,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.2.1";
+const APP_VERSION = "2.2.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1440,7 +1442,7 @@ function dealRow(d, compact){
     <div class="row-main"><div class="row-title">${esc(d.client)}${d.company && d.company !== d.client ? ` · <span style="font-weight:500">${esc(d.company)}</span>` : ""}</div>
       <div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
       ${d.nextStep || d.nextAt ? `<div class="row-meta"><span ${late ? 'style="color:var(--bad);font-weight:600"' : ""}>Next: ${esc(d.nextStep || "Follow up")}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</span></div>` : ""}
-      ${d.contact ? `<div class="row-meta"><span style="font-family:var(--f-mono)">${esc(d.contact)}</span><button class="btn ghost sm" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>` : ""}
+      ${d.contact ? `<div class="row-meta"><span style="font-family:var(--f-num);font-variant-numeric:tabular-nums">${esc(d.contact)}</span><button class="btn ghost sm" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>` : ""}
       ${!compact && d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}${d._by ? `<div class="by">Updated by ${esc(d._by)}</div>` : ""}
       ${!compact && nextStage ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-stage="${d.id}" data-to="${nextStage}">${IC.check}${nextStage === "done" ? "Mark delivered" : "Move to " + esc(stageLabel(nextStage))}</button>${d.stage !== "active" ? `<button class="btn sm ghost" data-stage="${d.id}" data-to="lost">Lost</button>` : ""}</div>` : ""}</div>
     <div class="row-actions">${editBtn(d.id)}${compact ? "" : delBtn(d.id)}</div></li>`;
@@ -1600,7 +1602,7 @@ function siteTodayCard(){
   if (inClaude || !signedIn() || !web.site) return "";
   const S = webSummary();
   return `<section class="card"><div class="card-head"><div><h2>${esc(web.site)}</h2><p class="sub">${S ? (S.lastHit ? "Last visit " + esc(ago(S.lastHit)) : "Waiting for the first visit") : "Loading visits…"}</p></div><button class="btn sm ghost" data-nav="site">Visits</button></div>
-    ${S ? `<div class="row-meta" style="font-size:14px;gap:6px 16px;margin:0"><span><b style="color:var(--fg);font-family:var(--f-mono)">${S.today.uv}</b> visitors today</span><span><b style="color:var(--fg);font-family:var(--f-mono)">${S.uv7}</b> this week</span>${S.live ? `<span><span class="live-dot"></span>${S.live} on the site now</span>` : ""}</div>` : ""}</section>`;
+    ${S ? `<div class="row-meta" style="font-size:14px;gap:6px 16px;margin:0"><span><b style="color:var(--fg);font-family:var(--f-num);font-variant-numeric:tabular-nums">${S.today.uv}</b> visitors today</span><span><b style="color:var(--fg);font-family:var(--f-num);font-variant-numeric:tabular-nums">${S.uv7}</b> this week</span>${S.live ? `<span><span class="live-dot"></span>${S.live} on the site now</span>` : ""}</div>` : ""}</section>`;
 }
 
 function dealDefaultNext(){ const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); }
