@@ -680,7 +680,9 @@ async function syncNow(){
       more = r.more || Object.keys(pending).length > 0 && guard < 3;
       if (changed && !more) render();
     }
-    if (applyRemoteProfile()) render();
+    const aiNew = applyRemoteAi();
+    if (!aiNew && !byId(aiItemId()) && Object.keys(aiKeys()).length) queueAiSync(true);
+    if (applyRemoteProfile() || aiNew) render();
     else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync(true);
     lastSync = now(); lsSet("task.lastSync", lastSync);
   } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
@@ -792,7 +794,7 @@ if (!profile._wmOff){ profile.watermark = false; profile._wmOff = 1; try { local
 function saveProfile(patch, quiet){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; }
   if (!quiet && Object.keys(patch).some(k => PROFILE_SYNC.includes(k))){ profile._editedAt = now(); try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {} queueProfileSync(); }
   return true; }
-// Signed in, your name, photo, logo and background follow you to every device (the PIN and API key stay on each device).
+// Signed in, your name, photo, logo and background follow you to every device (the PIN stays on each device; AI keys sync separately, see AI_SYNC).
 const PROFILE_SYNC = ["name", "role", "company", "partner", "currency", "photo", "bg", "bgPhoto", "logo"];
 function profileSyncNote(){
   if (inClaude) return "Shown in the menu, the greeting and the lock screen.";
@@ -1301,7 +1303,7 @@ function keyCard(){
     return `<li class="row"><div class="row-main"><div class="row-title">${esc(P.name)} ${main ? `<span class="pill s-good">Main</span>` : ""}</div>
       <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span>${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></div>
       <div class="row-actions">${main ? "" : `<button class="btn sm" data-aimain="${p}">Make main</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div></li>`; }).join("");
-  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}` : "Add a key from Claude, ChatGPT, Gemini or OpenRouter. It's saved only on this device and never put in backups."}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+  return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length > 1 ? "If the main key fails, Task tries your other keys." : "Add another key as a backup if you like."}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini or OpenRouter. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
     ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
     <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 240px"><button class="btn primary" type="submit" id="key-save">Save key</button></form>
     <p class="sub" style="margin:8px 0 0">Get a key: ${Object.values(AI_PROV).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells which one it is.</p>
@@ -1436,7 +1438,7 @@ applyTheme();
 const lastBackup = () => { try { return +localStorage.getItem("task.lastBackup") || 0; } catch { return 0; } };
 async function downloadBackup(){
   const {pinHash: _h, pinSalt: _s, ...prof} = profile;
-  const data = JSON.stringify({app: "Task", version: 2, exportedAt: new Date().toISOString(), profile: prof, items}, null, 1);
+  const data = JSON.stringify({app: "Task", version: 2, exportedAt: new Date().toISOString(), profile: prof, items: items.filter(x => x.sub !== "ai")}, null, 1);
   const filename = `task-backup-${new Date().toISOString().slice(0, 10)}.json`;
   try {
     const dl = await cap("downloads");
@@ -1497,7 +1499,7 @@ function viewSettings(){
         : `<div class="set-row"><div class="t"><b>Install Task</b><span>${isIOS() ? "In Safari, tap the Share button, then Add to Home Screen." : "Open your browser menu (⋮), then Install app or Add to Home screen."}</span></div></div>`}
       <div class="set-row"><div class="t"><b>Appearance</b><span>Brandbridge light or dark</span></div><div class="seg">${[["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]].map(([k, l]) => `<button data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div></div>
       <div class="set-row"><div class="t"><b>Notifications</b><span>${esc(notif)}</span></div>${!inClaude && "Notification" in window && Notification.permission === "default" ? `<button class="btn" id="notif-btn">Turn on</button>` : ""}</div>
-      <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? "API key saved on this device" : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>`;
+      <div class="set-row"><div class="t"><b>Task AI</b><span>${inClaude ? "Uses your Claude account" : apiKey() ? (signedIn() ? "AI keys synced to your devices" : "AI key saved on this device") : "No API key yet"}</span></div><button class="btn" data-nav="ai">${IC.ai}AI settings</button></div></section>`;
   const dangerSec = `<section class="card"><div class="card-head"><div><h2>Danger zone</h2><p class="sub">Download a backup first. This can't be undone.</p></div></div>
       <div class="set-row"><div class="t"><b>Erase all data</b><span>Removes every goal, client, card and note from this device.</span></div><button class="btn danger" id="wipe-btn">Erase all data</button></div></section>`;
   const aboutSec = `<section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>`;
@@ -1516,7 +1518,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.11.2";
+const APP_VERSION = "2.12";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2461,9 +2463,9 @@ document.addEventListener("click", async ev => {
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }
-  if (d.aimain){ lsSet("task.aiMain", d.aimain); toast(`${AI_PROV[d.aimain].short} is now your main AI.`); render(); return; }
+  if (d.aimain){ aiSet("task.aiMain", d.aimain); toast(`${AI_PROV[d.aimain].short} is now your main AI.`); render(); return; }
   if (d.aitest){ testKey(t, d.aitest); return; }
-  if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key from this device?`)){ delete ks[d.aidel]; lsSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
+  if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key${signedIn() ? " from all your devices" : " from this device"}?`)){ delete ks[d.aidel]; aiSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
   if (d.libdel){ const b = libBook(d.libdel); if (b && confirm(`Remove ${b.title} from this device?`)){ await libDelBook(d.libdel); toast("Book removed."); render(); } return; }
   if (d.libask){ closePop(); go("books"); libRun(d.libask); return; }
   if (d.exttype){ ext.type = d.exttype; ext.rows.forEach(r => { if (EXT_TYPES[ext.type].liquid ? r.unit === "pct" : ["mg5", "mgml"].includes(r.unit)) r.unit = EXT_TYPES[ext.type].liquid ? "mg5" : "pct"; }); saveExt(); render(); return; }
@@ -2578,8 +2580,8 @@ document.addEventListener("change", async ev => {
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
-  if (ev.target.dataset?.aipick){ lsSet("task.aiMain", ev.target.value); toast(`Task AI now answers with ${AI_PROV[ev.target.value].short}.`); }
-  if (ev.target.dataset?.aimodel){ lsSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
+  if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(`Task AI now answers with ${AI_PROV[ev.target.value].short}.`); }
+  if (ev.target.dataset?.aimodel){ aiSet("task.aiModel", {...lsGet("task.aiModel", {}), [ev.target.dataset.aimodel]: ev.target.value}); toast("Model saved."); }
   if (ev.target.dataset?.libcat){ const b = libBook(ev.target.dataset.libcat); if (b){ b.cat = ev.target.value; saveLib(); } }
   if (id === "lib-filter"){ libFilter = ev.target.value; if (libQ) libRun(libQ); }
   if (id === "wm-toggle"){ saveProfile({watermark: ev.target.checked}); applyLook(); }
@@ -2640,7 +2642,7 @@ document.addEventListener("submit", ev => {
   else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
     if (!k) return; const p = provOfKey(k);
     if (!p){ toast("That doesn't look like a Claude, ChatGPT, Gemini or OpenRouter key. Copy the whole key and try again."); return; }
-    lsSet("task.aiKeys", {...aiKeys(), [p]: k}); if (!aiOrder().length || aiOrder().length === 1) lsSet("task.aiMain", p);
+    aiSet("task.aiKeys", {...aiKeys(), [p]: k}); if (!aiOrder().length || aiOrder().length === 1) aiSet("task.aiMain", p);
     aiState = "unknown"; $("#api-key").value = ""; document.activeElement?.blur(); render(); testKey($("#key-save"), p); }
 });
 document.addEventListener("keydown", ev => {
@@ -2803,6 +2805,23 @@ function aiKeys(){
   try { const old = localStorage.getItem("task.apiKey"); if (old && !ks.anthropic){ ks.anthropic = old; lsSet("task.aiKeys", ks); } } catch {}
   return ks;
 }
+// Signed in, keys and the chosen AI follow you to your other devices (private to you, never shared with your team or put in backups).
+const AI_SYNC = ["task.aiKeys", "task.aiMain", "task.aiModel"];
+const aiItemId = () => (typeof session !== "undefined" && session?.user?.id) ? "aikeys-" + session.user.id : null;
+function aiSet(k, v){ lsSet(k, v); lsSet("task.aiAt", now()); queueAiSync(); }
+function queueAiSync(first){
+  const id = aiItemId(); if (!id) return;
+  const ai = Object.fromEntries(AI_SYNC.map(k => [k, lsGet(k, null)]));
+  const rec = {id, kind: "meta", sub: "ai", ai, updatedAt: first ? (lsGet("task.aiAt", 0) || 1) : lsGet("task.aiAt", now())};
+  const i = items.findIndex(x => x.id === id); if (i >= 0) items[i] = rec; else items.push(rec);
+  saveLocal(); markDirty(id);
+}
+function applyRemoteAi(){
+  const x = byId(aiItemId()); if (!x?.ai || (x.updatedAt || 0) <= lsGet("task.aiAt", 0)) return false;
+  AI_SYNC.forEach(k => lsSet(k, x.ai[k] ?? null)); lsSet("task.aiAt", x.updatedAt);
+  if (!x.ai["task.aiKeys"]?.anthropic) try { localStorage.removeItem("task.apiKey"); } catch {}
+  aiState = "unknown"; return true;
+}
 const aiOrder = () => { const ks = aiKeys(), main = lsGet("task.aiMain", ""), have = Object.keys(AI_PROV).filter(p => ks[p]); return have.includes(main) ? [main, ...have.filter(p => p !== main)] : have; };
 const aiModel = p => lsGet("task.aiModel", {})[p] || AI_PROV[p].model || "";
 function apiKey(){ const p = aiOrder()[0]; return p ? aiKeys()[p] : ""; }
@@ -2834,7 +2853,7 @@ async function aiPickModel(p){
   lsSet("task.aiModels", {...lsGet("task.aiModels", {}), [p]: ok.map(m => m.id).slice(0, 12)});
   const cur = aiModel(p); if (cur && ok.some(m => m.id === cur)) return cur;
   const pick = ok[0]?.id || (p === "openai" ? "gpt-4.1-mini" : "gemini-2.5-flash");
-  lsSet("task.aiModel", {...lsGet("task.aiModel", {}), [p]: pick}); return pick;
+  aiSet("task.aiModel", {...lsGet("task.aiModel", {}), [p]: pick}); return pick;
 }
 // OpenAI-style chat (OpenAI, Gemini and OpenRouter all speak it), with the same page tools.
 async function openaiSample(p, input, opts = {}){
@@ -2851,7 +2870,7 @@ async function openaiSample(p, input, opts = {}){
         body: JSON.stringify({model, messages, ...(apiTools.length ? {tools: apiTools} : {})})});
     } catch { throw {code: opts.signal?.aborted ? "cancelled" : "offline", text: all}; }
     // No OpenRouter credit: switch to its free models (they don't need credit) and try again.
-    if (res.status === 402 && p === "openrouter" && model !== "openrouter/free"){ model = "openrouter/free"; lsSet("task.aiModel", {...lsGet("task.aiModel", {}), openrouter: model}); toast("No OpenRouter credit, so Task switched to its free models."); round--; continue; }
+    if (res.status === 402 && p === "openrouter" && model !== "openrouter/free"){ model = "openrouter/free"; aiSet("task.aiModel", {...lsGet("task.aiModel", {}), openrouter: model}); toast("No OpenRouter credit, so Task switched to its free models."); round--; continue; }
     if (!res.ok){ const why = await res.text().catch(() => "");
       throw {code: res.status === 401 || res.status === 403 || /api.?key/i.test(why) ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 402 ? "no_credit" : res.status === 404 || /model/i.test(why) ? "model_missing" : "upstream_error", text: all}; }
     const j = await res.json(), ch = j.choices?.[0] || {}, msg = ch.message || {};
