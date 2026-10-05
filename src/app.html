@@ -198,6 +198,15 @@ textarea{resize:vertical;min-height:80px}
 
 /* Chat */
 .chat{display:flex;flex-direction:column;height:min(68vh,660px);min-height:380px;padding:0;overflow:hidden}
+/* No scroll bars anywhere; an arrow shows when there's more below */
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+.more-arrow{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:34;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--accent);display:grid;place-items:center;box-shadow:var(--shadow);cursor:pointer;padding:0;opacity:0;pointer-events:none;transition:opacity .2s}
+.more-arrow.on{opacity:.95;pointer-events:auto;animation:nudge 1.6s ease-in-out infinite}
+.more-arrow svg{width:20px;height:20px}
+.pop-box{position:relative}
+.pop-box .more-arrow{position:absolute;bottom:12px}
+@keyframes nudge{50%{transform:translate(-50%,3px)}}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:1px solid var(--line-strong);background:var(--panel);border-radius:99px;padding:7px 14px;font-size:13px;font-weight:600}
@@ -429,8 +438,10 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   .today-grid .pgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}
   .today-grid .pbtn{flex-direction:column;align-items:flex-start;gap:5px;padding:9px 10px}
   .today-grid .pbtn b{font-size:12.5px}.today-grid .pbtn small{font-size:11px}
-  .copyright{display:none}
+  .copyright{flex:none;padding:4px 16px calc(var(--nav-h) + 4px + env(safe-area-inset-bottom,0px));font-size:10.5px;border-top:0}
+  .more-arrow:not(.in-pop){bottom:calc(var(--nav-h) + 30px + env(safe-area-inset-bottom,0px))}
   .today-hero{padding:11px 14px}.today-hero h2{font-size:18px}.today-hero p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+  .notice{padding:8px 10px}.notice .btn{padding:6px 10px;font-size:12.5px}
   .notice p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}
   .site-actions .lbl{display:none}.site-actions{flex-wrap:nowrap}
   .card-head:has(.site-actions){flex-wrap:nowrap;align-items:flex-start}
@@ -441,7 +452,7 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
   html,body{height:100%;overflow:hidden}
   .shell{height:100dvh;min-height:0}
   .main{height:100dvh;min-height:0;overflow:hidden}
-  .content{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:calc(var(--nav-h) + 6px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+  .content{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:12px;overscroll-behavior:contain}
   .content::-webkit-scrollbar{display:none}
   .content.swipe-l{animation:swl .22s ease-out}.content.swipe-r{animation:swr .22s ease-out}
   .card-head{margin-bottom:8px}
@@ -473,6 +484,10 @@ mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;bor
 }
 @media (max-width:420px){ .row-actions .icon-btn{width:30px} }
 /* Shorter phones: tighten so pages still fit without scrolling */
+@media (max-width:900px) and (max-height:880px){
+  .today-grid .pbtn small{display:none}
+  .today-grid .pbtn{padding:8px 10px;gap:4px}
+}
 @media (max-width:900px) and (max-height:780px){
   .today-hero{display:none}
   .content{padding-top:12px;gap:10px}
@@ -1066,7 +1081,7 @@ function viewToday(){
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
     <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
-  ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your API key to turn it on.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
+  ${oneNotice(`${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off until you add your key.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}`)}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Meetings today</div></button>
@@ -1492,7 +1507,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.9";
+const APP_VERSION = "2.9.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2819,6 +2834,21 @@ async function setupOffline(){
     if ("periodicSync" in swReg){ try { const st = await navigator.permissions.query({name: "periodic-background-sync"}); if (st.state === "granted") await swReg.periodicSync.register("task-reminders", {minInterval: 15 * MIN}); } catch {} }
   } catch {}
 }
+/* ---------- "More below" arrows instead of scroll bars ---------- */
+const moreArrows = (() => {
+  const mk = inPop => { const b = document.createElement("button"); b.className = "more-arrow" + (inPop ? " in-pop" : ""); b.setAttribute("aria-label", "More below"); b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'; return b; };
+  const page = mk(false), pop = mk(true); document.body.append(page); document.querySelector("#pop .pop-box").append(pop);
+  const pageEl = () => innerWidth <= 900 ? document.getElementById("views") : document.scrollingElement;
+  const more = el => el && el.scrollHeight - el.clientHeight - el.scrollTop > 12;
+  const check = () => { page.classList.toggle("on", $("#pop").hidden && !document.body.classList.contains("sheet-open") && more(pageEl())); pop.classList.toggle("on", !$("#pop").hidden && more($("#pop-body"))); };
+  const down = el => el.scrollBy({top: Math.round(el.clientHeight * .75), behavior: "smooth"});
+  page.addEventListener("click", e => { e.stopPropagation(); down(pageEl()); });
+  pop.addEventListener("click", e => { e.stopPropagation(); down($("#pop-body")); });
+  addEventListener("scroll", check, {passive: true}); document.getElementById("views").addEventListener("scroll", check, {passive: true});
+  $("#pop-body").addEventListener("scroll", check, {passive: true}); addEventListener("resize", check);
+  let q = 0; new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; check(); }); }).observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class", "open"]});
+  setTimeout(check, 300); return check;
+})();
 /* ---------- Swipe sideways between Today, Goals, Clients and Meetings (phone) ---------- */
 (() => {
   let sx = 0, sy = 0, st = 0, ok = false;
