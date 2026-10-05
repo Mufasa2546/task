@@ -279,6 +279,18 @@ body.is-locked{overflow:hidden}
 .lock .btn.ghost{color:rgba(255,255,255,.8)}
 .lock .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff}
 .lock .btn.danger{background:#8b0e2f;border-color:#8b0e2f}
+.auth-box{max-width:360px}
+.auth-logo img{width:64px;height:64px;border-radius:16px;display:block;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.auth-form{display:grid;gap:12px;width:100%;text-align:left;margin-top:8px}
+.auth-form label{display:grid;gap:6px;font-size:13px;font-weight:600;color:rgba(255,255,255,.85)}
+.auth-form .opt{font-weight:400;color:rgba(255,255,255,.6)}
+.auth-form input{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:16px}
+.auth-form input::placeholder{color:rgba(255,255,255,.45)}
+.auth-form input:focus{border-color:#c8a24b;box-shadow:0 0 0 3px rgba(200,162,75,.25)}
+.lock .btn.primary.auth-go{background:#c8a24b;border-color:#c8a24b;color:#0b2340;min-height:46px;font-size:15px;width:100%}
+.auth-msg{background:rgba(139,14,47,.55);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.code{font-family:var(--f-mono);font-size:20px;font-weight:600;letter-spacing:.12em;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:8px 14px}
+.by{font-size:12px;color:var(--muted)}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
@@ -311,6 +323,7 @@ body.is-locked{overflow:hidden}
 
 <div class="wm" id="wm" aria-hidden="true"></div>
 <div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
+<div class="lock auth" id="auth" role="dialog" aria-label="Sign in" hidden></div>
 <div class="shell">
   <aside class="side" id="side" aria-label="Sections"></aside>
   <div class="main">
@@ -365,12 +378,12 @@ async function put(rec){
   rec.updatedAt = now();
   const i = items.findIndex(x => x.id === rec.id);
   if (i >= 0) items[i] = rec; else items.push(rec);
-  saveLocal(); render();
+  saveLocal(); render(); markDirty(rec.id);
   if (cloud) { try { const {id, ...data} = rec; await cloud.doc(id).set(data); } catch (e) { toast("Couldn't sync that change: " + (e.message || e.code)); } }
   return rec;
 }
 async function remove(id){
-  items = items.filter(x => x.id !== id); saveLocal(); render();
+  items = items.filter(x => x.id !== id); saveLocal(); render(); markDirty(id, true);
   if (cloud) { try { await cloud.doc(id).delete(); } catch (e) { toast("Couldn't sync the delete: " + (e.message || e.code)); } }
 }
 const add = (kind, fields) => put({ id: uid(), kind, createdAt: now(), ...fields });
@@ -391,6 +404,136 @@ async function connectCloud(){
       items = remote; saveLocal(); syncLabel = "Synced to your Claude account"; render();
     }, e => { syncLabel = "Offline copy (" + e.code + ")"; render(); });
   } catch {}
+}
+
+/* ---------- Accounts and sync (hosted app only: /api on the Cloudflare worker) ---------- */
+const SKEY = "task.session", CKEY = "task.cursor", PKEY = "task.pending";
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
+const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+let session = inClaude ? null : lsGet(SKEY, null);
+let pending = lsGet(PKEY, {});
+let apiOk = false, syncing = false, lastSync = lsGet("task.lastSync", 0), syncErr = "", authOpen = false, authMode = "signin", authMsg = "";
+const signedIn = () => !!session?.token;
+function spaceOf(x){
+  if (x.kind === "deal" || x.kind === "project") return "team";
+  if (x.kind === "task") return !isMe(x.who) || x.shared ? "team" : "me";
+  if (x.kind === "biz" || x.kind === "appt") return x.shared ? "team" : "me";
+  if (x.kind === "log") return x.shared || /brandbridge/i.test(x.tag || "") || (profile.company && x.tag === profile.company) ? "team" : "me";
+  return "me";
+}
+let syncTimer = null;
+function markDirty(id, deleted){
+  if (!signedIn()) return;
+  pending[id] = deleted ? {deleted: true, updatedAt: now()} : 1; lsSet(PKEY, pending);
+  clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200);
+}
+async function api(path, body){
+  const res = await fetch("/api/" + path, {method: body ? "POST" : "GET", headers: {"content-type": "application/json", ...(session?.token ? {authorization: "Bearer " + session.token} : {})}, body: body ? JSON.stringify(body) : undefined});
+  let data = {}; try { data = await res.json(); } catch {}
+  if (res.status === 401 && data.error === "signed_out" && session){ signOut(true); throw {code: "signed_out"}; }
+  if (!res.ok) throw {code: data.error || "http_" + res.status};
+  return data;
+}
+async function clientKey(email, password){
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode("task-v1:" + email.trim().toLowerCase()), iterations: 300000}, k, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function acceptSession(r){
+  session = {token: r.token || session?.token, user: r.user, team: r.team, members: r.members || []}; lsSet(SKEY, session);
+  const other = (r.members || []).find(m => m.email !== r.user.email);
+  const patch = {};
+  if (!profile.name && r.user.name) patch.name = r.user.name;
+  if (other?.name) patch.partner = other.name.split(/\s+/)[0];
+  if (r.team?.name && !profile.company) patch.company = r.team.name;
+  if (Object.keys(patch).length) saveProfile(patch);
+  // Once a partner has joined, re-send items that still say "me"/"partner" so they carry real emails.
+  if (other){ let n = 0; items.forEach(x => { if ((x.who === "me" || x.who === "partner") && spaceOf(x) === "team"){ pending[x.id] = 1; n++; } }); if (n) lsSet(PKEY, pending); }
+}
+async function startSession(r, fresh){
+  acceptSession(r); lsSet(CKEY, 0);
+  if (fresh){ items.forEach(x => pending[x.id] = 1); lsSet(PKEY, pending); }
+  authOpen = false; renderAuth(); render(); await syncNow();
+}
+function signOut(expired){
+  session = null; lsSet(SKEY, null); lsSet(CKEY, null); pending = {}; lsSet(PKEY, {});
+  toast(expired ? "You were signed out. Sign in again to keep syncing." : "Signed out. Your data stays on this device.");
+  render();
+}
+const cleanForSync = x => { const {notified, _by, ...d} = x; if ("who" in d) d.who = normWho(d.who); return d; };
+async function syncNow(){
+  if (!signedIn() || !apiOk || !navigator.onLine || syncing) return;
+  syncing = true; syncErr = "";
+  try {
+    if ((session.members || []).length < 2) acceptSession(await api("me")); // picks up a partner who just joined
+    let more = true, guard = 0;
+    while (more && guard++ < 20){
+      const sent = Object.entries(pending).slice(0, 500);
+      const changes = sent.map(([id, p]) => { if (p && p.deleted) return {id, deleted: true, updatedAt: p.updatedAt}; const x = byId(id); return x ? {id, space: spaceOf(x), data: cleanForSync(x), updatedAt: x.updatedAt || now()} : null; }).filter(Boolean);
+      const sentStamp = Object.fromEntries(changes.map(c => [c.id, c.updatedAt]));
+      const r = await api("sync", {since: lsGet(CKEY, 0), changes});
+      for (const [id] of sent){ const x = byId(id), p = pending[id]; if (p && p.deleted ? p.updatedAt === sentStamp[id] : (!x || x.updatedAt === sentStamp[id])) delete pending[id]; }
+      let changed = false;
+      for (const it of r.items || []){
+        const local = byId(it.id);
+        if (pending[it.id] && local && (local.updatedAt || 0) > it.updatedAt) continue;
+        if (it.deleted){ if (local){ items = items.filter(x => x.id !== it.id); changed = true; } continue; }
+        if (local && (local.updatedAt || 0) > it.updatedAt) continue;
+        const merged = {...it.data, id: it.id, updatedAt: it.updatedAt, _by: it.by || undefined, notified: local?.notified ?? it.data.notified};
+        if (local) items[items.indexOf(local)] = merged; else items.push(merged);
+        changed = true;
+      }
+      for (const id of r.gone || []){ const local = byId(id); if (local && spaceOf(local) === "team" && !pending[id]){ items = items.filter(x => x !== local); changed = true; } }
+      lsSet(CKEY, r.cursor); lsSet(PKEY, pending);
+      if (changed){ saveLocal(); }
+      more = r.more || Object.keys(pending).length > 0 && guard < 3;
+      if (changed && !more) render();
+    }
+    lastSync = now(); lsSet("task.lastSync", lastSync);
+  } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
+  syncing = false;
+  if (view === "settings") render(); else renderChrome();
+}
+async function refreshMe(){ if (!signedIn() || !apiOk) return; try { acceptSession(await api("me")); } catch {} }
+async function checkApi(){
+  if (inClaude || location.protocol === "file:") return;
+  try { const c = new AbortController(); setTimeout(() => c.abort(), 5000); const r = await fetch("/api/health", {signal: c.signal, cache: "no-store"}); apiOk = r.ok && (await r.json()).ok === true; } catch { apiOk = false; }
+  if (!apiOk) return;
+  if (signedIn()){ refreshMe(); syncNow(); }
+  else if (!lsGet("task.noAccount", false)){ authOpen = true; renderAuth(); }
+  render();
+}
+const AUTH_ERR = {bad_email: "Enter a valid email address.", bad_password: "Use at least 8 characters for your password.", email_taken: "That email already has an account. Sign in instead.", bad_invite: "That invite code didn't work. Check it with your partner.", bad_login: "Wrong email or password.", locked: "Too many tries. Wait 15 minutes, then try again.", signed_out: "Please sign in again."};
+function renderAuth(){
+  const el = document.getElementById("auth"); if (!el) return;
+  el.hidden = !authOpen; document.body.classList.toggle("is-locked", authOpen || locked);
+  if (!authOpen){ el.innerHTML = ""; return; }
+  const up = authMode === "signup";
+  el.innerHTML = `<div class="lock-box auth-box"><span class="auth-logo"><img src="icon-192.png" alt=""></span><h2>${up ? "Create your account" : "Sign in to Task"}</h2>
+    <p>${up ? "Your Brandbridge clients and shared goals sync with your partner. Pharmacy and personal items stay private to you." : "Pick up where you left off on any device."}</p>
+    <form id="auth-form" class="auth-form">
+      ${up ? `<label>Your name<input id="au-name" autocomplete="name" required value="${esc(profile.name)}" placeholder="Mufasa"></label>` : ""}
+      <label>Email<input id="au-email" type="email" autocomplete="email" required placeholder="you@brandbridge.co"></label>
+      <label>Password<input id="au-pass" type="password" autocomplete="${up ? "new-password" : "current-password"}" required minlength="8" placeholder="${up ? "At least 8 characters" : ""}"></label>
+      ${up ? `<label>Invite code <span class="opt">(only if your partner already has an account)</span><input id="au-invite" autocapitalize="characters" placeholder="e.g. K7Q2M9XD"></label>` : ""}
+      ${authMsg ? `<div class="auth-msg">${esc(authMsg)}</div>` : ""}
+      <button class="btn primary auth-go" type="submit" id="au-go">${up ? "Create account" : "Sign in"}</button></form>
+    <button class="btn ghost sm" id="au-switch">${up ? "I already have an account" : "New here? Create an account"}</button>
+    <button class="btn ghost sm" id="au-skip">${signedIn() ? "Cancel" : "Use without an account on this device"}</button></div>`;
+}
+async function submitAuth(){
+  const up = authMode === "signup", email = ($("#au-email")?.value || "").trim(), pass = $("#au-pass")?.value || "";
+  if (pass.length < 8){ authMsg = AUTH_ERR.bad_password; return renderAuth(); }
+  const btn = $("#au-go"); btn.disabled = true; btn.textContent = up ? "Creating..." : "Signing in...";
+  try {
+    const key = await clientKey(email, pass);
+    const r = up ? await api("signup", {email, key, name: ($("#au-name")?.value || "").trim(), invite: ($("#au-invite")?.value || "").trim(), company: profile.company || "Brandbridge"})
+                 : await api("login", {email, key});
+    authMsg = ""; lsSet("task.noAccount", false);
+    if (up && $("#au-name")?.value) saveProfile({name: $("#au-name").value.trim()});
+    await startSession(r, true);
+    toast(up ? (r.members?.length > 1 ? `Account created. You joined ${r.team.name}.` : "Account created. Share your invite code with your partner in Settings.") : `Signed in as ${r.user.email}.`);
+  } catch (e) { authMsg = AUTH_ERR[e?.code] || (navigator.onLine ? "Something went wrong (" + (e?.code || "error") + "). Try again." : "You're offline. Connect to sign in."); renderAuth(); }
 }
 
 /* ---------- Time ---------- */
@@ -454,8 +597,14 @@ profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", b
 function saveProfile(patch){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); return true; } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; } }
 const firstName = () => (profile.name || "").trim().split(/\s+/)[0] || "";
 const partner = () => (profile.partner || "").trim() || "Partner";
-const WHO = () => [["me", firstName() || "Me"], ["partner", partner()], ["both", "Both"]];
-const whoLabel = w => (WHO().find(x => x[0] === w) || [])[1] || "";
+// "who" is stored as an email once signed in, so it reads the same on both partners' phones.
+const myEmail = () => (typeof session !== "undefined" && session?.user?.email) || "";
+const partnerMember = () => ((typeof session !== "undefined" && session?.members) || []).find(m => m.email !== myEmail());
+const isMe = w => !w || w === "me" || (!!myEmail() && w === myEmail());
+function normWho(w){ if (!myEmail()) return w || "me"; if (!w || w === "me") return myEmail(); if (w === "partner") return partnerMember()?.email || w; return w; }
+const WHO = () => { const pm = myEmail() && partnerMember(); return pm ? [[myEmail(), firstName() || "Me"], [pm.email, (pm.name || pm.email).split(/\s+/)[0]], ["both", "Both"]] : [["me", firstName() || "Me"], ["partner", partner()], ["both", "Both"]]; };
+function whoLabel(w){ if (w === "both") return "Both"; if (isMe(w)) return firstName() || "Me"; if (w === "partner") return partner();
+  const m = ((typeof session !== "undefined" && session?.members) || []).find(x => x.email === w); return m ? (m.name || m.email).split(/\s+/)[0] : partner(); }
 const money = n => n ? `${esc(profile.currency || "")} ${Number(n).toLocaleString()}`.trim() : "";
 const initials = () => (profile.name || "T").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 const avatar = (cls = "") => profile.photo ? `<img class="avatar ${cls}" src="${profile.photo}" alt="">` : `<span class="avatar ${cls}" aria-hidden="true">${esc(initials())}</span>`;
@@ -484,7 +633,7 @@ let locked = false, pinEntry = "", lockMode = "pin", hiddenAt = 0;
 function lockNow(){ if (!hasPin()) return; locked = true; pinEntry = ""; lockMode = "pin"; renderLock(); }
 function renderLock(){
   const el = document.getElementById("lock"); if (!el) return;
-  el.hidden = !locked; document.body.classList.toggle("is-locked", locked);
+  el.hidden = !locked; document.body.classList.toggle("is-locked", locked || authOpen);
   if (!locked){ el.innerHTML = ""; return; }
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
   el.innerHTML = lockMode === "forgot" ? `<div class="lock-box"><div class="lock-av">${avatar("lg")}</div><h2>Reset your PIN</h2>
@@ -571,7 +720,7 @@ function renderChrome(){
   const groups = {};
   for (const [k, s] of Object.entries(SECTIONS)) (groups[s.group] ||= []).push(k);
   const online = inClaude ? !!cloud : navigator.onLine;
-  const foot = inClaude ? (cloud ? "Synced across your devices" : "Saved on this device") : (navigator.onLine ? "Online · saved on this device" : "Offline · everything still works");
+  const foot = inClaude ? (cloud ? "Synced across your devices" : "Saved on this device") : signedIn() ? (navigator.onLine ? (syncErr ? "Sync paused, will retry" : "Signed in · synced") : "Offline · will sync later") : (navigator.onLine ? "Online · saved on this device" : "Offline · everything still works");
   $("#side").innerHTML = `<div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#c8a24b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>Task</div>` +
     Object.entries(groups).map(([g, keys]) => `<div class="nav-group"><div class="nav-label">${g}</div>${keys.map(k =>
       `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span>${c[k] ? `<span class="nav-count">${c[k]}</span>` : ""}</button>`).join("")}</div>`).join("") +
@@ -619,7 +768,7 @@ function taskRow(t){
     <div class="row-main"><div class="row-title">${esc(t.title)}</div>
       <div class="row-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : `<span>No time set</span>`}
         ${st === "overdue" ? `<span class="pill s-bad">Overdue</span>` : st === "soon" ? `<span class="pill s-warn">Due soon</span>` : ""}
-        ${t.who && t.who !== "me" ? `<span class="pill s-gold">${esc(whoLabel(t.who))}</span>` : ""}${t.repeat ? `<span class="pill">${esc(REPEAT_LABEL[t.repeat] || t.repeat)}</span>` : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+        ${!isMe(t.who) ? `<span class="pill s-gold">${esc(whoLabel(t.who))}</span>` : ""}${t.repeat ? `<span class="pill">${esc(REPEAT_LABEL[t.repeat] || t.repeat)}</span>` : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
       ${t.notes ? `<div class="row-notes">${esc(t.notes)}</div>` : ""}</div>
     <div class="row-actions">${t.due && !t.done ? calBtn(t.id) : ""}${editBtn(t.id)}${delBtn(t.id)}</div></li>`;
 }
@@ -662,7 +811,7 @@ function viewToday(){
     <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
     <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
-  ${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
+  ${!inClaude && apiOk && !signedIn() ? `<div class="notice"><p>Create an account to back up online and share Brandbridge clients and goals with ${esc(partner())}.</p><button class="btn sm primary" data-acct="signup">${IC.user}Create account</button></div>` : ""}${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && !signedIn() && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
     <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Meetings today</div></button>
@@ -699,7 +848,7 @@ let taskFilter = "open";
 function taskForm(e){
   return `<form class="form" id="task-form">
     <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Send the website proposal to the client" autocomplete="off"></label>
-    <label class="field">Who<select id="t-who">${WHO().map(([k, l]) => `<option value="${k}" ${(e?.who || "me") === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+    <label class="field">Who<select id="t-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
     <label class="field">When<input id="t-due" type="datetime-local" value="${toInput(e?.due)}"></label>
     <label class="field">Business<select id="t-biz">${bizOptions(e?.bizId)}</select></label>
     <label class="field">Repeat<select id="t-repeat">${[["", "Doesn't repeat"], ["daily", "Every day"], ["weekdays", "Weekdays (Mon to Fri)"], ["weekly", "Every week"], ["monthly", "Every month"]].map(([k, l]) => `<option value="${k}" ${(e?.repeat || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
@@ -731,6 +880,7 @@ function apptForm(e){
     <label class="field">Remind me<select id="a-lead">${[[-1, "No reminder"], [0, "At start time"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [1440, "1 day before"]].map(([v, l]) => `<option value="${v}" ${(e ? (e.lead ?? -1) : 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="field">Location<input id="a-loc" value="${esc(e?.location)}" placeholder="Office, Google Meet, client's office, pharmacy"></label>
     <label class="field">Business<select id="a-biz">${bizOptions(e?.bizId)}</select></label>
+    ${signedIn() && session.members?.length > 1 ? `<label class="check"><input id="a-shared" type="checkbox" ${e?.shared ? "checked" : ""}> Share with ${esc(partner())}</label>` : ""}
     <label class="field wide">Notes<textarea id="a-notes" placeholder="Agenda, what to prepare">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Book appointment"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
 }
@@ -848,6 +998,7 @@ function viewBiz(){
       <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Brandbridge Ltd"></label>
       <label class="field">Status<select id="b-status">${["active", "building", "idea", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
       <label class="field">Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
+      ${signedIn() && session.members?.length > 1 ? `<label class="check"><input id="b-shared" type="checkbox" ${e?.shared ? "checked" : ""}> Share with ${esc(partner())}</label>` : ""}
       <label class="field wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
       <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add business"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !list.length)}
     ${list.length ? `<div class="tiles">${list.map(b => {
@@ -1035,7 +1186,17 @@ async function restoreBackup(file){
 function viewSettings(){
   const lb = lastBackup(), theme = getTheme(), n = items.filter(x => x.kind !== "meta").length;
   const notif = !("Notification" in window) ? "Not supported in this browser" : Notification.permission === "granted" ? "On" : Notification.permission === "denied" ? "Blocked in browser settings" : "Off";
+  const acct = inClaude ? "" : !apiOk ? `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Sign-in works on task.brandbridgeacademy.workers.dev when you're online.</p></div></div></section>`
+    : signedIn() ? `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Signed in as ${esc(session.user.email)}</p></div><span class="pill s-good">Synced</span></div>
+      <div class="set-row"><div class="t"><b>${esc(session.team?.name || "Team")}</b><span>${(session.members || []).map(m => esc(m.name || m.email) + (m.role === "owner" ? " (owner)" : "")).join(" · ")}</span></div></div>
+      ${session.team?.code && (session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Invite code for ${esc(partner())}</b><span>${esc(partner())} opens Task, taps Create account and enters this code.</span></div><div class="btn-row"><span class="code">${esc(session.team.code)}</span><button class="btn" data-copy="Join me on Task: open https://task.brandbridgeacademy.workers.dev, tap Create account and enter invite code ${esc(session.team.code)}">${IC.copy}Copy invite</button></div></div>` : ""}
+      ${(session.members || []).length < 2 ? `<div class="set-row"><div class="t"><b>Have a code from your partner?</b><span>Join their team instead</span></div><div class="btn-row"><input id="join-code" placeholder="Invite code" style="max-width:150px" autocapitalize="characters"><button class="btn" id="join-btn">Join</button></div></div>` : ""}
+      <div class="set-row"><div class="t"><b>Sync</b><span>${syncing ? "Syncing..." : syncErr ? esc(syncErr) : lastSync ? "Last synced " + esc(ago(lastSync)) : "Not synced yet"}${Object.keys(pending).length ? " · " + Object.keys(pending).length + " change(s) waiting" : ""}</span></div><div class="btn-row"><button class="btn" id="sync-now">Sync now</button><button class="btn ghost" id="sign-out">Sign out</button></div></div>
+      <p class="sub" style="color:var(--muted);margin:10px 0 0">Shared with your team: clients and deals, projects, goals for ${esc(partner())} or both, Brandbridge log entries, and anything you tick "Share". Everything else stays private to you.</p></section>`
+    : `<section class="card"><div class="card-head"><div><h2>Account</h2><p class="sub">Sign in to back up online, use Task on more than one device, and share Brandbridge work with ${esc(partner())}.</p></div><span class="pill s-warn">Not signed in</span></div>
+      <div class="btn-row"><button class="btn primary" data-acct="signup">${IC.user}Create account</button><button class="btn" data-acct="signin">Sign in</button></div></section>`;
   return `<div class="grid2">
+    ${acct}
     <section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">Shown in the menu, the greeting and the lock screen. Saved on this device.</p></div></div>
       <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-founder", profile.company].filter(Boolean).join(", "))}</span></div></div>
         <div class="btn-row"><button class="btn" id="photo-btn">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</button>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div><input type="file" id="photo-file" accept="image/*" hidden></div>
@@ -1069,7 +1230,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "1.6";
+const APP_VERSION = "2.0";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1187,10 +1348,10 @@ function dealRow(d, compact){
   const late = d.nextAt && d.nextAt < now() && isOpenDeal(d);
   return `<li class="row ${d.stage === "lost" ? "done" : ""}">${compact ? `<span class="time-chip">${esc(fmtTime(d.nextAt))}</span>` : ""}
     <div class="row-main"><div class="row-title">${esc(d.client)}${d.company && d.company !== d.client ? ` · <span style="font-weight:500">${esc(d.company)}</span>` : ""}</div>
-      <div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${d.who && d.who !== "me" ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
+      <div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${!isMe(d.who) ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
       ${d.nextStep || d.nextAt ? `<div class="row-meta"><span ${late ? 'style="color:var(--bad);font-weight:600"' : ""}>Next: ${esc(d.nextStep || "Follow up")}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</span></div>` : ""}
       ${d.contact ? `<div class="row-meta"><span style="font-family:var(--f-mono)">${esc(d.contact)}</span><button class="btn ghost sm" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>` : ""}
-      ${!compact && d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}
+      ${!compact && d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}${d._by ? `<div class="by">Updated by ${esc(d._by)}</div>` : ""}
       ${!compact && nextStage ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-stage="${d.id}" data-to="${nextStage}">${IC.check}${nextStage === "done" ? "Mark delivered" : "Move to " + esc(stageLabel(nextStage))}</button>${d.stage !== "active" ? `<button class="btn sm ghost" data-stage="${d.id}" data-to="lost">Lost</button>` : ""}</div>` : ""}</div>
     <div class="row-actions">${editBtn(d.id)}${compact ? "" : delBtn(d.id)}</div></li>`;
 }
@@ -1216,7 +1377,7 @@ function viewDeals(){
       <label class="field">Service<select id="dl-service">${SERVICES.map(x => `<option ${(e?.service || SERVICES[0]) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label class="field">Stage<select id="dl-stage">${STAGES.map(([k, l]) => `<option value="${k}" ${(e?.stage || "lead") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}" placeholder="150000"></label>
-      <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${(e?.who || "me") === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+      <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
       <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" placeholder="Send proposal" list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
       <label class="field">When<input id="dl-at" type="datetime-local" value="${toInput(e ? e.nextAt : n)}"></label>
       <label class="check"><input id="dl-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
@@ -1291,6 +1452,7 @@ document.addEventListener("click", async ev => {
   if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
+  if (d.acct){ authMode = d.acct; authMsg = ""; authOpen = true; renderAuth(); return; }
   if (d.dfilter){ dealFilter = d.dfilter; render(); return; }
   if (d.stage){ const r = byId(d.stage); if (r){ put({...r, stage: d.to, ...(d.to === "done" ? {doneAt: now()} : {})}); toast(`${r.client}: ${stageLabel(d.to)}`); } return; }
   if (d.key){ pressKey(d.key); return; }
@@ -1313,11 +1475,18 @@ document.addEventListener("click", async ev => {
     case "logo-btn": $("#logo-file")?.click(); break;
     case "logo-clear": saveProfile({logo: ""}); applyLook(); render(); break;
     case "lock-now": lockNow(); break;
+    case "au-switch": authMode = authMode === "signup" ? "signin" : "signup"; authMsg = ""; renderAuth(); break;
+    case "au-skip": if (!signedIn()) lsSet("task.noAccount", true); authOpen = false; authMsg = ""; renderAuth(); render(); break;
+    case "sync-now": await syncNow(); toast(syncErr || "Synced."); break;
+    case "sign-out": try { await api("logout", {}); } catch {} signOut(); break;
+    case "join-btn": { const code = ($("#join-code")?.value || "").trim(); if (!code) break;
+      try { acceptSession(await api("team/join", {code})); lsSet(CKEY, 0); items.forEach(x => { if (spaceOf(x) === "team") pending[x.id] = 1; }); lsSet(PKEY, pending); await syncNow(); toast(`You joined ${session.team.name}.`); } catch (e) { toast(AUTH_ERR[e?.code] || "Couldn't join (" + (e?.code || "error") + ")."); } render(); break; }
     case "lock-forgot": lockMode = "forgot"; renderLock(); break;
     case "lock-back": lockMode = "pin"; renderLock(); break;
     case "lock-wipe":
       if (!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent = "Tap again to erase"; break; }
-      for (const x of items.slice()) await remove(x.id); chat = []; saveChat(); saveProfile({pinHash: "", pinSalt: ""}); locked = false; renderLock(); toast("Task was reset. Restore your backup in Settings."); go("settings"); break;
+      if (signedIn()){ items = []; saveLocal(); signOut(); } else for (const x of items.slice()) await remove(x.id);
+      chat = []; saveChat(); saveProfile({pinHash: "", pinSalt: ""}); locked = false; renderLock(); toast("Task was reset. Restore your backup in Settings."); go("settings"); break;
     case "pin-remove": saveProfile({pinHash: "", pinSalt: "", pinLen: 0}); toast("PIN removed."); render(); break;
     case "restore-btn": $("#restore-file")?.click(); break;
     case "install-btn": if (installPrompt){ installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; render(); }); } break;
@@ -1325,6 +1494,7 @@ document.addEventListener("click", async ev => {
     case "reload-app": location.reload(); break;
     case "wipe-btn":
       if (!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent = "Tap again to erase everything"; setTimeout(() => { if (t.isConnected){ t.classList.remove("armed"); t.textContent = "Erase all data"; } }, 4000); break; }
+      if (signedIn()){ items = []; saveLocal(); chat = []; saveChat(); signOut(); toast("Erased from this device. Your account data is still saved online."); break; }
       for (const x of items.slice()) await remove(x.id); chat = []; saveChat(); toast("All data erased from this device."); break;
     case "starter-deck": loadStarterDeck(); break;
     case "start-review": { const q = cardsDue().sort((a, b) => (a.box || 1) - (b.box || 1)).map(c => c.id); q.total = q.length; reviewQueue = q; revealed = false; render(); break; }
@@ -1369,7 +1539,7 @@ document.addEventListener("submit", ev => {
     toast((editing ? "Goal updated" : "Goal added") + (due ? `, reminder at ${fmtWhen(due)}` : "")); editing = null; openForm = null;
   } else if (f === "appt-form"){
     const start = fromInput($("#a-start").value), lead = +$("#a-lead").value;
-    const data = {client: v("#a-client"), phone: v("#a-phone"), purpose: v("#a-purpose"), start, duration: +$("#a-dur").value, lead, location: v("#a-loc"), bizId: $("#a-biz").value || null, notes: v("#a-notes")};
+    const data = {client: v("#a-client"), phone: v("#a-phone"), purpose: v("#a-purpose"), start, duration: +$("#a-dur").value, lead, location: v("#a-loc"), bizId: $("#a-biz").value || null, notes: v("#a-notes"), shared: !!$("#a-shared")?.checked};
     if (editing?.kind === "appt") put({...editing, ...data, notified: editing.start === start && editing.lead === lead ? editing.notified : null}); else add("appt", {...data, status: "scheduled"});
     toast(`${editing ? "Updated" : "Booked"} ${data.client}, ${fmtWhen(start)}`); editing = null; openForm = null;
   } else if (f === "card-form"){
@@ -1379,7 +1549,7 @@ document.addEventListener("submit", ev => {
   } else if (f === "log-form"){
     add("log", {text: v("#l-text"), tag: $("#l-tag").value, at: now()}); toast("Logged");
   } else if (f === "biz-form"){
-    const data = {name: v("#b-name"), status: $("#b-status").value, url: v("#b-url"), notes: v("#b-notes")};
+    const data = {name: v("#b-name"), status: $("#b-status").value, url: v("#b-url"), notes: v("#b-notes"), shared: !!$("#b-shared")?.checked};
     editing?.kind === "biz" ? put({...editing, ...data}) : add("biz", data); editing = null; toast("Business saved");
   } else if (f === "proj-form"){
     const data = {name: v("#p-name"), status: $("#p-status").value, url: v("#p-url"), repo: v("#p-repo"), notes: v("#p-notes"), checkedAt: now()};
@@ -1397,6 +1567,7 @@ document.addEventListener("submit", ev => {
     if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else add("deal", data);
     toast(`${editing ? "Updated" : "Added"} ${data.client}${nextAt && data.remind ? ", reminder " + fmtWhen(nextAt) : ""}`); editing = null; openForm = null;
   }
+  else if (f === "auth-form"){ submitAuth(); return; }
   else if (f === "pin-form"){
     const a = v("#pin-new"), b = v("#pin-confirm");
     if (!/^\d{4,6}$/.test(a)){ toast("Use 4 to 6 digits."); return; }
@@ -1507,15 +1678,15 @@ const tools = [
   {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00. Optional repeat (needs a due time): daily, weekdays, weekly, monthly.",
    inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},
    execute: async i => { const due = i.due ? new Date(String(i.due)).getTime() : null; if (i.due && isNaN(due)) throw new Error("Unreadable due time");
-     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false, who: String(i.who || "me"), repeat: due && i.repeat ? String(i.repeat) : ""}); return {id: r.id}; }},
+     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false, who: normWho(String(i.who || "me")), repeat: due && i.repeat ? String(i.repeat) : ""}); return {id: r.id}; }},
   {name: "add_deal", description: "Add a Brandbridge client or deal. service: Web development, AI automation, Digital advertising, Branding & design, Consulting or Other. stage: lead, proposal, active, done, lost. who: me, partner or both. nextAt is ISO 8601 local datetime for the next step reminder.",
    inputSchema: {type: "object", properties: {client: {type: "string"}, company: {type: "string"}, contact: {type: "string"}, service: {type: "string"}, stage: {type: "string", enum: ["lead", "proposal", "active", "done", "lost"]}, value: {type: "number"}, who: {type: "string", enum: ["me", "partner", "both"]}, nextStep: {type: "string"}, nextAt: {type: "string"}, notes: {type: "string"}}, required: ["client"]},
    execute: async i => { const nextAt = i.nextAt ? new Date(String(i.nextAt)).getTime() : null; if (i.nextAt && isNaN(nextAt)) throw new Error("Unreadable nextAt");
-     const r = await add("deal", {client: String(i.client), company: String(i.company || ""), contact: String(i.contact || ""), service: String(i.service || "Other"), stage: String(i.stage || "lead"), value: Number(i.value) || 0, who: String(i.who || "me"), nextStep: String(i.nextStep || ""), nextAt, remind: !!nextAt, notes: String(i.notes || "")}); return {id: r.id}; }},
+     const r = await add("deal", {client: String(i.client), company: String(i.company || ""), contact: String(i.contact || ""), service: String(i.service || "Other"), stage: String(i.stage || "lead"), value: Number(i.value) || 0, who: normWho(String(i.who || "me")), nextStep: String(i.nextStep || ""), nextAt, remind: !!nextAt, notes: String(i.notes || "")}); return {id: r.id}; }},
   {name: "update_deal", description: "Update a client/deal by id: stage, value, nextStep, nextAt (ISO local datetime), who, notes.",
    inputSchema: {type: "object", properties: {id: {type: "string"}, stage: {type: "string", enum: ["lead", "proposal", "active", "done", "lost"]}, value: {type: "number"}, nextStep: {type: "string"}, nextAt: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, notes: {type: "string"}}, required: ["id"]},
    execute: async i => { const r = byId(String(i.id)); if (!r || r.kind !== "deal") throw new Error("No deal with that id"); const p = {};
-     ["stage", "nextStep", "who", "notes"].forEach(k => { if (i[k] != null) p[k] = String(i[k]); }); if (i.value != null) p.value = Number(i.value);
+     ["stage", "nextStep", "who", "notes"].forEach(k => { if (i[k] != null) p[k] = String(i[k]); }); if (p.who) p.who = normWho(p.who); if (i.value != null) p.value = Number(i.value);
      if (i.nextAt){ const t = new Date(String(i.nextAt)).getTime(); if (isNaN(t)) throw new Error("Unreadable nextAt"); p.nextAt = t; p.remind = true; p.notified = null; }
      if (p.stage === "done") p.doneAt = now(); await put({...r, ...p}); return "updated"; }},
   {name: "add_stock_item", description: "Track a stock item's expiry date. expiry is YYYY-MM-DD. alertDays defaults to 90.",
@@ -1714,7 +1885,10 @@ async function setupOffline(){
 }
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
-loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb();
+loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb(); checkApi();
+setInterval(() => { if (!document.hidden) syncNow(); }, 30000);
+addEventListener("online", () => syncNow());
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncNow(); });
 setInterval(() => { updateTitle(); checkReminders(); }, 15000);
 setTimeout(checkReminders, 1500);
 document.addEventListener("pointerdown", unlockAudio, {once: true});

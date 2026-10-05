@@ -1,0 +1,8 @@
+worker
+src
+.git
+wrangler.jsonc
+build.sh
+README.md
+node_modules
+.wrangler
