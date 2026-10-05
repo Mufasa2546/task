@@ -1,5 +1,5 @@
 // Task service worker: offline cache + reminder notifications.
-const CACHE = "task-v20";
+const CACHE = "task-v21";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

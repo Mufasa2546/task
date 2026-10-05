@@ -1443,7 +1443,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.7.1";
+const APP_VERSION = "2.7.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1708,7 +1708,8 @@ async function libSearch(q, n = 20, cat = ""){
     s *= 1 + hit / terms.length; if (phrase.length > 6 && r.c.l.includes(phrase)) s += 4;
     return {c: r.c, score: s, hit}; });
   const best = Math.max(0, ...out.map(h => h.hit)), min = best >= 3 ? best - 1 : best >= 2 ? 2 : 1;
-  return out.filter(h => h.hit >= min).sort((a, b) => b.score - a.score).slice(0, n).map(h => ({...h, terms}));
+  const res2 = out.filter(h => h.hit >= min).sort((a, b) => b.score - a.score).slice(0, n).map(h => ({...h, terms}));
+  res2.missing = terms.filter((t, i) => !df[i] && t.length >= 4); return res2;
 }
 function libMark(text, terms){
   let h = esc(text); if (!terms?.length) return h;
@@ -1882,6 +1883,7 @@ function viewBooks(){
       ${cats.length > 1 ? `<select id="lib-filter" aria-label="Which books"><option value="">All books</option>${LIB_CATS.filter(([k]) => cats.includes(k)).map(([k, l]) => `<option value="${k}" ${libFilter === k ? "selected" : ""}>${l}</option>`).join("")}</select>` : ""}
       <button class="btn primary" type="submit">Search</button></form>
     <div id="lib-status" class="lib-status" ${libBusy ? "" : "hidden"}>${libBusy ? "Reading your book…" : ""}</div>
+    ${libHits?.missing?.length ? `<p class="sub" style="margin:0">No page in ${libFilter ? "these" : "your"} books mentions <b>${esc(libHits.missing.join(", "))}</b>.${hits.length ? " Closest matches:" : ""}</p>` : ""}
     ${libHits ? hits.length ? `<ul class="lib-hits">${hits.slice(0, 3).map((h, i) => hitRow(h, i)).join("")}</ul>
       <div class="btn-row" style="justify-content:space-between">${hits.length > 3 ? `<button class="btn sm" data-pop="lib-hits">See all ${hits.length}${IC.chev}</button>` : "<span></span>"}${canAI ? `<button class="btn sm primary" data-libai="1">${IC.ai}Answer with AI</button>` : `<span class="sub">Add an API key for written answers</span>`}</div>`
       : empty("Nothing found.", "Try other words, or a drug or condition name.") : !libBooks.length ? `<div class="btn-row"><label class="btn primary" for="lib-file" role="button">${IC.plus}Add your first book</label></div>` : ""}
