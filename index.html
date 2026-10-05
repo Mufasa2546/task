@@ -426,6 +426,7 @@ body.pop-open{overflow:hidden}
 mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .lib-read{white-space:pre-wrap;font-size:14.5px;line-height:1.6}
 .lib-tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;flex:none;margin-right:10px;align-self:center}.lib-tick.on{background:var(--good);border-color:var(--good);color:#fff}.lib-tick svg{width:14px;height:14px}
+.pack{display:flex;align-items:center;gap:10px;justify-content:space-between;background:color-mix(in srgb,var(--gold) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--gold) 35%,transparent);border-radius:var(--r-sm);padding:10px 12px}.pack div{display:grid;gap:2px;min-width:0}.pack b{font-size:14px}.pack small{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lib-shelf .row{padding:8px 0}.lib-shelf .row-title{font-size:14px}
 .lib-books select{margin-top:6px;max-width:220px;font-size:13px;padding:4px 8px;min-height:0}
 .copyright{margin-top:auto;text-align:center;font-size:12px;color:var(--muted);padding:8px 16px 12px}
@@ -1521,7 +1522,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.9.1";
+const APP_VERSION = "2.10";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1917,7 +1918,7 @@ const ZIM_SHELF = [
     ["Medicines & Allied Substances Control Act (15:03)", /allied substances|masca|15[:.]03/i, /medicines and allied substances control|chapter 15[:.]03/, "zimlii.org or veritaszim.net"],
     ["Dangerous Drugs Act (15:02)", /dangerous drugs|15[:.]02/i, /dangerous drugs act|chapter 15[:.]02/, "zimlii.org or veritaszim.net"],
     ["Health Professions Act (27:19)", /health professions|27[:.]19/i, /health professions act|chapter 27[:.]19/, "zimlii.org"],
-    ["MCAZ guidelines", /mcaz|medicines control/i, /medicines control authority of zimbabwe|\bmcaz\b/, "mcaz.co.zw"],
+    ["MCAZ guidelines", /(mcaz|medicines control).*guideline|guideline.*(mcaz|medicines control)/i, /(medicines control authority of zimbabwe|\bmcaz\b).{0,200}guideline|guideline.{0,200}(medicines control authority|\bmcaz\b)/, "mcaz.co.zw"],
     ["Pharmacists Council code of conduct", /pharmacists council|pcz|code of conduct/i, /pharmacists council of zimbabwe|code of (professional )?conduct/, "Pharmacists Council of Zimbabwe"]]],
   ["Guidelines", [
     ["EDLIZ: Zimbabwe treatment guidelines", /edliz|essential medicines list|standard treatment/i, /edliz|essential (medicines|drugs) list and standard treatment|standard treatment guidelines/, "Ministry of Health and Child Care"],
@@ -1930,17 +1931,45 @@ const ZIM_SHELF = [
     ["Anatomy & physiology (e.g. Tortora)", /anatom|physiol|tortora/i, /anatomy|physiology|tortora/, "Your own copy"],
     ["Cosmetics & skin (e.g. Baran & Maibach)", /cosmet|dermat|skin/i, /cosmetic|cosmeceutical|dermatolog/, "Your own copy"]]]
 ];
-const libMatch = (re, re2) => libBooks.find(b => re.test(b.title)) || libBooks.find(b => b.head && re2.test(b.head));
+const libMatch = (re, re2) => libBooks.find(b => re.test(b.title)) || libBooks.find(b => b.head && re2.test(b.head.slice(0, 500)));
 let libShelfTab = 0;
+// Ready-made packs of public documents (Acts, guidelines, registers), added in one tap.
+const LIB_PACKS = [{id: "zim-pharmacy-2026-10", file: "packs/zim-pharmacy.json", name: "Zimbabwe pharmacy pack", about: "Health Professions Act, Dangerous Drugs Act (2 versions), MCAZ register of medicines, WHO pharmacy practice handbook, EDLIZ 2020 (ch. 1-15)"}];
+const packUrl = f => inClaude ? "https://task.brandbridgeacademy.workers.dev/" + f : new URL(f, location.href).href;
+async function libInstallPack(id){
+  const P = LIB_PACKS.find(x => x.id === id); if (!P || libBusy) return; libBusy = true;
+  const st = m => { const el = $("#lib-status") || $("#pack-status"); if (el){ el.hidden = false; el.textContent = m; } };
+  let added = 0;
+  try {
+    st(`Downloading ${P.name}…`);
+    const res = await fetch(packUrl(P.file)); if (!res.ok) throw new Error("http");
+    const pack = await res.json();
+    try { await navigator.storage?.persist?.(); } catch {}
+    for (const bk of pack.books){
+      if (libBooks.some(b => b.title === bk.title)) continue;
+      st(`Adding ${bk.title}…`);
+      const id = uid(), rows = []; let chars = 0;
+      bk.pages.forEach((pg, i) => libSplit(pg).forEach(t => { if (t.length > 20){ rows.push({b: id, p: i + 1, t}); chars += t.length; } }));
+      await libPut(rows);
+      libBooks.push({id, title: bk.title, cat: bk.cat, label: bk.label, pages: bk.pages.length, chunks: rows.length, chars, size: chars, head: libHeadOf(bk.pages.slice(0, 8), bk.title), blank: 0, pack: pack.id, addedAt: now()});
+      saveLib(); added++;
+    }
+    libMem = null; dailyTried = "";
+    toast(added ? `${added} documents added to your library.` : "You already have everything in this pack.");
+  } catch (e){ toast(e?.name === "QuotaExceededError" ? "Your device is out of space for more books." : "Couldn't download the pack. Check your connection and try again."); }
+  libBusy = false; libUsageCheck(); render();
+}
+const packHTML = () => LIB_PACKS.map(P => { const have = libBooks.some(b => b.pack === P.id);
+  return `<div class="pack"><div><b>${esc(P.name)}</b><small>${esc(P.about)}</small></div>${have ? `<span class="pill s-good">Added</span>` : `<button class="btn sm primary" data-libpack="${P.id}" ${libBusy ? "disabled" : ""}>${IC.download || IC.plus}Add all</button>`}</div>`; }).join("") + `<div id="pack-status" class="lib-status" hidden></div>`;
 function libShelf(){
   const [, rows] = ZIM_SHELF[libShelfTab];
-  return `<div class="seg ext-tabs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ZIM_SHELF.map(([g], i) => `<button data-libshelf="${i}" aria-pressed="${i === libShelfTab}">${g}</button>`).join("")}</div>
+  return packHTML() + `<div class="seg ext-tabs" style="grid-template-columns:repeat(3,minmax(0,1fr))">${ZIM_SHELF.map(([g], i) => `<button data-libshelf="${i}" aria-pressed="${i === libShelfTab}">${g}</button>`).join("")}</div>
     <ul class="list lib-shelf">${rows.map(([t, re, re2, where]) => { const has = libMatch(re, re2); return `<li class="row"><span class="lib-tick ${has ? "on" : ""}">${has ? IC.check : ""}</span><div class="row-main"><div class="row-title">${esc(t)}</div><div class="row-meta"><span>${has ? "In your library: " + esc(has.title) : esc(where)}</span></div></div></li>`; }).join("")}</ul>
     <p class="sub" style="margin:0">Download the ones you have, then tap Add books. Typed PDFs work best. Scanned pages can't be searched.</p>`;
 }
 const fmtMB = b => b >= 1e9 ? (b / 1e9).toFixed(1) + " GB" : Math.max(.1, b / 1e6).toFixed(1) + " MB";
 function libBooksHTML(){
-  return `<div class="btn-row" style="justify-content:space-between;align-items:center"><span class="sub">${libBooks.length} book${libBooks.length === 1 ? "" : "s"}${libUsage ? " · " + fmtMB(libUsage) + " used on this device" : ""}</span><label class="btn sm primary" for="lib-file" role="button">${IC.plus}Add books</label></div>
+  return packHTML() + `<div class="btn-row" style="justify-content:space-between;align-items:center"><span class="sub">${libBooks.length} book${libBooks.length === 1 ? "" : "s"}${libUsage ? " · " + fmtMB(libUsage) + " used on this device" : ""}</span><label class="btn sm primary" for="lib-file" role="button">${IC.plus}Add books</label></div>
     ${libBooks.length ? `<ul class="list lib-books">${[...libBooks].sort((a, b) => a.title.localeCompare(b.title)).map(b => `<li class="row"><div class="row-main"><div class="row-title">${esc(b.title)}</div>
       <div class="row-meta"><span>${b.pages} ${b.label === "part" ? "part" : "page"}${b.pages === 1 ? "" : "s"}</span><span>${fmtMB(b.size || b.chars)}</span></div>
       <select data-libcat="${b.id}" aria-label="Category for ${esc(b.title)}">${LIB_CATS.map(([k, l]) => `<option value="${k}" ${b.cat === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
@@ -1964,7 +1993,7 @@ function viewBooks(){
     ${libHits?.missing?.length ? `<p class="sub" style="margin:0">No page in ${libFilter ? "these" : "your"} books mentions <b>${esc(libHits.missing.join(", "))}</b>.${hits.length ? " Closest matches:" : ""}</p>` : ""}
     ${libHits ? hits.length ? `<ul class="lib-hits">${hits.slice(0, 3).map((h, i) => hitRow(h, i)).join("")}</ul>
       <div class="btn-row" style="justify-content:space-between">${hits.length > 3 ? `<button class="btn sm" data-pop="lib-hits">See all ${hits.length}${IC.chev}</button>` : "<span></span>"}${canAI ? `<button class="btn sm primary" data-libai="1">${IC.ai}Answer with AI</button>` : `<span class="sub">Add an API key for written answers</span>`}</div>`
-      : empty("Nothing found.", "Try other words, or a drug or condition name.") : !libBooks.length ? `<div class="btn-row"><label class="btn primary" for="lib-file" role="button">${IC.plus}Add your first book</label></div>` : ""}
+      : empty("Nothing found.", "Try other words, or a drug or condition name.") : !libBooks.length ? `<div class="btn-row"><label class="btn" for="lib-file" role="button">${IC.plus}Add your own book</label><button class="btn primary" data-libpack="${LIB_PACKS[0].id}" ${libBusy ? "disabled" : ""}>${IC.download || IC.plus}Add Zimbabwe pack</button></div>` : ""}
   </section>`;
   return ask + `<div class="pgrid">${panel("lib-books", "book", "My books", libBooks.length ? `${libBooks.length} on this device` : "Add PDFs or Word files", libBooksHTML(), "On this device only")}
     ${panel("lib-zim", "tools", "Suggested books", "Zimbabwe law, EDLIZ, textbooks", libShelf(), "What to add")}</div>`;
@@ -2357,6 +2386,7 @@ document.addEventListener("click", async ev => {
   if (d.dailyi != null){ dailyGo(+d.dailyi); return; }
   if (d.dailystart){ dailyTried = dayKey(now()); await dailyEnsure(); if (!daily.set?.length || daily.day !== dayKey(now())){ if (inClaude || apiKey()){ await dailyRefill(true); await dailyEnsure(); } if (daily.day !== dayKey(now())) toast("No notes yet. Add a book with readable text, or your API key."); } render(); return; }
   if (d.dailymore){ dailyRefill(true); return; }
+  if (d.libpack){ libInstallPack(d.libpack); return; }
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
   if (d.libai){ openPop("lib-answer"); libAsk(t); return; }

@@ -5,3 +5,6 @@
 /t.js
   Cache-Control: public, max-age=3600
   Access-Control-Allow-Origin: *
+/packs/*
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *
