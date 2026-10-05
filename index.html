@@ -1552,11 +1552,11 @@ function webSummary(){
   return {today: t, live: st.live || 0, uv7: sum(d.slice(-7), x => x.uv), pv7: sum(d.slice(-7), x => x.pv), uvAll: sum(d, x => x.uv), pvAll: sum(d, x => x.pv), lastHit: st.lastHit};
 }
 function siteInstallCard(installed){
-  const snip = snippetFor(), lovable = `Add this line inside the <head> of index.html, exactly as written, and don't change anything else:\n${snip}`;
+  const snip = snippetFor(), forDev = `Hi ${partner()}, can you add one line to ${web.site} so Task can count website visits? No cookies, no personal data, and it loads after the page.\n\nIf you use Claude Code on the site's repo, paste this to it:\n\nAdd this script tag to the <head> of every page of the site, exactly as written, and don't change anything else:\n${snip}\nIf there's an index.html, put it just before </head>. If the site uses TanStack Start (no index.html), add it to the head scripts in the root route (src/routes/__root.tsx). Build to check nothing broke, then commit and push to the branch Vercel deploys from.`;
   return `<section class="card"><div class="card-head"><div><h2>${installed ? "Counter code" : "Last step: add one line to " + esc(web.site)}</h2><p class="sub">${installed ? "This is on your site. Keep it if the site is rebuilt." : "Visits start showing here as soon as this line is on the live site."}</p></div></div>
     <code class="snippet">${esc(snip)}</code>
-    <div class="btn-row"><button class="btn primary" data-copy="${esc(snip)}" data-copylabel="Code">${IC.copy}Copy code</button><button class="btn" data-copy="${esc(lovable)}" data-copylabel="Instructions">${IC.copy}Copy prompt for Lovable</button></div>
-    ${installed ? "" : `<ol class="steps" style="margin-top:14px"><li>Open the project for ${esc(web.site)} (Lovable, Vercel or the code).</li><li>Paste the line inside <b>&lt;head&gt;</b> of <b>index.html</b>, or paste the prompt into Lovable's chat.</li><li>Publish, then tap <b>Check site</b> above. It turns green when the counter is found.</li></ol>`}
+    <div class="btn-row"><button class="btn primary" data-copy="${esc(snip)}" data-copylabel="Code">${IC.copy}Copy code</button><button class="btn" data-copy="${esc(forDev)}" data-copylabel="Message">${IC.copy}Copy message for ${esc(partner())}</button></div>
+    ${installed ? "" : `<ol class="steps" style="margin-top:14px"><li>Tap <b>Copy message for ${esc(partner())}</b> and send it to whoever has the site's code. It works as a prompt for Claude Code too.</li><li>They add the line to the site's head and push, and Vercel redeploys.</li><li>Then tap <b>Check site</b> above. It turns green when the counter is found.</li></ol>`}
     <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">No cookies and no personal data: a visitor is counted once per day from a code that is thrown away after 2 days, so you don't need a cookie banner.</p></section>`;
 }
 function viewSite(){
