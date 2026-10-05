@@ -302,6 +302,19 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .linkmenu-box .btn{width:100%;justify-content:flex-start;min-height:48px;font-size:15px}
 .linkmenu-box .btn svg{width:18px;height:18px}
 .link-btn{border:0;background:none;padding:0;color:var(--accent);font-family:var(--f-mono);font-size:12.5px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+/* Website visits */
+.vchart{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;margin-top:4px}
+.vc-y{display:flex;flex-direction:column;justify-content:space-between;height:180px;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right;margin:-7px 0}
+.vc-plot{position:relative;height:180px;border-bottom:1px solid var(--line-strong);background:linear-gradient(var(--line) 1px,transparent 1px) 0 0/100% 50%}
+.vc-cols{position:absolute;inset:0;display:flex;align-items:flex-end;gap:2px}
+.vc-col{flex:1 1 0;height:100%;display:flex;align-items:flex-end;justify-content:center;border:0;background:none;padding:0;min-width:0;cursor:pointer}
+.vc-col span{display:block;width:100%;max-width:26px;background:var(--accent);border-radius:4px 4px 0 0}
+.vc-cols:hover .vc-col:not(:hover) span,.vc-cols.picked .vc-col:not(.on) span{opacity:.4}
+.vc-x{grid-column:2;display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.vc-tip{position:absolute;z-index:5;pointer-events:none;background:var(--fg);color:var(--bg);border-radius:10px;padding:7px 10px;font-size:12.5px;line-height:1.35;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.2);transform:translate(-50%,calc(-100% - 8px))}
+.vc-tip b{font-family:var(--f-mono);font-weight:600}
+.snippet{display:block;font-family:var(--f-mono);font-size:12.5px;line-height:1.5;background:var(--sunk);border:1px dashed var(--line-strong);border-radius:var(--r-sm);padding:10px 12px;overflow-wrap:anywhere;white-space:pre-wrap;margin:0 0 10px;user-select:all}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:6px;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
@@ -513,7 +526,7 @@ async function checkApi(){
   if (inClaude || location.protocol === "file:") return;
   try { const c = new AbortController(); setTimeout(() => c.abort(), 5000); const r = await fetch("/api/health", {signal: c.signal, cache: "no-store"}); apiOk = r.ok && (await r.json()).ok === true; } catch { apiOk = false; }
   if (!apiOk) return;
-  if (signedIn()){ refreshMe(); syncNow(); }
+  if (signedIn()){ refreshMe(); syncNow(); loadWeb(); }
   else if (!lsGet("task.noAccount", false)){ authOpen = true; renderAuth(); }
   render();
 }
@@ -740,6 +753,8 @@ const IC = {
   tools: I('<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14.5h1M11.5 14.5h1M14.5 14.5h1M8.5 18h1M11.5 18h4"/>'),
   stock: I('<path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/>'),
   insights: I('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  refresh: I('<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>'),
+  site: I('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>'),
   settings: I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   download: I('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   upload: I('<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>'),
@@ -752,6 +767,7 @@ const SECTIONS = {
   tasks: {label: "Goals", icon: "tasks", group: "Plan"},
   appts: {label: "Meetings & appointments", short: "Meetings", icon: "appts", group: "Plan"},
   deals: {label: "Clients & deals", short: "Clients", icon: "deals", group: "Brandbridge"},
+  site: {label: "Website visits", short: "Visits", icon: "site", group: "Brandbridge"},
   projects: {label: "Projects & websites", short: "Projects", icon: "projects", group: "Brandbridge"},
   biz: {label: "Businesses", icon: "biz", group: "Brandbridge"},
   learn: {label: "Learning", short: "Learn", icon: "learn", group: "Pharmacy"},
@@ -888,6 +904,7 @@ function viewToday(){
         <div class="card-head"><h2>Daily briefing</h2><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div>
         <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: meetings, Brandbridge clients, goals, pharmacy and study.")}</div>
       </section>
+      ${siteTodayCard()}
       <section class="card">
         <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="${expiring.length ? "stock" : "projects"}">${expiring.length ? "Expiry" : "Projects"}</button></div>
         ${expiring.length ? `<ul class="list">${expiring.slice(0, 4).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
@@ -1289,7 +1306,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1451,9 +1468,130 @@ function viewDeals(){
       <div class="seg">${[["open", "Open"], ["done", "Delivered"], ["lost", "Lost"], ["all", "All"]].map(([k, l]) => `<button data-dfilter="${k}" aria-pressed="${dealFilter === k}">${l}</button>`).join("")}</div></div>
       ${body || empty(all.length ? "Nothing here." : "No clients yet.", all.length ? "Try another filter." : "Add a lead above. Task reminds you of each next step so no client goes cold.")}</section>`;
 }
+/* ---------- Website visits ---------- */
+// The official site loads /t.js from this app; the Worker counts visits (no cookies, no stored IPs) and Task shows them here.
+const TRACKER = location.origin.startsWith("http") && !inClaude ? location.origin : "https://task.brandbridgeacademy.workers.dev";
+const OFFICIAL_SITE = "brandbridge.site";
+let web = {site: null, sites: null, stats: null, at: 0, check: null, days: 30, loading: false, err: "", ...lsGet("task.web", {})};
+web.loading = false; web.err = "";
+const saveWeb = () => lsSet("task.web", {site: web.site, sites: web.sites, stats: web.stats, at: web.at, check: web.check, days: web.days});
+const snippetFor = () => `<script defer src="${TRACKER}/t.js"><\/script>`;
+const countryName = c => { if (!c || c === "??") return "Unknown"; try { return new Intl.DisplayNames(["en"], {type: "regionNames"}).of(c) || c; } catch { return c; } };
+async function loadWeb(force){
+  if (!signedIn() || !apiOk || web.loading) return;
+  if (!force && now() - web.at < 60000 && web.sites) return;
+  web.loading = true; web.err = "";
+  try {
+    web.sites = (await api("sites")).sites;
+    if (!web.sites.some(x => x.domain === web.site)) { web.site = web.sites[0]?.domain || null; web.stats = null; }
+    if (web.site){ web.stats = await api(`stats?site=${encodeURIComponent(web.site)}&days=${web.days}`); web.at = now(); }
+    saveWeb();
+  } catch (e) { web.err = "Couldn't load visits (" + (e?.code || "offline") + ")."; }
+  web.loading = false;
+  if (view === "site" || view === "today") render();
+}
+async function connectSite(domain){
+  domain = showUrl(domain || OFFICIAL_SITE).split("/")[0].replace(/^www\./, "").toLowerCase();
+  try {
+    const r = await api("sites", {domain}); web.sites = r.sites; web.site = domain; web.stats = null; web.check = null; saveWeb();
+    // Keep the site in Projects too, so it shows up with the other apps and websites.
+    if (!of("project").some(p => showUrl(p.url).replace(/^www\./, "").split("/")[0] === domain)) add("project", {name: domain, status: "live", url: "https://" + domain, repo: "", notes: domain === OFFICIAL_SITE ? "Official Brandbridge website. Visits are counted in Website visits." : "Visits are counted in Website visits."});
+    toast(`${domain} connected. Add the line below to the site to start counting.`);
+    await loadWeb(true); await checkWeb(); render();
+  } catch (e) { toast(({bad_domain: "That doesn't look like a website address.", domain_taken: "Another Task team already connected that website.", too_many_sites: "You can connect up to 10 websites.", signed_out: "Sign in again first."})[e?.code] || "Couldn't connect (" + (e?.code || "error") + ")."); }
+}
+async function checkWeb(){
+  if (!web.site) return;
+  try {
+    web.check = {...await api("sites/check", {domain: web.site}), at: now()}; saveWeb();
+    const p = of("project").find(p => showUrl(p.url).replace(/^www\./, "").split("/")[0] === web.site);
+    if (p) put({...p, status: web.check.up ? (p.status === "down" ? "live" : p.status) : "down", checkedAt: now()});
+    toast(web.check.up ? `${web.site} is up (${web.check.ms} ms).${web.check.installed ? "" : " The visit counter isn't on it yet."}` : `${web.site} didn't respond${web.check.status ? " (error " + web.check.status + ")" : ""}.`, !web.check.up);
+  } catch (e) { toast("Couldn't check the site (" + (e?.code || "error") + ")."); }
+}
+const niceMax = n => { if (n <= 4) return 4; const p = 10 ** Math.floor(Math.log10(n)), f = n / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
+const dayLabel = (d, long) => new Date(d + "T12:00:00").toLocaleDateString([], long ? {weekday: "short", day: "numeric", month: "short"} : {day: "numeric", month: "short"});
+function visitsChart(days){
+  const max = niceMax(Math.max(...days.map(d => d.uv))), last = days.length - 1;
+  return `<div class="vchart" id="vchart"><div class="vc-y" aria-hidden="true"><span>${max}</span><span>${max / 2}</span><span>0</span></div>
+    <div class="vc-plot"><div class="vc-cols" role="list">${days.map((d, i) => `<button class="vc-col" role="listitem" data-vtip="${i}" data-day="${esc(dayLabel(d.day, true))}${i === last ? " (so far)" : ""}" data-uv="${d.uv}" data-pv="${d.pv}" aria-label="${esc(dayLabel(d.day, true))}: ${d.uv} visitors, ${d.pv} page views"><span style="height:${d.uv ? Math.max(1.5, d.uv / max * 100) : 0}%"></span></button>`).join("")}</div></div>
+    <div class="vc-x" aria-hidden="true"><span>${esc(dayLabel(days[0].day))}</span><span>${esc(dayLabel(days[Math.floor(last / 2)].day))}</span><span>Today</span></div>
+    <div class="vc-tip" id="vc-tip" hidden></div></div>`;
+}
+function showVtip(col){
+  const chart = col.closest(".vchart"), tip = chart?.querySelector(".vc-tip"); if (!tip) return;
+  chart.querySelectorAll(".vc-col.on").forEach(c => c.classList.remove("on")); col.classList.add("on"); col.parentNode.classList.add("picked");
+  const d = col.dataset, cr = chart.getBoundingClientRect(), br = col.querySelector("span").getBoundingClientRect(), r = col.getBoundingClientRect();
+  tip.innerHTML = `${esc(d.day)}<br><b>${d.uv}</b> visitor${d.uv === "1" ? "" : "s"} · <b>${d.pv}</b> page view${d.pv === "1" ? "" : "s"}`; tip.hidden = false;
+  const half = tip.offsetWidth / 2, x = Math.min(cr.width - half, Math.max(half, r.left + r.width / 2 - cr.left));
+  tip.style.left = x + "px"; tip.style.top = Math.max(tip.offsetHeight + 8, Math.min(br.top, r.bottom - 4) - cr.top) + "px";
+}
+function hideVtip(){ const tip = $("#vc-tip"); if (tip){ tip.hidden = true; document.querySelectorAll(".vc-col.on").forEach(c => c.classList.remove("on")); document.querySelector(".vc-cols.picked")?.classList.remove("picked"); } }
+document.addEventListener("pointerover", e => { const c = e.target.closest?.(".vc-col"); if (c && e.pointerType === "mouse") showVtip(c); });
+document.addEventListener("pointerout", e => { if (e.target.closest?.(".vc-cols") && !e.relatedTarget?.closest?.(".vc-cols") && e.pointerType === "mouse") hideVtip(); });
+document.addEventListener("focusin", e => { const c = e.target.closest?.(".vc-col"); if (c) showVtip(c); });
+document.addEventListener("pointerdown", e => { if (!e.target.closest?.(".vc-cols")) hideVtip(); });
+const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+function webSummary(){
+  const st = web.stats; if (!st) return null;
+  const d = st.days, t = d.at(-1) || {uv: 0, pv: 0};
+  return {today: t, live: st.live || 0, uv7: sum(d.slice(-7), x => x.uv), pv7: sum(d.slice(-7), x => x.pv), uvAll: sum(d, x => x.uv), pvAll: sum(d, x => x.pv), lastHit: st.lastHit};
+}
+function siteInstallCard(installed){
+  const snip = snippetFor(), lovable = `Add this line inside the <head> of index.html, exactly as written, and don't change anything else:\n${snip}`;
+  return `<section class="card"><div class="card-head"><div><h2>${installed ? "Counter code" : "Last step: add one line to " + esc(web.site)}</h2><p class="sub">${installed ? "This is on your site. Keep it if the site is rebuilt." : "Visits start showing here as soon as this line is on the live site."}</p></div></div>
+    <code class="snippet">${esc(snip)}</code>
+    <div class="btn-row"><button class="btn primary" data-copy="${esc(snip)}" data-copylabel="Code">${IC.copy}Copy code</button><button class="btn" data-copy="${esc(lovable)}" data-copylabel="Instructions">${IC.copy}Copy prompt for Lovable</button></div>
+    ${installed ? "" : `<ol class="steps" style="margin-top:14px"><li>Open the project for ${esc(web.site)} (Lovable, Vercel or the code).</li><li>Paste the line inside <b>&lt;head&gt;</b> of <b>index.html</b>, or paste the prompt into Lovable's chat.</li><li>Publish, then tap <b>Check site</b> above. It turns green when the counter is found.</li></ol>`}
+    <p style="margin:12px 0 0;font-size:13px;color:var(--muted)">No cookies and no personal data: a visitor is counted once per day from a code that is thrown away after 2 days, so you don't need a cookie banner.</p></section>`;
+}
+function viewSite(){
+  if (inClaude || location.protocol === "file:") return `<section class="card">${empty("Open Task from its web address to see website visits.", "Visit counts come from your Task account at task.brandbridgeacademy.workers.dev.")}<div class="btn-row"><button class="btn primary" data-link="https://task.brandbridgeacademy.workers.dev/#site">${IC.site}Open Task</button></div></section>`;
+  if (!signedIn()) return `<section class="card"><div class="card-head"><div><h2>Connect ${OFFICIAL_SITE}</h2><p class="sub">See how many people visit your official website, which pages they read and where they come from.</p></div></div>
+    ${apiOk ? `<p class="sub" style="margin:0 0 12px">Website visits need a Task account, so ${esc(partner())} sees the same numbers.</p><div class="btn-row"><button class="btn primary" data-acct="signup">${IC.user}Create account</button><button class="btn" data-acct="signin">Sign in</button></div>` : empty("You're offline.", "Connect to the internet and sign in to see website visits.")}</section>`;
+  if (!web.sites && !web.err){ setTimeout(() => loadWeb(), 0); return `<section class="card">${empty("Loading your websites…", "")}</section>`; }
+  if (!web.site) return `<section class="card"><div class="card-head"><div><h2>Connect your official website</h2><p class="sub">Task counts visits to the site and shows them here and on Today, for you and ${esc(partner())}.</p></div></div>
+    <form class="btn-row" id="site-form"><input id="site-domain" value="${OFFICIAL_SITE}" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1 1 220px" aria-label="Website address"><button class="btn primary" type="submit">${IC.site}Connect website</button></form>
+    ${web.err ? `<p class="sub" style="color:var(--bad);margin:10px 0 0">${esc(web.err)}</p>` : ""}</section>`;
+  if (now() - web.at > 60000) setTimeout(() => loadWeb(), 0);
+  const st = web.stats, S = webSummary(), ck = web.check, installed = !!(S?.lastHit) || !!ck?.installed;
+  const status = !st ? `<span class="pill s-mute">Loading…</span>` : st.lastHit ? `<span class="pill s-good">Connected · last visit ${esc(ago(st.lastHit))}</span>` : ck?.installed ? `<span class="pill s-good">Counter found · waiting for the first visit</span>` : `<span class="pill s-warn">Waiting for the counter code</span>`;
+  const up = ck ? (ck.up ? `<span class="pill s-good">Site up · ${ck.ms} ms</span>` : `<span class="pill s-bad">Site not responding</span>`) : "";
+  const top = st?.top || {}, rows = (a, f = x => x) => (a || []).map(([k, n]) => [f(k), n]);
+  const listCard = (title, sub, data, none) => `<section class="card"><div class="card-head"><div><h2>${title}</h2><p class="sub">${sub}</p></div></div>${data.length ? barList(data) : empty(none, "")}</section>`;
+  const range = `Last ${web.days} days`;
+  return `<section class="card"><div class="card-head"><div><h2 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(web.site)}${(web.sites || []).length > 1 ? `<span class="seg">${web.sites.map(x => `<button data-vsite="${esc(x.domain)}" aria-pressed="${x.domain === web.site}">${esc(x.domain)}</button>`).join("")}</span>` : ""}</h2>
+      <div class="row-meta">${status}${up}${linkBtn("https://" + web.site)}</div></div>
+      <div class="btn-row"><button class="btn sm" id="web-refresh" ${web.loading ? "disabled" : ""}>${IC.refresh}${web.loading ? "Refreshing…" : "Refresh"}</button><button class="btn sm" id="web-check">${IC.check}Check site</button></div></div>
+      ${web.err ? `<p class="sub" style="color:var(--bad);margin:0">${esc(web.err)} Showing the last numbers saved on this device.</p>` : ""}</section>
+    <div class="stats">
+      <div class="stat"><div class="n">${S ? S.today.uv : "–"}</div><div class="l">Visitors today</div></div>
+      <div class="stat"><div class="n">${S ? S.today.pv : "–"}</div><div class="l">Page views today</div></div>
+      <div class="stat"><div class="n">${S ? (S.live ? `<span class="live-dot"></span>` : "") + S.live : "–"}</div><div class="l">On the site now</div></div>
+      <div class="stat"><div class="n">${S ? S.uv7 : "–"}</div><div class="l">Visitors, last 7 days</div></div></div>
+    ${st ? `<section class="card"><div class="card-head"><div><h2>Visitors per day</h2><p class="sub">${range} · ${S.uvAll} visitors · ${S.pvAll} page views · Kenya time</p></div>
+        <div class="seg">${[7, 30, 90].map(n => `<button data-vdays="${n}" aria-pressed="${web.days === n}">${n} days</button>`).join("")}</div></div>
+        ${visitsChart(st.days)}</section>
+      <div class="grid2">
+        ${listCard("Top pages", range, rows(top.path, k => k === "/" ? "Home page" : k), "No page views yet.")}
+        ${listCard("Where visitors come from", range + " · Direct means typed in or from an app", rows(top.ref), "No visitors yet.")}
+        ${listCard("Countries", range, rows(top.country, countryName), "No visitors yet.")}
+        ${listCard("Devices", range, rows(top.device), "No visitors yet.")}
+      </div>` : ""}
+    ${siteInstallCard(installed)}
+    <section class="card"><div class="card-head"><div><h2>Your own visits</h2><p class="sub">Stop counting yourself: open the site once with this link on each phone or computer you use.</p></div></div>
+      <div class="btn-row"><button class="btn" data-link="https://${esc(web.site)}/?task_ignore=1">${IC.site}Don't count this device</button><button class="btn ghost" id="web-remove">Disconnect ${esc(web.site)}</button></div></section>`;
+}
+function siteTodayCard(){
+  if (inClaude || !signedIn() || !web.site) return "";
+  const S = webSummary();
+  return `<section class="card"><div class="card-head"><div><h2>${esc(web.site)}</h2><p class="sub">${S ? (S.lastHit ? "Last visit " + esc(ago(S.lastHit)) : "Waiting for the first visit") : "Loading visits…"}</p></div><button class="btn sm ghost" data-nav="site">Visits</button></div>
+    ${S ? `<div class="row-meta" style="font-size:14px;gap:6px 16px;margin:0"><span><b style="color:var(--fg);font-family:var(--f-mono)">${S.today.uv}</b> visitors today</span><span><b style="color:var(--fg);font-family:var(--f-mono)">${S.uv7}</b> this week</span>${S.live ? `<span><span class="live-dot"></span>${S.live} on the site now</span>` : ""}</div>` : ""}</section>`;
+}
+
 function dealDefaultNext(){ const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); }
 
-const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
+const VIEWS = {site: viewSite, today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
@@ -1475,7 +1613,7 @@ function updateTitle(){
     tasks: `${c.tasks} open`, deals: `${c.deals} open · ${followUps().length} follow-up${followUps().length === 1 ? "" : "s"} due`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
-    insights: "Learned from your own data, on this device", tools: "Dose, kidney function, BMI and interactions", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
+    insights: "Learned from your own data, on this device", site: web.site ? web.site + (web.stats ? " · " + (web.stats.days.at(-1)?.uv || 0) + " visitor" + ((web.stats.days.at(-1)?.uv || 0) === 1 ? "" : "s") + " today" : "") : "Connect your official website", tools: "Dose, kidney function, BMI and interactions", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
   })[view];
 }
 
@@ -1508,7 +1646,10 @@ document.addEventListener("click", async ev => {
   if (d.afilter){ apptFilter = d.afilter; render(); return; }
   if (d.appt){ const r = byId(d.appt); if (r){ put({...r, status: d.to}); toast(d.to === "done" ? `Marked ${r.client}'s appointment done.` : "Marked as no-show."); } return; }
   if (d.ics) return exportIcs(byId(d.ics));
-  if (d.copy){ try { await navigator.clipboard.writeText(d.copy); toast("Copied " + d.copy); } catch { toast(d.copy); } return; }
+  if (d.copy){ try { await navigator.clipboard.writeText(d.copy); toast(d.copylabel ? d.copylabel + " copied." : "Copied " + d.copy); } catch { toast(d.copy); } return; }
+  if (d.vtip != null){ showVtip(t); return; }
+  if (d.vdays){ web.days = +d.vdays; saveWeb(); loadWeb(true); render(); return; }
+  if (d.vsite){ web.site = d.vsite; web.stats = null; web.check = null; saveWeb(); loadWeb(true); render(); return; }
   if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
@@ -1537,6 +1678,10 @@ document.addEventListener("click", async ev => {
     case "au-switch": authMode = authMode === "signup" ? "signin" : "signup"; authMsg = ""; renderAuth(); break;
     case "au-skip": if (!signedIn()) lsSet("task.noAccount", true); authOpen = false; authMsg = ""; renderAuth(); render(); break;
     case "sync-now": await syncNow(); toast(syncErr || "Synced."); break;
+    case "web-refresh": t.disabled = true; await loadWeb(true); if (web.err) toast(web.err); break;
+    case "web-check": t.disabled = true; t.textContent = "Checking…"; await checkWeb(); render(); break;
+    case "web-remove": if (!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent = "Tap again to disconnect"; break; }
+      try { const r = await api("sites/remove", {domain: web.site}); web.sites = r.sites; web.site = r.sites[0]?.domain || null; web.stats = null; web.check = null; saveWeb(); toast("Website disconnected."); } catch (e) { toast("Couldn't disconnect (" + (e?.code || "error") + ")."); } render(); break;
     case "sign-out": try { await api("logout", {}); } catch {} signOut(); break;
     case "join-btn": { const code = ($("#join-code")?.value || "").trim(); if (!code) break;
       try { acceptSession(await api("team/join", {code})); lsSet(CKEY, 0); items.forEach(x => { if (spaceOf(x) === "team") pending[x.id] = 1; }); lsSet(PKEY, pending); await syncNow(); toast(`You joined ${session.team.name}.`); } catch (e) { toast(AUTH_ERR[e?.code] || "Couldn't join (" + (e?.code || "error") + ")."); } render(); break; }
@@ -1588,6 +1733,7 @@ document.addEventListener("change", async ev => {
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
   const f = ev.target.id, v = id => ($(id)?.value || "").trim();
+  if (f === "site-form"){ connectSite(v("#site-domain")); return; }
   if (f === "task-form"){
     const due = fromInput($("#t-due").value);
     const repeat = $("#t-repeat").value;
@@ -1728,6 +1874,7 @@ function snapshot(){
     projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()})),
     clientsAndDeals: of("deal").map(d => ({id: d.id, client: d.client, company: d.company, service: d.service, stage: d.stage, value: d.value, who: whoLabel(d.who), nextStep: d.nextStep, nextAt: d.nextAt ? new Date(d.nextAt).toString() : null, notes: d.notes})),
     stockExpiry: of("stock").filter(x => !x.cleared).map(x => ({name: x.name, batch: x.batch, expires: new Date(x.expiry).toDateString(), daysLeft: stockLeft(x)})),
+    officialWebsite: (() => { const S = webSummary(); return web.site && S ? {site: web.site, visitorsToday: S.today.uv, pageViewsToday: S.today.pv, onSiteNow: S.live, visitorsLast7Days: S.uv7, topPages: web.stats.top.path.slice(0, 5), sources: web.stats.top.ref.slice(0, 5), countries: web.stats.top.country.slice(0, 5).map(([c, n]) => [countryName(c), n])} : undefined; })(),
     learnedPatterns: learnPatterns().tips
   });
 }
@@ -1945,7 +2092,7 @@ async function setupOffline(){
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
 loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb(); checkApi();
-setInterval(() => { if (!document.hidden) syncNow(); }, 30000);
+setInterval(() => { if (!document.hidden){ syncNow(); if (view === "site" || view === "today") loadWeb(); } }, 30000);
 addEventListener("online", () => syncNow());
 document.addEventListener("visibilitychange", () => { if (!document.hidden) syncNow(); });
 setInterval(() => { updateTitle(); checkReminders(); }, 15000);

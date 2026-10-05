@@ -2,17 +2,27 @@
 // All data lives in one SQLite-backed Durable Object, so there is nothing to set up in the Cloudflare dashboard.
 import { DurableObject } from "cloudflare:workers";
 
+const CORS = { "access-control-allow-origin": "*", "access-control-allow-methods": "POST", "access-control-allow-headers": "content-type" };
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
+    const stub = env.STORE.get(env.STORE.idFromName("main"));
+    // Visit counter: called by t.js from the websites being tracked, so any origin may send it. It returns nothing.
+    if (url.pathname === "/api/hit") {
+      if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+      if (req.method !== "POST") return new Response(null, { status: 405, headers: CORS });
+      const h = new Headers(req.headers);
+      h.set("x-country", (req.cf && req.cf.country) || "");
+      await stub.fetch(new Request(req.url, { method: "POST", headers: h, body: (await req.text()).slice(0, 2000) })).catch(() => {});
+      return new Response(null, { status: 204, headers: CORS });
+    }
     if (req.method !== "GET" && req.method !== "POST") return json({ error: "method" }, 405);
-    // Same-origin only: the app is the only client.
+    // Everything else is same-origin only: the app is the only client.
     const origin = req.headers.get("origin");
     if (origin && origin !== url.origin) return json({ error: "origin" }, 403);
-    const stub = env.STORE.get(env.STORE.idFromName("main"));
     return stub.fetch(req);
   }
 };
@@ -30,6 +40,13 @@ function same(a, b) { if (a.length !== b.length) return false; let d = 0; for (l
 const cleanEmail = e => String(e || "").trim().toLowerCase();
 const okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 200;
 const SESSION_DAYS = 90;
+// Visit stats are kept per day in Kenya time (UTC+3), the business's home timezone.
+const TZ_MS = 3 * 36e5;
+const dayKey = t => new Date(t + TZ_MS).toISOString().slice(0, 10);
+const cleanHost = h => String(h || "").trim().toLowerCase().replace(/^[a-z]+:\/\//, "").split(/[/?#:]/)[0].replace(/^www\./, "");
+const okHost = h => /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(h) && h.length <= 120;
+const BOT = /bot|crawl|spider|slurp|headless|lighthouse|facebookexternalhit|embedly|preview|curl|wget|python|axios|node-fetch|go-http|okhttp|java\/|uptime|monitor|pingdom|vercel/i;
+const DIMS = ["path", "ref", "country", "device"];
 
 export class Store extends DurableObject {
   constructor(ctx, env) {
@@ -44,6 +61,10 @@ export class Store extends DurableObject {
       CREATE INDEX IF NOT EXISTS items_space_srv ON items (space, srv);
       CREATE TABLE IF NOT EXISTS gone (id TEXT NOT NULL, space TEXT NOT NULL, srv INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS gone_space_srv ON gone (space, srv);
+      CREATE TABLE IF NOT EXISTS sites (domain TEXT PRIMARY KEY, team_id TEXT NOT NULL, added INTEGER, last_hit INTEGER DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS stats (site TEXT, day TEXT, dim TEXT, key TEXT, n INTEGER, PRIMARY KEY (site, day, dim, key));
+      CREATE TABLE IF NOT EXISTS uv (site TEXT, day TEXT, h TEXT, last INTEGER, PRIMARY KEY (site, day, h));
+      CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
     `);
   }
 
@@ -56,6 +77,7 @@ export class Store extends DurableObject {
     if (req.method === "POST") { try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); } }
     try {
       if (path === "health") return json({ ok: true });
+      if (path === "hit") { await this.hit(req, body); return new Response(null, { status: 204 }); }
       if (path === "signup") return this.signup(body);
       if (path === "login") return this.login(body);
       const user = await this.auth(req);
@@ -65,6 +87,10 @@ export class Store extends DurableObject {
       if (path === "team/join") return this.join(user, body);
       if (path === "team/rename") return this.renameTeam(user, body);
       if (path === "sync") return this.sync(user, body);
+      if (path === "sites") return req.method === "POST" ? this.addSite(user, body) : json({ sites: this.sitesOf(user) });
+      if (path === "sites/remove") return this.removeSite(user, body);
+      if (path === "sites/check") return this.checkSite(user, body);
+      if (path === "stats") return this.stats(user, url);
       return json({ error: "not_found" }, 404);
     } catch (e) {
       return json({ error: "server", message: String(e && e.message || e) }, 500);
@@ -179,4 +205,111 @@ export class Store extends DurableObject {
       items: rows.map(r => ({ id: r.id, space: r.space === mine ? "me" : "team", deleted: !!r.deleted, updatedAt: r.updated, by: r.by_user === user.id ? null : names[r.by_user] || null, data: r.deleted ? null : JSON.parse(r.data) }))
     });
   }
+
+  // ---------- Website visits ----------
+  // No cookies and no stored IP addresses: a visitor is a hash of IP + browser + site with a salt that is
+  // thrown away after two days, so the same person counts once per day and can't be followed across days.
+  daySalt(day) {
+    let row = this.one("SELECT v FROM meta WHERE k = ?", "salt:" + day);
+    if (row) return row.v;
+    const v = rand(16);
+    this.sql.exec("INSERT OR IGNORE INTO meta (k, v) VALUES (?, ?)", "salt:" + day, v);
+    // New day: forget old salts and the visitor hashes they made.
+    const keep = dayKey(Date.now() - 864e5);
+    this.sql.exec("DELETE FROM meta WHERE k LIKE 'salt:%' AND k < ?", "salt:" + keep);
+    this.sql.exec("DELETE FROM uv WHERE day < ?", keep);
+    return this.one("SELECT v FROM meta WHERE k = ?", "salt:" + day).v;
+  }
+  bump(site, day, dim, key) {
+    key = String(key || "").slice(0, 160);
+    if (DIMS.includes(dim) && !this.one("SELECT 1 AS x FROM stats WHERE site = ? AND day = ? AND dim = ? AND key = ?", site, day, dim, key)
+      && (this.one("SELECT COUNT(*) AS c FROM stats WHERE site = ? AND day = ? AND dim = ?", site, day, dim)?.c || 0) >= 300) key = "(other)";
+    this.sql.exec("INSERT INTO stats (site, day, dim, key, n) VALUES (?, ?, ?, ?, 1) ON CONFLICT(site, day, dim, key) DO UPDATE SET n = n + 1", site, day, dim, key);
+  }
+  async hit(req, b) {
+    const ua = req.headers.get("user-agent") || "";
+    if (!ua || BOT.test(ua)) return;
+    const site = cleanHost(b.h || b.s);
+    if (!site || !this.one("SELECT 1 AS x FROM sites WHERE domain = ?", site)) return;
+    const t = Date.now(), day = dayKey(t);
+    let path = String(b.p || "/").split(/[?#]/)[0] || "/";
+    if (path.length > 1) path = path.replace(/\/+$/, "");
+    const h = (await sha(this.daySalt(day) + "|" + (req.headers.get("cf-connecting-ip") || "") + "|" + ua + "|" + site)).slice(0, 20);
+    const fresh = !this.one("SELECT 1 AS x FROM uv WHERE site = ? AND day = ? AND h = ?", site, day, h);
+    if (fresh) this.sql.exec("INSERT INTO uv (site, day, h, last) VALUES (?, ?, ?, ?)", site, day, h, t);
+    else this.sql.exec("UPDATE uv SET last = ? WHERE site = ? AND day = ? AND h = ?", t, site, day, h);
+    this.bump(site, day, "pv", "");
+    this.bump(site, day, "path", path);
+    if (fresh) {
+      let ref = "";
+      try { ref = cleanHost(new URL(String(b.r || "")).hostname); } catch {}
+      if (ref === site) ref = "";
+      const w = Number(b.w) || 0;
+      this.bump(site, day, "uv", "");
+      this.bump(site, day, "ref", ref ? (REF_NAMES[ref] || ref) : "Direct");
+      this.bump(site, day, "country", (req.headers.get("x-country") || "").toUpperCase().slice(0, 2) || "??");
+      this.bump(site, day, "device", /iPad|Tablet/i.test(ua) || (w >= 600 && w < 1024 && /Mobi|Android/i.test(ua)) ? "Tablet" : /Mobi|Android|iPhone/i.test(ua) ? "Phone" : "Computer");
+    }
+    this.sql.exec("UPDATE sites SET last_hit = ? WHERE domain = ?", t, site);
+  }
+  sitesOf(user) {
+    const team = this.teamOf(user.id); if (!team) return [];
+    return this.all("SELECT domain, added, last_hit FROM sites WHERE team_id = ? ORDER BY added", team.id);
+  }
+  addSite(user, b) {
+    const team = this.teamOf(user.id); if (!team) return json({ error: "no_team" }, 400);
+    const domain = cleanHost(b.domain);
+    if (!okHost(domain)) return json({ error: "bad_domain" }, 400);
+    const ex = this.one("SELECT team_id FROM sites WHERE domain = ?", domain);
+    if (ex && ex.team_id !== team.id) return json({ error: "domain_taken" }, 409);
+    if (!ex) {
+      if (this.one("SELECT COUNT(*) AS c FROM sites WHERE team_id = ?", team.id).c >= 10) return json({ error: "too_many_sites" }, 400);
+      this.sql.exec("INSERT INTO sites (domain, team_id, added) VALUES (?, ?, ?)", domain, team.id, Date.now());
+    }
+    return json({ sites: this.sitesOf(user) });
+  }
+  removeSite(user, b) {
+    const team = this.teamOf(user.id); const domain = cleanHost(b.domain);
+    if (team && this.one("SELECT 1 AS x FROM sites WHERE domain = ? AND team_id = ?", domain, team.id)) {
+      this.sql.exec("DELETE FROM sites WHERE domain = ?", domain);
+      this.sql.exec("DELETE FROM stats WHERE site = ?", domain);
+      this.sql.exec("DELETE FROM uv WHERE site = ?", domain);
+    }
+    return json({ sites: this.sitesOf(user) });
+  }
+  ownSite(user, domain) {
+    const team = this.teamOf(user.id); domain = cleanHost(domain);
+    return team && this.one("SELECT domain, last_hit FROM sites WHERE domain = ? AND team_id = ?", domain, team.id);
+  }
+  // Loads the site's home page from Cloudflare to say whether it is up and whether the counter is installed.
+  async checkSite(user, b) {
+    const s = this.ownSite(user, b.domain); if (!s) return json({ error: "not_found" }, 404);
+    const t0 = Date.now();
+    try {
+      const r = await fetch("https://" + s.domain + "/", { redirect: "follow", headers: { "user-agent": "TaskSiteCheck/1.0 (+uptime)" }, signal: AbortSignal.timeout(10000) });
+      const html = r.headers.get("content-type")?.includes("html") ? (await r.text()).slice(0, 400000) : "";
+      return json({ up: r.status < 500, status: r.status, ms: Date.now() - t0, installed: /\/t\.js["'?]/.test(html) && html.includes("task.brandbridgeacademy.workers.dev"), finalUrl: r.url });
+    } catch (e) {
+      return json({ up: false, status: 0, ms: Date.now() - t0, installed: false, error: String(e && e.message || e).slice(0, 120) });
+    }
+  }
+  stats(user, url) {
+    const s = this.ownSite(user, url.searchParams.get("site")); if (!s) return json({ error: "not_found" }, 404);
+    const n = Math.min(90, Math.max(7, Number(url.searchParams.get("days")) || 30));
+    const now = Date.now(), today = dayKey(now), days = [];
+    for (let i = n - 1; i >= 0; i--) days.push(dayKey(now - i * 864e5));
+    const from = days[0];
+    const daily = Object.fromEntries(days.map(d => [d, { day: d, pv: 0, uv: 0 }]));
+    for (const r of this.all("SELECT day, dim, n FROM stats WHERE site = ? AND day >= ? AND dim IN ('pv', 'uv')", s.domain, from)) if (daily[r.day]) daily[r.day][r.dim] = r.n;
+    const top = {};
+    for (const dim of DIMS) top[dim] = this.all("SELECT key, SUM(n) AS n FROM stats WHERE site = ? AND day >= ? AND dim = ? GROUP BY key ORDER BY n DESC LIMIT 8", s.domain, from, dim).map(r => [r.key, r.n]);
+    const todayTop = this.all("SELECT key, n FROM stats WHERE site = ? AND day = ? AND dim = 'path' ORDER BY n DESC LIMIT 5", s.domain, today).map(r => [r.key, r.n]);
+    const live = this.one("SELECT COUNT(*) AS c FROM uv WHERE site = ? AND day >= ? AND last > ?", s.domain, dayKey(now - 864e5), now - 5 * 6e4)?.c || 0;
+    return json({ site: s.domain, lastHit: s.last_hit || 0, today, days: days.map(d => daily[d]), top, todayTop, live });
+  }
 }
+
+// Friendlier names for the most common sources.
+const REF_NAMES = { "google.com": "Google", "google.co.ke": "Google", "bing.com": "Bing", "duckduckgo.com": "DuckDuckGo", "facebook.com": "Facebook", "m.facebook.com": "Facebook", "l.facebook.com": "Facebook", "lm.facebook.com": "Facebook",
+  "instagram.com": "Instagram", "l.instagram.com": "Instagram", "t.co": "X (Twitter)", "x.com": "X (Twitter)", "twitter.com": "X (Twitter)", "linkedin.com": "LinkedIn", "lnkd.in": "LinkedIn",
+  "youtube.com": "YouTube", "tiktok.com": "TikTok", "wa.me": "WhatsApp", "web.whatsapp.com": "WhatsApp", "chatgpt.com": "ChatGPT", "brandbridgeacademy.site": "Brandbridge Academy", "task.brandbridgeacademy.workers.dev": "Task app" };
