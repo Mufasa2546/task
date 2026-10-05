@@ -272,6 +272,7 @@ body[data-bg="photo"]::before{background:linear-gradient(color-mix(in srgb,var(-
 .wm img{max-height:240px;object-fit:contain}
 :root[data-theme="dark"] .wm{opacity:.09}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wm{opacity:.09}}
+@media (max-width:900px){.wm{display:none!important}} /* no watermark on phones */
 .bg-pick{display:flex;flex-wrap:wrap;gap:8px}
 .bg-pick button{width:64px;height:44px;border-radius:10px;border:2px solid var(--line);background:var(--bg);font-size:11px;font-weight:700;color:var(--muted);padding:0;overflow:hidden}
 .bg-pick button[aria-pressed="true"]{border-color:var(--gold);color:var(--fg)}
@@ -1442,7 +1443,7 @@ function viewSettings(){
       <div class="set-row"><div class="t"><b>Background</b><span>Soft, so text stays easy to read</span></div>
         <div class="bg-pick">${[["none", "Plain", ""], ["navy", "Navy", "sw-navy"], ["gold", "Gold", "sw-gold"], ["grid", "Grid", "sw-grid"], ["photo", profile.bgPhoto ? "" : "Photo", "sw-photo"]].map(([k, l, c]) => `<button data-bg="${k}" class="${c}" aria-pressed="${(profile.bg || "none") === k}" aria-label="${k} background">${l}</button>`).join("")}</div></div>
       <div class="set-row"><div class="t"><b>Your own background photo</b><span>${profile.bgPhoto ? "Photo saved" : "Any photo from your phone"}</span></div><label class="btn" for="bg-file" role="button">${IC.upload}${profile.bgPhoto ? "Change photo" : "Upload photo"}</label></div>
-      <div class="set-row"><div class="t"><b>Logo watermark</b><span>${profile.logo ? "Using your uploaded logo" : "Using a Brandbridge wordmark until you upload your logo"}</span></div>
+      <div class="set-row"><div class="t"><b>Logo watermark</b><span>${profile.logo ? "Using your uploaded logo" : "Using a Brandbridge wordmark until you upload your logo"}. Laptop only.</span></div>
         <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><label class="btn" for="logo-file" role="button">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</label>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div></div></section>`;
   const pinSec = `${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>${IC.lock.replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')}PIN lock</h2><p class="sub">${hasPin() ? "On. Task asks for your PIN when it opens and after 2 minutes away." : "Ask for a PIN when Task opens, so client details stay private if someone picks up your phone."}</p></div>${hasPin() ? `<span class="pill s-good">On</span>` : ""}</div>
       ${hasPin() ? `<div class="btn-row"><button class="btn" id="lock-now">${IC.lock}Lock now</button><button class="btn ghost danger" id="pin-remove">Remove PIN</button></div>`
@@ -1475,7 +1476,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.8.1";
+const APP_VERSION = "2.8.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
