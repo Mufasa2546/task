@@ -354,7 +354,7 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .content .list .row-title{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .content .list .row-main > .row-meta ~ .row-meta{display:none}
 .content .list .row-meta{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
-.pop{position:fixed;inset:0;z-index:80;display:grid;align-items:end;justify-items:center;background:rgba(4,12,24,.45)}
+.pop{position:fixed;inset:0;z-index:80;display:grid;align-items:end;justify-items:center;background:rgba(4,12,24,.4);backdrop-filter:blur(6px) saturate(.9);-webkit-backdrop-filter:blur(6px) saturate(.9)}
 .pop[hidden]{display:none}
 .pop-box{width:100%;max-width:640px;max-height:88dvh;display:flex;flex-direction:column;background:var(--bg);border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.25);overflow:hidden}
 .pop-head{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
@@ -429,7 +429,7 @@ body.pop-open{overflow:hidden}
   .tabbar svg{width:22px;height:22px}
   .tabbar button[aria-current="true"]{color:var(--accent)}
   .toasts{left:16px;right:16px;width:auto;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom,0px))}
-  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:44;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--panel);border-radius:20px 20px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.2)}
   .sheet .grip{width:40px;height:4px;border-radius:99px;background:var(--line-strong);margin:0 auto 12px}
   .sheet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -1440,7 +1440,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.6";
+const APP_VERSION = "2.6.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
