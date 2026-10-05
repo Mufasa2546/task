@@ -105,11 +105,16 @@ a.btn.ghost{color:var(--muted)}
 .card-head .sub{font-size:13px;color:var(--muted);margin:2px 0 0}
 .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start}
 .hero{background:linear-gradient(135deg,#0b2340 0%,#14345c 55%,#8b0e2f 130%);border-bottom:3px solid var(--gold)!important;color:#fff;border:0;padding:22px}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.hero-top > div{min-width:0}
+.hero .avatar{box-shadow:0 0 0 2px rgba(255,255,255,.25),0 0 0 3.5px var(--gold)}
+.pill.s-gold{background:color-mix(in srgb,var(--gold) 20%,transparent);color:color-mix(in srgb,var(--gold) 60%,var(--fg))}
 .hero h2{margin:0;font-size:clamp(22px,3.4vw,28px);font-weight:800;letter-spacing:-.02em;text-wrap:balance}
 .hero p{margin:6px 0 0;opacity:.92;max-width:60ch}
 .hero .btn{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.28);color:#fff}
 .hero .btn:hover{background:rgba(255,255,255,.26)}
 .hero .btn-row{margin-top:16px}
+.stat-money{font-size:clamp(17px,2.4vw,22px)!important;overflow-wrap:anywhere}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);text-align:left;min-width:0}
 button.stat:hover{border-color:var(--accent)}
@@ -238,12 +243,62 @@ textarea{resize:vertical;min-height:80px}
 .steps{margin:0 0 14px;padding-left:20px;display:grid;gap:6px;font-size:14px}
 .calc-out{margin-top:12px;background:var(--sunk);border-radius:var(--r-sm);padding:12px 14px;min-height:46px}
 .calc-out.placeholder{color:var(--muted)}
+.avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:none;display:grid;place-items:center;background:linear-gradient(135deg,#0b2340,#8b0e2f);color:#fff;font-weight:700;font-size:12.5px;box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--gold)}
+.avatar.lg{width:84px;height:84px;font-size:28px}
+.avatar.md{width:56px;height:56px;font-size:19px}
+.me-btn{border:0;background:none;padding:0;cursor:pointer;border-radius:50%;flex:none}
+.side-me{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--sunk);text-align:left;width:100%;cursor:pointer}
+.side-me:hover{border-color:var(--gold)}
+.side-me b{display:block;font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-me span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-me > div{min-width:0}
+/* backgrounds and watermark sit behind everything */
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none}
+body[data-bg="navy"]::before{background:radial-gradient(900px 520px at 100% 0%,color-mix(in srgb,#0b2340 14%,transparent),transparent 62%),radial-gradient(760px 460px at 0% 100%,color-mix(in srgb,#8b0e2f 9%,transparent),transparent 62%)}
+body[data-bg="gold"]::before{background:radial-gradient(900px 520px at 100% 0%,color-mix(in srgb,#c8a24b 22%,transparent),transparent 62%),radial-gradient(760px 460px at 0% 100%,color-mix(in srgb,#0b2340 10%,transparent),transparent 62%)}
+body[data-bg="grid"]::before{background-image:linear-gradient(color-mix(in srgb,var(--fg) 6%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--fg) 6%,transparent) 1px,transparent 1px);background-size:28px 28px}
+body[data-bg="photo"]::before{background:linear-gradient(color-mix(in srgb,var(--bg) 80%,transparent),color-mix(in srgb,var(--bg) 80%,transparent)),var(--bg-photo) center/cover no-repeat}
+.shell{position:relative;z-index:1}
+.wm{position:fixed;z-index:0;pointer-events:none;right:clamp(16px,4vw,48px);bottom:clamp(90px,14vh,140px);width:min(52vw,380px);color:var(--fg);opacity:.06}
+.wm img,.wm svg{width:100%;height:auto;display:block}
+.wm img{max-height:240px;object-fit:contain}
+:root[data-theme="dark"] .wm{opacity:.09}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .wm{opacity:.09}}
+.bg-pick{display:flex;flex-wrap:wrap;gap:8px}
+.bg-pick button{width:64px;height:44px;border-radius:10px;border:2px solid var(--line);background:var(--bg);font-size:11px;font-weight:700;color:var(--muted);padding:0;overflow:hidden}
+.bg-pick button[aria-pressed="true"]{border-color:var(--gold);color:var(--fg)}
+.bg-pick .sw-navy{background:radial-gradient(60px 40px at 100% 0%,rgba(11,35,64,.35),transparent),radial-gradient(60px 40px at 0% 100%,rgba(139,14,47,.25),transparent),var(--bg)}
+.bg-pick .sw-gold{background:radial-gradient(60px 40px at 100% 0%,rgba(200,162,75,.5),transparent),var(--bg)}
+.bg-pick .sw-grid{background-image:linear-gradient(rgba(127,127,127,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(127,127,127,.25) 1px,transparent 1px);background-size:8px 8px}
+.bg-pick .sw-photo{background:var(--bg-photo) center/cover,var(--sunk)}
+.switch{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;cursor:pointer}
+.switch input{width:20px;height:20px;min-height:0;accent-color:var(--accent)}
+/* lock screen */
+.lock{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:radial-gradient(700px 420px at 100% 0%,rgba(200,162,75,.18),transparent 60%),radial-gradient(600px 380px at 0% 100%,rgba(139,14,47,.28),transparent 60%),#0b2340;color:#fff;overflow-y:auto}
+.lock[hidden]{display:none}
+body.is-locked{overflow:hidden}
+.lock-box{width:100%;max-width:320px;display:grid;justify-items:center;gap:12px;text-align:center}
+.lock-box h2{margin:6px 0 0;font-size:22px;font-weight:800}
+.lock-box p{margin:0;color:rgba(255,255,255,.75);font-size:14px}
+.lock .avatar{box-shadow:0 0 0 3px #0b2340,0 0 0 5px #c8a24b}
+.pin-dots{display:flex;gap:14px;margin:10px 0 6px}
+.pin-dots i{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.6)}
+.pin-dots i.on{background:#c8a24b;border-color:#c8a24b}
+.pin-dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.keypad{display:grid;grid-template-columns:repeat(3,72px);gap:14px;margin:6px 0}
+.keypad button{width:72px;height:72px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font-size:26px;font-weight:600;display:grid;place-items:center}
+.keypad button:active{background:rgba(200,162,75,.35)}
+.keypad svg{width:22px;height:22px}
+.lock .btn.ghost{color:rgba(255,255,255,.8)}
+.lock .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff}
+.lock .btn.danger{background:#8b0e2f;border-color:#8b0e2f}
 .copyright{margin-top:auto;text-align:center;font-size:12.5px;color:var(--muted);padding:14px 16px 24px;border-top:1px solid var(--line)}
 
 @media (max-width:900px){
   .shell{grid-template-columns:minmax(0,1fr)}
   .side{display:none}
-  .topbar .m-brand{display:grid}
+  .topbar .m-brand{display:block}
   .page-title h1{font-size:18px}
   .content{padding-block:16px 20px}
   .copyright{padding-bottom:calc(var(--nav-h) + 22px + env(safe-area-inset-bottom,0px))}
@@ -268,12 +323,14 @@ textarea{resize:vertical;min-height:80px}
 @media (prefers-reduced-motion:no-preference){.toast{animation:pop .2s ease-out}@keyframes pop{from{transform:translateY(6px);opacity:.3}}}
 </style>
 
+<div class="wm" id="wm" aria-hidden="true"></div>
+<div class="lock" id="lock" role="dialog" aria-label="Locked" hidden></div>
 <div class="shell">
   <aside class="side" id="side" aria-label="Sections"></aside>
   <div class="main">
     <header class="topbar">
       <div class="topbar-in">
-        <span class="logo m-brand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#c8a24b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>
+        <button class="m-brand me-btn" id="m-avatar" data-nav="settings" aria-label="Profile and settings"></button>
         <div class="page-title"><h1 id="page-h1">Today</h1><p id="page-sub">&nbsp;</p></div>
         <div class="top-actions">
           <button class="btn primary" id="new-btn" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="new-label">New</span></button>
@@ -369,10 +426,11 @@ const apptEnd = a => a.start + (a.duration || 30) * MIN;
 function remindAt(x){
   if (x.kind === "task" && x.remind && !x.done && x.due) return x.due;
   if (x.kind === "appt" && x.status === "scheduled" && x.start && x.lead != null && x.lead >= 0) return x.start - x.lead * MIN;
+  if (x.kind === "deal" && x.remind && x.nextAt && isOpenDeal(x)) return x.nextAt;
   if (x.kind === "stock" && !x.cleared && x.expiry) return x.expiry - (x.alertDays ?? 30) * DAY;
   return null;
 }
-const reminderText = x => x.kind === "stock" ? `${x.name}${x.batch ? " (batch " + x.batch + ")" : ""} expires ${fmtDay(x.expiry)}` : x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${fmtTime(x.start)}` : x.title;
+const reminderText = x => x.kind === "deal" ? `${x.client}: ${x.nextStep || "follow up"}` : x.kind === "stock" ? `${x.name}${x.batch ? " (batch " + x.batch + ")" : ""} expires ${fmtDay(x.expiry)}` : x.kind === "appt" ? `${x.client}${x.purpose ? " · " + x.purpose : ""} at ${fmtTime(x.start)}` : x.title;
 const LEARN_META = "learn-meta";
 const learnMeta = () => byId(LEARN_META) || {id: LEARN_META, kind: "meta", days: []};
 const BOX_DAYS = [0, 0, 1, 3, 7, 16];
@@ -394,13 +452,74 @@ function nextDue(due, repeat){
 }
 async function toggleTask(r){
   if (!r.done && r.repeat && r.due){
-    const nx = await add("task", {title: r.title, due: nextDue(r.due, r.repeat), remind: r.remind, notes: r.notes, bizId: r.bizId, repeat: r.repeat, done: false});
+    const nx = await add("task", {title: r.title, who: r.who, due: nextDue(r.due, r.repeat), remind: r.remind, notes: r.notes, bizId: r.bizId, repeat: r.repeat, done: false});
     await put({...r, done: true, doneAt: now(), nextId: nx.id});
     toast(`Done. Next: ${fmtWhen(nx.due)}`); return;
   }
   if (r.done && r.nextId){ const nx = byId(r.nextId); if (nx && !nx.done) await remove(nx.id); }
   put({...r, done: !r.done, doneAt: !r.done ? now() : null, nextId: null});
 }
+
+/* ---------- Profile, look and lock (this device only) ---------- */
+const PROFILE_KEY = "task.profile";
+let profile = {};
+try { profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"); } catch {}
+profile = {name: "", company: "Brandbridge", partner: "Paul", currency: "KES", bg: "navy", watermark: true, ...profile};
+function saveProfile(patch){ profile = {...profile, ...patch}; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); return true; } catch { toast("That image is too big to save on this device. Try a smaller one."); return false; } }
+const firstName = () => (profile.name || "").trim().split(/\s+/)[0] || "";
+const partner = () => (profile.partner || "").trim() || "Partner";
+const WHO = () => [["me", firstName() || "Me"], ["partner", partner()], ["both", "Both"]];
+const whoLabel = w => (WHO().find(x => x[0] === w) || [])[1] || "";
+const money = n => n ? `${esc(profile.currency || "")} ${Number(n).toLocaleString()}`.trim() : "";
+const initials = () => (profile.name || "T").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+const avatar = (cls = "") => profile.photo ? `<img class="avatar ${cls}" src="${profile.photo}" alt="">` : `<span class="avatar ${cls}" aria-hidden="true">${esc(initials())}</span>`;
+const WORDMARK = `<svg viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M30 18h34c18 0 28 8 28 21 0 8-4 14-11 17 9 3 15 10 15 20 0 15-11 24-31 24H30zm18 34h14c8 0 12-3 12-9s-4-9-12-9H48zm0 34h16c9 0 13-3 13-10s-4-10-13-10H48z"/><text x="112" y="72" font-family="Plus Jakarta Sans,system-ui,sans-serif" font-size="42" font-weight="800" letter-spacing="2">BRANDBRIDGE</text><rect x="114" y="86" width="220" height="5" rx="2.5"/></g></svg>`;
+function applyLook(){
+  const b = document.body; if (!b) return;
+  b.dataset.bg = profile.bg === "photo" && !profile.bgPhoto ? "navy" : (profile.bg || "none");
+  document.documentElement.style.setProperty("--bg-photo", profile.bgPhoto ? `url("${profile.bgPhoto}")` : "none");
+  const wm = document.getElementById("wm");
+  if (wm){ wm.hidden = !profile.watermark; wm.innerHTML = profile.logo ? `<img src="${profile.logo}" alt="">` : WORDMARK; }
+}
+function readImage(file, max, type = "image/jpeg", q = .82){
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error("not an image"));
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL(type, q)); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("unreadable image")); };
+    img.src = url;
+  });
+}
+async function pinHash(pin, salt){ const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + ":" + pin)); return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+const hasPin = () => !inClaude && !!profile.pinHash;
+let locked = false, pinEntry = "", lockMode = "pin", hiddenAt = 0;
+function lockNow(){ if (!hasPin()) return; locked = true; pinEntry = ""; lockMode = "pin"; renderLock(); }
+function renderLock(){
+  const el = document.getElementById("lock"); if (!el) return;
+  el.hidden = !locked; document.body.classList.toggle("is-locked", locked);
+  if (!locked){ el.innerHTML = ""; return; }
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
+  el.innerHTML = lockMode === "forgot" ? `<div class="lock-box"><div class="lock-av">${avatar("lg")}</div><h2>Reset your PIN</h2>
+      <p>For privacy, the only way to reset a forgotten PIN is to erase Task's data on this device. You can then restore everything from your latest backup file.</p>
+      <div class="btn-row" style="justify-content:center"><button class="btn" id="lock-back">Go back</button><button class="btn danger" id="lock-wipe">Erase and reset</button></div></div>`
+    : `<div class="lock-box"><div class="lock-av">${avatar("lg")}</div><h2>${firstName() ? "Welcome back, " + esc(firstName()) : "Welcome back"}</h2><p>Enter your PIN to open Task</p>
+      <div class="pin-dots ${lockMode === "wrong" ? "shake" : ""}">${Array.from({length: profile.pinLen || 4}, (_, i) => `<i class="${i < pinEntry.length ? "on" : ""}"></i>`).join("")}</div>
+      <div class="keypad">${keys.map(k => k === "" ? "<span></span>" : `<button data-key="${k}" aria-label="${k === "del" ? "Delete" : k}">${k === "del" ? IC.x : k}</button>`).join("")}</div>
+      <button class="btn ghost sm" id="lock-forgot">Forgot PIN?</button></div>`;
+}
+async function pressKey(k){
+  if (!locked) return;
+  if (k === "del"){ pinEntry = pinEntry.slice(0, -1); lockMode = "pin"; return renderLock(); }
+  if (pinEntry.length >= (profile.pinLen || 4)) return;
+  pinEntry += k; lockMode = "pin"; renderLock();
+  if (pinEntry.length === (profile.pinLen || 4)){
+    if (await pinHash(pinEntry, profile.pinSalt) === profile.pinHash){ locked = false; pinEntry = ""; renderLock(); render(); }
+    else { pinEntry = ""; lockMode = "wrong"; renderLock(); if (navigator.vibrate) try { navigator.vibrate(120); } catch {} }
+  }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) hiddenAt = now(); else if (hasPin() && hiddenAt && now() - hiddenAt > 2 * MIN) lockNow(); });
 
 /* ---------- Icons ---------- */
 const I = (p, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${p}</svg>`;
@@ -421,6 +540,9 @@ const IC = {
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
   search: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
   copy: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'),
+  deals: I('<path d="M3 8.5l4-3 5 2 5-2 4 3v4l-9 7-9-7z"/><path d="M12 7.5v12M7 5.5l5 7 5-7"/>'),
+  user: I('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4 4.3-6 8-6s6.8 2 8 6"/>'),
+  lock: I('<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>'),
   tools: I('<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7h7M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14.5h1M11.5 14.5h1M14.5 14.5h1M8.5 18h1M11.5 18h4"/>'),
   stock: I('<path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/>'),
   insights: I('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
@@ -434,19 +556,20 @@ const IC = {
 const SECTIONS = {
   today: {label: "Today", icon: "today", group: "Plan"},
   tasks: {label: "Goals", icon: "tasks", group: "Plan"},
-  appts: {label: "Appointments", short: "Clients", icon: "appts", group: "Plan"},
-  learn: {label: "Pharmacy learning", short: "Learn", icon: "learn", group: "Grow"},
-  tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Grow"},
-  log: {label: "Activity log", short: "Log", icon: "log", group: "Grow"},
-  stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Work"},
-  biz: {label: "Businesses", icon: "biz", group: "Work"},
-  projects: {label: "Apps & websites", short: "Projects", icon: "projects", group: "Work"},
-  ai: {label: "Task AI", icon: "ai", group: "Assist"},
-  insights: {label: "Insights", icon: "insights", group: "Assist"},
-  search: {label: "Search", icon: "search", group: "Assist"},
-  settings: {label: "Settings & backup", short: "Settings", icon: "settings", group: "Assist"}
+  appts: {label: "Meetings & appointments", short: "Meetings", icon: "appts", group: "Plan"},
+  deals: {label: "Clients & deals", short: "Clients", icon: "deals", group: "Brandbridge"},
+  projects: {label: "Projects & websites", short: "Projects", icon: "projects", group: "Brandbridge"},
+  biz: {label: "Businesses", icon: "biz", group: "Brandbridge"},
+  learn: {label: "Learning", short: "Learn", icon: "learn", group: "Pharmacy"},
+  tools: {label: "Pharmacy tools", short: "Tools", icon: "tools", group: "Pharmacy"},
+  stock: {label: "Expiry tracker", short: "Expiry", icon: "stock", group: "Pharmacy"},
+  log: {label: "Activity log", short: "Log", icon: "log", group: "Personal"},
+  insights: {label: "Insights", icon: "insights", group: "Personal"},
+  ai: {label: "Task AI", icon: "ai", group: "Assistant"},
+  search: {label: "Search", icon: "search", group: "Assistant"},
+  settings: {label: "Settings & profile", short: "Settings", icon: "settings", group: "Assistant"}
 };
-const TAB_KEYS = ["today", "tasks", "appts", "learn"];
+const TAB_KEYS = ["today", "tasks", "deals", "appts"];
 let view = "today";
 try { const v = localStorage.getItem("jarvis.view"); if (SECTIONS[v]) view = v; } catch {}
 if (location.hash && SECTIONS[location.hash.slice(1)]) view = location.hash.slice(1);
@@ -455,7 +578,7 @@ let syncLabel = inClaude ? "Saved on this device" : "";
 function counts(){
   return { tasks: of("task").filter(t => !t.done).length,
     appts: of("appt").filter(a => a.status === "scheduled" && apptEnd(a) >= now()).length,
-    learn: cardsDue().length, biz: of("biz").length, projects: of("project").length, stock: stockAlerts().length };
+    learn: cardsDue().length, biz: of("biz").length, projects: of("project").length, stock: stockAlerts().length, deals: openDeals().length };
 }
 function renderChrome(){
   const c = counts();
@@ -466,13 +589,15 @@ function renderChrome(){
   $("#side").innerHTML = `<div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#c8a24b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5l4 4 8-9"/></svg></span>Task</div>` +
     Object.entries(groups).map(([g, keys]) => `<div class="nav-group"><div class="nav-label">${g}</div>${keys.map(k =>
       `<button class="nav-btn" data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span>${c[k] ? `<span class="nav-count">${c[k]}</span>` : ""}</button>`).join("")}</div>`).join("") +
+    `<button class="side-me" data-nav="settings">${avatar()}<div><b>${esc(profile.name || "Add your profile")}</b><span>${esc(profile.company ? profile.company + " · " + (profile.role || "Co-founder") : "Name, photo and look")}</span></div></button>` +
     `<div class="side-foot"><span class="dot ${online || inClaude ? "" : "off"}"></span>${esc(syncLabel || foot)}</div>`;
   const inMore = !TAB_KEYS.includes(view);
   $("#tabbar").innerHTML = TAB_KEYS.map(k => `<button data-nav="${k}" aria-current="${view === k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].short || SECTIONS[k].label}</span></button>`).join("") +
     `<button data-sheet="open" aria-current="${inMore}">${IC.more}<span>${inMore ? (SECTIONS[view].short || SECTIONS[view].label) : "More"}</span></button>`;
   $("#sheet-grid").innerHTML = Object.keys(SECTIONS).filter(k => !TAB_KEYS.includes(k)).map(k =>
     `<button data-nav="${k}">${IC[SECTIONS[k].icon]}<span>${SECTIONS[k].label}</span></button>`).join("");
-  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["appt","appts","Client appointment"],["card","learn","Drug card"],["log","log","Log an update"],["stock","stock","Stock expiry"]]
+  const ma = $("#m-avatar"); if (ma) ma.innerHTML = avatar();
+  $("#new-menu").innerHTML = [["task","tasks","Goal or reminder"],["deal","deals","Client or deal"],["appt","appts","Meeting or appointment"],["log","log","Log an update"],["card","learn","Drug card"],["stock","stock","Stock expiry"]]
     .map(([n, ic, l]) => `<button data-new="${n}">${IC[ic]}<span>${l}</span></button>`).join("");
 }
 function go(k, opts = {}){
@@ -508,7 +633,7 @@ function taskRow(t){
     <div class="row-main"><div class="row-title">${esc(t.title)}</div>
       <div class="row-meta">${t.due ? `<span>${esc(fmtWhen(t.due))}</span>` : `<span>No time set</span>`}
         ${st === "overdue" ? `<span class="pill s-bad">Overdue</span>` : st === "soon" ? `<span class="pill s-warn">Due soon</span>` : ""}
-        ${t.repeat ? `<span class="pill">${esc(REPEAT_LABEL[t.repeat] || t.repeat)}</span>` : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
+        ${t.who && t.who !== "me" ? `<span class="pill s-gold">${esc(whoLabel(t.who))}</span>` : ""}${t.repeat ? `<span class="pill">${esc(REPEAT_LABEL[t.repeat] || t.repeat)}</span>` : ""}${biz ? `<span>${esc(biz.name)}</span>` : ""}</div>
       ${t.notes ? `<div class="row-notes">${esc(t.notes)}</div>` : ""}</div>
     <div class="row-actions">${t.due && !t.done ? calBtn(t.id) : ""}${editBtn(t.id)}${delBtn(t.id)}</div></li>`;
 }
@@ -536,7 +661,7 @@ function apptRow(a, showDay = true){
 function viewToday(){
   const tasksToday = sortTasks(of("task").filter(t => !t.done && t.due && (isToday(t.due) || t.due < now())));
   const apptsToday = of("appt").filter(a => isToday(a.start) && a.status !== "cancelled").sort((a, b) => a.start - b.start);
-  const schedule = [...apptsToday.map(a => ({t: a.start, html: apptRow(a, false)})), ...tasksToday.map(t => ({t: t.due, html: taskRow(t)}))].sort((a, b) => a.t - b.t);
+  const schedule = [...followUps().map(d => ({t: d.nextAt, html: dealRow(d, true)})), ...apptsToday.map(a => ({t: a.start, html: apptRow(a, false)})), ...tasksToday.map(t => ({t: t.due, html: taskRow(t)}))].sort((a, b) => a.t - b.t);
   const unscheduled = sortTasks(of("task").filter(t => !t.done && !t.due)).slice(0, 3);
   const due = cardsDue().length, projs = of("project");
   const attention = projs.filter(p => p.status === "down" || p.status === "building"), expiring = stockAlerts().sort((a, b) => a.expiry - b.expiry);
@@ -547,27 +672,27 @@ function viewToday(){
   const h = new Date().getHours();
   return `
   <section class="card hero">
-    <h2>${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}.</h2>
-    <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your first goal, appointment or drug card to get started."}</p>
-    <div class="btn-row"><button class="btn" data-go="appts" data-open="appt">${IC.appts}New appointment</button><button class="btn" data-go="learn">${IC.learn}${due ? `Review ${due} card${due > 1 ? "s" : ""}` : "Study"}</button></div>
+    <div class="hero-top"><div><h2>${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}${firstName() ? ", " + esc(firstName()) : ""}.</h2>
+    <p>${next ? "Next up: " + esc(next.s) + "." : items.length ? "Nothing scheduled next. A good moment to plan or study." : "Welcome to Task. Add your profile in Settings, then your first goal, client or meeting."}</p></div>${avatar("md")}</div>
+    <div class="btn-row"><button class="btn" data-go="deals" data-open="deal">${IC.deals}New client</button><button class="btn" data-go="appts" data-open="appt">${IC.appts}New meeting</button>${due ? `<button class="btn" data-go="learn">${IC.learn}Review ${due} card${due > 1 ? "s" : ""}</button>` : ""}</div>
   </section>
   ${notifBanner()}${!inClaude && !apiKey() ? `<div class="notice"><p>Task AI is off. Add your Anthropic API key to turn on the assistant, briefings, quizzes and interaction checks.</p><button class="btn sm primary" data-go="ai" data-open="key">${IC.ai}Add API key</button></div>` : ""}${!inClaude && items.length >= 5 && now() - lastBackup() > 7 * DAY ? `<div class="notice"><p>${lastBackup() ? "Your last backup was " + esc(ago(lastBackup())) + "." : "You haven't backed up yet."} Your data lives only on this device, so save a copy now and then.</p><button class="btn sm primary" id="backup-btn">${IC.download}Back up now</button></div>` : ""}
   <div class="stats">
     <button class="stat" data-nav="tasks"><div class="n">${tasksToday.length}</div><div class="l">Goals due today</div></button>
-    <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Appointments today</div></button>
+    <button class="stat" data-nav="appts"><div class="n">${apptsToday.filter(a => a.status === "scheduled").length}</div><div class="l">Meetings today</div></button>
+    <button class="stat" data-nav="deals"><div class="n" ${followUps().some(d => d.nextAt < now()) ? 'style="color:var(--bad)"' : ""}>${followUps().length}</div><div class="l">Client follow-ups</div></button>
     <button class="stat" data-nav="learn"><div class="n">${due}</div><div class="l">Cards to review${streak() ? ` · ${streak()}-day streak` : ""}</div></button>
-    <button class="stat" data-nav="projects"><div class="n" ${projs.some(p => p.status === "down") ? 'style="color:var(--bad)"' : ""}>${projs.filter(p => p.status === "live").length}/${projs.length}</div><div class="l">Projects live</div></button>
   </div>
   <div class="grid-2">
     <section class="card">
-      <div class="card-head"><div><h2>Today's schedule</h2><p class="sub">Appointments and goals, in time order</p></div><button class="btn sm" data-go="tasks" data-open="task">${IC.plus}Goal</button></div>
+      <div class="card-head"><div><h2>Today's schedule</h2><p class="sub">Meetings, follow-ups and goals, in time order</p></div><button class="btn sm" data-go="tasks" data-open="task">${IC.plus}Goal</button></div>
       ${schedule.length ? `<ul class="list">${schedule.map(s => s.html).join("")}</ul>` : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
       ${unscheduled.length ? `<div class="group-head">Anytime</div><ul class="list">${unscheduled.map(taskRow).join("")}</ul>` : ""}
     </section>
     <div style="display:grid;gap:18px">
       <section class="card">
         <div class="card-head"><h2>Daily briefing</h2><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div>
-        <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: appointments, goals, study, businesses and projects.")}</div>
+        <div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Get a short summary of your day: meetings, Brandbridge clients, goals, pharmacy and study.")}</div>
       </section>
       <section class="card">
         <div class="card-head"><h2>Needs attention</h2><button class="btn sm ghost" data-nav="${expiring.length ? "stock" : "projects"}">${expiring.length ? "Expiry" : "Projects"}</button></div>
@@ -587,7 +712,8 @@ function viewToday(){
 let taskFilter = "open";
 function taskForm(e){
   return `<form class="form" id="task-form">
-    <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Restock the pharmacy shelves" autocomplete="off"></label>
+    <label class="field wide">Goal<input id="t-title" required value="${esc(e?.title)}" placeholder="Send the website proposal to the client" autocomplete="off"></label>
+    <label class="field">Who<select id="t-who">${WHO().map(([k, l]) => `<option value="${k}" ${(e?.who || "me") === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
     <label class="field">When<input id="t-due" type="datetime-local" value="${toInput(e?.due)}"></label>
     <label class="field">Business<select id="t-biz">${bizOptions(e?.bizId)}</select></label>
     <label class="field">Repeat<select id="t-repeat">${[["", "Doesn't repeat"], ["daily", "Every day"], ["weekdays", "Weekdays (Mon to Fri)"], ["weekly", "Every week"], ["monthly", "Every month"]].map(([k, l]) => `<option value="${k}" ${(e?.repeat || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
@@ -611,15 +737,15 @@ let apptFilter = "upcoming";
 function apptForm(e){
   const d = e?.start || (() => { const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); })();
   return `<form class="form" id="appt-form">
-    <label class="field">Client name<input id="a-client" required value="${esc(e?.client)}" placeholder="Mary Wanjiku" autocomplete="off"></label>
+    <label class="field">Client or contact<input id="a-client" required value="${esc(e?.client)}" placeholder="Mary Wanjiku" autocomplete="off" list="contacts"><datalist id="contacts">${[...new Set([...of("deal").map(d => d.client), ...of("appt").map(a => a.client)])].slice(0, 50).map(n => `<option>${esc(n)}</option>`).join("")}</datalist></label>
     <label class="field">Phone<input id="a-phone" type="tel" value="${esc(e?.phone)}" placeholder="+254 7..." autocomplete="off"></label>
-    <label class="field">Purpose<input id="a-purpose" list="purposes" value="${esc(e?.purpose)}" placeholder="Medication review"><datalist id="purposes"><option>Medication review</option><option>Blood pressure check</option><option>Blood sugar check</option><option>Prescription pickup</option><option>Vaccination</option><option>Consultation</option><option>Home delivery</option><option>Follow-up</option></datalist></label>
+    <label class="field">Purpose<input id="a-purpose" list="purposes" value="${esc(e?.purpose)}" placeholder="Discovery call"><datalist id="purposes"><option>Discovery call</option><option>Project kickoff</option><option>Proposal presentation</option><option>Website handover</option><option>Ad campaign review</option><option>Meeting with ${esc(partner())}</option><option>Medication review</option><option>Blood pressure check</option><option>Blood sugar check</option><option>Prescription pickup</option><option>Vaccination</option><option>Consultation</option><option>Home delivery</option><option>Follow-up</option></datalist></label>
     <label class="field">Date and time<input id="a-start" type="datetime-local" required value="${toInput(d)}"></label>
     <label class="field">Length<select id="a-dur">${[15, 30, 45, 60, 90].map(m => `<option value="${m}" ${(e?.duration || 30) === m ? "selected" : ""}>${m} min</option>`).join("")}</select></label>
     <label class="field">Remind me<select id="a-lead">${[[-1, "No reminder"], [0, "At start time"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"], [1440, "1 day before"]].map(([v, l]) => `<option value="${v}" ${(e ? (e.lead ?? -1) : 30) === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    <label class="field">Location<input id="a-loc" value="${esc(e?.location)}" placeholder="Pharmacy, phone call, client's home"></label>
+    <label class="field">Location<input id="a-loc" value="${esc(e?.location)}" placeholder="Office, Google Meet, client's office, pharmacy"></label>
     <label class="field">Business<select id="a-biz">${bizOptions(e?.bizId)}</select></label>
-    <label class="field wide">Notes<textarea id="a-notes" placeholder="Current medicines, allergies, what to prepare">${esc(e?.notes)}</textarea></label>
+    <label class="field wide">Notes<textarea id="a-notes" placeholder="Agenda, what to prepare">${esc(e?.notes)}</textarea></label>
     <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Book appointment"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`;
 }
 function viewAppts(){
@@ -720,9 +846,9 @@ function viewLog(){
   for (const l of logs){ const d = fmtDay(l.at); if (d !== last){ if (last) rows += "</ul>"; rows += `<div class="group-head">${esc(d)}</div><ul class="list">`; last = d; }
     rows += `<li class="row"><span class="time-chip">${esc(fmtTime(l.at))}</span><div class="row-main"><div class="row-title">${esc(l.text)}</div>${l.tag ? `<div class="row-meta"><span>${esc(l.tag)}</span></div>` : ""}</div><div class="row-actions">${delBtn(l.id)}</div></li>`; }
   if (last) rows += "</ul>";
-  const tags = ["Personal", "Pharmacy", "Learning", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
+  const tags = ["Brandbridge", "Pharmacy", "Learning", "Personal", ...of("biz").map(b => b.name), ...of("project").map(p => p.name)];
   return `${adder("log", "Log an update", `<form class="form" id="log-form">
-      <label class="field wide">What did you do?<textarea id="l-text" required placeholder="Counselled 6 clients on new hypertension regimens"></textarea></label>
+      <label class="field wide">What did you do?<textarea id="l-text" required placeholder="Launched the ad campaign for a client"></textarea></label>
       <label class="field">About<select id="l-tag"><option value="">General</option>${[...new Set(tags)].map(t => `<option>${esc(t)}</option>`).join("")}</select></label>
       <div class="btn-row"><button class="btn primary" type="submit">Log it</button></div></form>`, !logs.length)}
     <section class="card">${rows || empty("Your log is empty.", "Every update is timestamped and grouped by day.")}</section>`;
@@ -733,7 +859,7 @@ const projPill = s => `<span class="pill ${({live: "s-good", building: "s-warn",
 function viewBiz(){
   const e = editing?.kind === "biz" ? editing : null, list = of("biz");
   return `${adder("biz", e ? "Edit business" : "New business", `<form class="form" id="biz-form">
-      <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Mufasa Pharmacy"></label>
+      <label class="field">Name<input id="b-name" required value="${esc(e?.name)}" placeholder="Brandbridge Ltd"></label>
       <label class="field">Status<select id="b-status">${["active", "building", "idea", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
       <label class="field">Website<input id="b-url" value="${esc(e?.url)}" placeholder="https://"></label>
       <label class="field wide">Notes, numbers, next step<textarea id="b-notes" placeholder="Revenue, team, what's next">${esc(e?.notes)}</textarea></label>
@@ -749,7 +875,7 @@ let projSummary = "";
 function viewProjects(){
   const e = editing?.kind === "project" ? editing : null, list = of("project");
   return `${adder("project", e ? "Update project" : "New project", `<form class="form" id="proj-form">
-      <label class="field">Name<input id="p-name" required value="${esc(e?.name)}" placeholder="Brandbridge Academy"></label>
+      <label class="field">Name<input id="p-name" required value="${esc(e?.name)}" placeholder="brandbridgeacademy.site"></label>
       <label class="field">Status<select id="p-status">${["live", "building", "down", "paused"].map(s => `<option ${e?.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
       <label class="field">URL<input id="p-url" value="${esc(e?.url)}" placeholder="https://"></label>
       <label class="field">Repo (optional)<input id="p-repo" value="${esc(e?.repo)}" placeholder="github.com/you/app"></label>
@@ -782,7 +908,7 @@ async function testKey(btn){
 }
 function viewAI(){
   return `<section class="card chat">
-    <div class="chips">${["Plan my day", "Book Mary for a BP check tomorrow at 10am", "Quiz me on antibiotics", "Explain metformin counselling points", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="chips">${["Plan my day", "Book a discovery call with Acme tomorrow at 10am", "Quiz me on antibiotics", "Which clients need a follow-up?", "Draft a proposal outline for an AI automation project", "What should I focus on this week?", "Summarize my projects"].map(c => `<button class="chip" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>
     <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.content)}</div>`).join("") : `<div class="msg sys">Task AI knows your goals, appointments, drug cards, log, businesses and projects. It can add and update them for you.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Ask anything, or tell Task what to add" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
   </section>
@@ -869,16 +995,16 @@ const insightAI = btn => { const P = learnPatterns();
   const facts = {goalsDone30d: P.recentTasks.filter(t => t.done).length + "/" + P.recentTasks.length, onTimeRate: P.withDue ? pct(P.onTime, P.withDue) + "%" : null, goalsByTimeOfDay: P.doneByBin, overdue: P.overdue,
     attended: P.attended, noShows: P.noshow, apptsByWeekday: Object.fromEntries(WD.map((d, i) => [d, P.byDay[i]])), bookedNext7: P.booked7, expectedNext7: P.forecast7, repeatClients: P.repeat,
     recall: P.right + P.wrong ? pct(P.right, P.right + P.wrong) + "%" : null, weakDrugs: P.weakCards.map(c => c.drug), topLogTopic: P.topTag?.[0], findings: P.tips};
-  return runInto(btn, "#insight-out", `${RULES}\n\nThese are patterns computed from my own data. Give me: 1) the 3 most important observations, 2) a concrete plan for the next 7 days (work, clients, study), 3) one habit to change. Under 200 words. Don't invent numbers.\n\nPatterns:\n${JSON.stringify(facts)}\n\nData:\n${snapshot()}`, t => insightText = t); };
+  return runInto(btn, "#insight-out", `${RULES()}\n\nThese are patterns computed from my own data. Give me: 1) the 3 most important observations, 2) a concrete plan for the next 7 days (work, clients, study), 3) one habit to change. Under 200 words. Don't invent numbers.\n\nPatterns:\n${JSON.stringify(facts)}\n\nData:\n${snapshot()}`, t => insightText = t); };
 
 /* ---------- Search ---------- */
 let globalQ = "";
 function viewSearch(){
   const q = globalQ.trim().toLowerCase();
-  const text = x => [x.title, x.client, x.purpose, x.phone, x.notes, x.drug, x.cls, x.indication, x.text, x.tag, x.name, x.url, x.location, x.batch].filter(Boolean).join(" ").toLowerCase();
+  const text = x => [x.title, x.client, x.purpose, x.phone, x.notes, x.drug, x.cls, x.indication, x.text, x.tag, x.name, x.url, x.location, x.batch, x.company, x.contact, x.service, x.nextStep].filter(Boolean).join(" ").toLowerCase();
   const res = q ? items.filter(x => x.kind !== "meta" && text(x).includes(q)) : [];
   const groups = [["appt", "Appointments", a => [a.client + (a.purpose ? " · " + a.purpose : ""), fmtWhen(a.start)]], ["task", "Goals", t => [t.title, t.done ? "Done" : t.due ? fmtWhen(t.due) : "No time set"]],
-    ["card", "Drug cards", c => [c.drug, c.cls]], ["log", "Log", l => [l.text, fmtWhen(l.at)]], ["biz", "Businesses", b => [b.name, b.status]], ["stock", "Stock", x => [x.name, "Expires " + fmtDay(x.expiry)]], ["project", "Apps & websites", p => [p.name, p.status]]];
+    ["card", "Drug cards", c => [c.drug, c.cls]], ["log", "Log", l => [l.text, fmtWhen(l.at)]], ["deal", "Clients & deals", d => [d.client + (d.company ? " · " + d.company : ""), stageLabel(d.stage) + (d.service ? " · " + d.service : "")]], ["biz", "Businesses", b => [b.name, b.status]], ["stock", "Stock", x => [x.name, "Expires " + fmtDay(x.expiry)]], ["project", "Apps & websites", p => [p.name, p.status]]];
   return `<section class="card"><label class="search" style="max-width:none">${IC.search}<input id="global-search" placeholder="Search clients, goals, drugs, notes..." value="${esc(globalQ)}" aria-label="Search everything" autocomplete="off"></label>
     ${!q ? `<p class="sub" style="color:var(--muted);margin:12px 0 0">Search across everything: client names and phone numbers, goals, drug cards, your log, businesses and projects.</p>`
       : !res.length ? empty("Nothing found.", "Try a shorter word.")
@@ -898,7 +1024,8 @@ function applyTheme(){ const t = getTheme(); if (t === "auto") delete document.d
 applyTheme();
 const lastBackup = () => { try { return +localStorage.getItem("task.lastBackup") || 0; } catch { return 0; } };
 async function downloadBackup(){
-  const data = JSON.stringify({app: "Task", version: 1, exportedAt: new Date().toISOString(), items}, null, 1);
+  const {pinHash: _h, pinSalt: _s, ...prof} = profile;
+  const data = JSON.stringify({app: "Task", version: 2, exportedAt: new Date().toISOString(), profile: prof, items}, null, 1);
   const filename = `task-backup-${new Date().toISOString().slice(0, 10)}.json`;
   try {
     const dl = await cap("downloads");
@@ -912,6 +1039,7 @@ async function restoreBackup(file){
   try {
     const parsed = JSON.parse(await file.text()); const list = Array.isArray(parsed) ? parsed : parsed.items;
     if (!Array.isArray(list)) throw new Error("not a Task backup");
+    if (parsed.profile && !profile.name){ const {pinHash: _h, pinSalt: _s, ...pp} = parsed.profile; saveProfile(pp); applyLook(); }
     let n = 0;
     for (const r of list){ if (!r || !r.id || !r.kind) continue; const ex = byId(r.id); if (!ex || (r.updatedAt || 0) > (ex.updatedAt || 0)){ await put({...r}); n++; } }
     toast(n ? `Restored ${n} item${n > 1 ? "s" : ""} from the backup.` : "Everything in that backup is already here.");
@@ -922,6 +1050,24 @@ function viewSettings(){
   const lb = lastBackup(), theme = getTheme(), n = items.filter(x => x.kind !== "meta").length;
   const notif = !("Notification" in window) ? "Not supported in this browser" : Notification.permission === "granted" ? "On" : Notification.permission === "denied" ? "Blocked in browser settings" : "Off";
   return `<div class="grid2">
+    <section class="card"><div class="card-head"><div><h2>Your profile</h2><p class="sub">Shown in the menu, the greeting and the lock screen. Saved on this device.</p></div></div>
+      <div class="set-row"><div style="display:flex;align-items:center;gap:14px;min-width:0">${avatar("md")}<div class="t"><b>${esc(profile.name || "No name yet")}</b><span>${esc([profile.role || "Co-founder", profile.company].filter(Boolean).join(", "))}</span></div></div>
+        <div class="btn-row"><button class="btn" id="photo-btn">${IC.upload}${profile.photo ? "Change photo" : "Add photo"}</button>${profile.photo ? `<button class="btn ghost" id="photo-clear">Remove</button>` : ""}</div><input type="file" id="photo-file" accept="image/*" hidden></div>
+      <div class="form" style="padding:0">
+        <label class="field">Your name<input id="pf-name" value="${esc(profile.name)}" placeholder="Mufasa" autocomplete="name"></label>
+        <label class="field">Your role<input id="pf-role" value="${esc(profile.role)}" placeholder="Co-founder"></label>
+        <label class="field">Company<input id="pf-company" value="${esc(profile.company)}" placeholder="Brandbridge"></label>
+        <label class="field">Business partner<input id="pf-partner" value="${esc(profile.partner)}" placeholder="Paul"></label>
+        <label class="field">Currency<input id="pf-currency" value="${esc(profile.currency)}" placeholder="KES" maxlength="5"></label></div></section>
+    <section class="card"><div class="card-head"><div><h2>Look</h2><p class="sub">Background and logo watermark</p></div></div>
+      <div class="set-row"><div class="t"><b>Background</b><span>Soft, so text stays easy to read</span></div>
+        <div class="bg-pick">${[["none", "Plain", ""], ["navy", "Navy", "sw-navy"], ["gold", "Gold", "sw-gold"], ["grid", "Grid", "sw-grid"], ["photo", profile.bgPhoto ? "" : "Photo", "sw-photo"]].map(([k, l, c]) => `<button data-bg="${k}" class="${c}" aria-pressed="${(profile.bg || "none") === k}" aria-label="${k} background">${l}</button>`).join("")}</div></div>
+      <div class="set-row"><div class="t"><b>Your own background photo</b><span>${profile.bgPhoto ? "Photo saved" : "Any photo from your phone"}</span></div><button class="btn" id="bg-upload">${IC.upload}${profile.bgPhoto ? "Change photo" : "Upload photo"}</button><input type="file" id="bg-file" accept="image/*" hidden></div>
+      <div class="set-row"><div class="t"><b>Logo watermark</b><span>${profile.logo ? "Using your uploaded logo" : "Using a Brandbridge wordmark until you upload your logo"}</span></div>
+        <div class="btn-row"><label class="switch"><input type="checkbox" id="wm-toggle" ${profile.watermark ? "checked" : ""}> Show</label><button class="btn" id="logo-btn">${IC.upload}${profile.logo ? "Change logo" : "Upload logo"}</button>${profile.logo ? `<button class="btn ghost" id="logo-clear">Remove</button>` : ""}</div><input type="file" id="logo-file" accept="image/png,image/svg+xml,image/*" hidden></div></section>
+    ${inClaude ? "" : `<section class="card"><div class="card-head"><div><h2>${IC.lock.replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')}PIN lock</h2><p class="sub">${hasPin() ? "On. Task asks for your PIN when it opens and after 2 minutes away." : "Ask for a PIN when Task opens, so client details stay private if someone picks up your phone."}</p></div>${hasPin() ? `<span class="pill s-good">On</span>` : ""}</div>
+      ${hasPin() ? `<div class="btn-row"><button class="btn" id="lock-now">${IC.lock}Lock now</button><button class="btn ghost danger" id="pin-remove">Remove PIN</button></div>`
+        : `<form class="form" id="pin-form" style="padding:0"><label class="field">New PIN (4 to 6 digits)<input id="pin-new" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><label class="field">Type it again<input id="pin-confirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password"></label><div class="btn-row"><button class="btn primary" type="submit">${IC.lock}Set PIN</button></div></form>`}</section>`}
     <section class="card"><div class="card-head"><div><h2>Backup and restore</h2><p class="sub">${inClaude ? "Your data syncs with your Claude account." : "Your data lives on this device. Save a backup so you never lose it, and use it to move to a new phone."}</p></div></div>
       <div class="set-row"><div class="t"><b>Save a backup</b><span>${n} items · ${lb ? "last backup " + esc(ago(lb)) : "no backup yet"}</span></div><button class="btn primary" id="backup-btn">${IC.download}Download backup</button></div>
       <div class="set-row"><div class="t"><b>Restore from a backup</b><span>Adds anything missing and keeps the newest version of each item.</span></div><button class="btn" id="restore-btn">${IC.upload}Choose file</button><input type="file" id="restore-file" accept="application/json,.json" hidden></div></section>
@@ -937,7 +1083,7 @@ function viewSettings(){
     <section class="card"><div class="card-head"><div><h2>About</h2></div></div><p class="sub" style="color:var(--muted);margin:0">Task ${APP_VERSION}. Made for Brandbridge. © ${new Date().getFullYear()} Brandbridge. All rights reserved.</p></section>
   </div>`;
 }
-const APP_VERSION = "1.5";
+const APP_VERSION = "1.6";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1042,7 +1188,66 @@ const checkInteractions = () => { const list = ($("#ix-in")?.value || "").trim()
   return runInto($("#ix-go"), "#ix-out", `You are a clinical pharmacist assistant. Check these medicines for clinically important drug-drug interactions: ${list}.
 For each interacting pair give: the pair, severity (major, moderate or minor), what happens and why (one line), and what to do (one line). Then list any important drug-disease or duplication concerns. If none are significant, say so. Plain text, no markdown headers, under 220 words. End with: Confirm with an interaction reference before acting.`, t => ixText = t); };
 
-const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
+/* ---------- Brandbridge: clients & deals ---------- */
+const STAGES = [["lead", "Lead"], ["proposal", "Proposal sent"], ["active", "In progress"], ["done", "Delivered"], ["lost", "Lost"]];
+const SERVICES = ["Web development", "AI automation", "Digital advertising", "Branding & design", "Consulting", "Other"];
+const stageLabel = k => (STAGES.find(s => s[0] === k) || [k, k])[1];
+const isOpenDeal = d => ["lead", "proposal", "active"].includes(d.stage);
+const openDeals = () => of("deal").filter(isOpenDeal);
+const followUps = () => openDeals().filter(d => d.nextAt && (isToday(d.nextAt) || d.nextAt < now())).sort((a, b) => a.nextAt - b.nextAt);
+const stagePill = k => `<span class="pill ${({lead: "", proposal: "s-warn", active: "s-gold", done: "s-good", lost: "s-mute"})[k] || ""}">${esc(stageLabel(k))}</span>`;
+function dealRow(d, compact){
+  const nextStage = {lead: "proposal", proposal: "active", active: "done"}[d.stage];
+  const late = d.nextAt && d.nextAt < now() && isOpenDeal(d);
+  return `<li class="row ${d.stage === "lost" ? "done" : ""}">${compact ? `<span class="time-chip">${esc(fmtTime(d.nextAt))}</span>` : ""}
+    <div class="row-main"><div class="row-title">${esc(d.client)}${d.company && d.company !== d.client ? ` · <span style="font-weight:500">${esc(d.company)}</span>` : ""}</div>
+      <div class="row-meta">${stagePill(d.stage)}${d.service ? `<span>${esc(d.service)}</span>` : ""}${d.value ? `<span>${money(d.value)}</span>` : ""}${d.who && d.who !== "me" ? `<span class="pill s-gold">${esc(whoLabel(d.who))}</span>` : ""}</div>
+      ${d.nextStep || d.nextAt ? `<div class="row-meta"><span ${late ? 'style="color:var(--bad);font-weight:600"' : ""}>Next: ${esc(d.nextStep || "Follow up")}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</span></div>` : ""}
+      ${d.contact ? `<div class="row-meta"><span style="font-family:var(--f-mono)">${esc(d.contact)}</span><button class="btn ghost sm" data-copy="${esc(d.contact)}">${IC.copy}Copy</button></div>` : ""}
+      ${!compact && d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}
+      ${!compact && nextStage ? `<div class="btn-row" style="margin-top:8px"><button class="btn sm" data-stage="${d.id}" data-to="${nextStage}">${IC.check}${nextStage === "done" ? "Mark delivered" : "Move to " + esc(stageLabel(nextStage))}</button>${d.stage !== "active" ? `<button class="btn sm ghost" data-stage="${d.id}" data-to="lost">Lost</button>` : ""}</div>` : ""}</div>
+    <div class="row-actions">${editBtn(d.id)}${compact ? "" : delBtn(d.id)}</div></li>`;
+}
+let dealFilter = "open";
+function viewDeals(){
+  const e = editing?.kind === "deal" ? editing : null, all = of("deal");
+  const open = all.filter(isOpenDeal), pipeline = open.reduce((s, d) => s + (+d.value || 0), 0);
+  const m0 = new Date(); m0.setDate(1); m0.setHours(0, 0, 0, 0);
+  const wonMonth = all.filter(d => d.stage === "done" && (d.doneAt || 0) >= m0.getTime()).reduce((s, d) => s + (+d.value || 0), 0);
+  const closed = all.filter(d => ["done", "lost"].includes(d.stage)), winRate = closed.length ? Math.round(closed.filter(d => d.stage === "done").length / closed.length * 100) : null;
+  const n = dealDefaultNext();
+  let body = "";
+  if (dealFilter === "open"){
+    for (const [k, l] of STAGES.slice(0, 3)){ const r = open.filter(d => d.stage === k).sort((a, b) => (a.nextAt || 9e15) - (b.nextAt || 9e15)); if (r.length) body += `<div class="group-head">${esc(l)} · ${r.length}</div><ul class="list">${r.map(d => dealRow(d)).join("")}</ul>`; }
+  } else {
+    const r = all.filter(d => dealFilter === "all" || d.stage === dealFilter).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    if (r.length) body = `<ul class="list">${r.map(d => dealRow(d)).join("")}</ul>`;
+  }
+  return `${adder("deal", e ? "Edit client" : "New client or deal", `<form class="form" id="deal-form">
+      <label class="field">Client or contact<input id="dl-client" required value="${esc(e?.client)}" placeholder="John Kamau" autocomplete="off"></label>
+      <label class="field">Company<input id="dl-company" value="${esc(e?.company)}" placeholder="Acme Hotels"></label>
+      <label class="field">Phone or email<input id="dl-contact" value="${esc(e?.contact)}" placeholder="+254 7... or name@company.com" autocomplete="off"></label>
+      <label class="field">Service<select id="dl-service">${SERVICES.map(x => `<option ${(e?.service || SERVICES[0]) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+      <label class="field">Stage<select id="dl-stage">${STAGES.map(([k, l]) => `<option value="${k}" ${(e?.stage || "lead") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}" placeholder="150000"></label>
+      <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${(e?.who || "me") === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
+      <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" placeholder="Send proposal" list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
+      <label class="field">When<input id="dl-at" type="datetime-local" value="${toInput(e ? e.nextAt : n)}"></label>
+      <label class="check"><input id="dl-remind" type="checkbox" ${e ? (e.remind ? "checked" : "") : "checked"}> Remind me</label>
+      <label class="field wide">Notes<textarea id="dl-notes" placeholder="Scope, budget, decision maker, links">${esc(e?.notes)}</textarea></label>
+      <div class="btn-row"><button class="btn primary" type="submit">${e ? "Save changes" : "Add client"}</button>${e ? `<button class="btn ghost" type="button" data-cancel>Cancel</button>` : ""}</div></form>`, !!e || !all.length)}
+    <div class="stats">
+      <div class="stat"><div class="n">${open.length}</div><div class="l">Open deals</div></div>
+      <div class="stat"><div class="n stat-money">${pipeline ? money(pipeline) : "0"}</div><div class="l">In the pipeline</div></div>
+      <div class="stat"><div class="n stat-money">${wonMonth ? money(wonMonth) : "0"}</div><div class="l">Delivered this month</div></div>
+      <div class="stat"><div class="n">${winRate == null ? "–" : winRate + "%"}</div><div class="l">Win rate</div></div></div>
+    <section class="card"><div class="card-head"><div><h2>${({open: "Open deals", done: "Delivered", lost: "Lost", all: "All clients"})[dealFilter]}</h2><p class="sub">${esc(profile.company || "Brandbridge")} · web, AI automation and digital ads</p></div>
+      <div class="seg">${[["open", "Open"], ["done", "Delivered"], ["lost", "Lost"], ["all", "All"]].map(([k, l]) => `<button data-dfilter="${k}" aria-pressed="${dealFilter === k}">${l}</button>`).join("")}</div></div>
+      ${body || empty(all.length ? "Nothing here." : "No clients yet.", all.length ? "Try another filter." : "Add a lead above. Task reminds you of each next step so no client goes cold.")}</section>`;
+}
+function dealDefaultNext(){ const x = new Date(Date.now() + DAY); x.setHours(10, 0, 0, 0); return x.getTime(); }
+
+const VIEWS = {today: viewToday, tasks: viewTasks, appts: viewAppts, learn: viewLearn, log: viewLog, biz: viewBiz, projects: viewProjects, ai: viewAI, deals: viewDeals, tools: viewTools, stock: viewStock, insights: viewInsights, search: viewSearch, settings: viewSettings};
 function render(){
   renderChrome();
   const keep = view === "ai" ? $("#chat-in")?.value : null;
@@ -1061,7 +1266,7 @@ function updateTitle(){
   const c = counts();
   $("#page-sub").textContent = ({
     today: d.toLocaleDateString([], {month: "long", day: "numeric"}) + " · " + d.toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}),
-    tasks: `${c.tasks} open`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
+    tasks: `${c.tasks} open`, deals: `${c.deals} open · ${followUps().length} follow-up${followUps().length === 1 ? "" : "s"} due`, appts: `${c.appts} upcoming`, learn: `${c.learn} card${c.learn === 1 ? "" : "s"} to review`,
     log: `${of("log").length} entries`, biz: `${c.biz} business${c.biz === 1 ? "" : "es"}`, projects: `${c.projects} project${c.projects === 1 ? "" : "s"}`,
     ai: inClaude ? "Uses your Claude account" : (navigator.onLine ? "Online" : "Offline"),
     insights: "Learned from your own data, on this device", tools: "Dose, kidney function, BMI and interactions", stock: `${stockAlerts().length} need attention`, search: `${items.filter(x => x.kind !== "meta").length} items`, settings: "Backup, install, appearance"
@@ -1077,7 +1282,7 @@ document.addEventListener("click", async ev => {
   if (t.id === "scrim"){ document.body.classList.remove("sheet-open"); return; }
   const d = t.dataset;
   if (t.id === "new-btn"){ const m = $("#new-menu"); m.hidden = !m.hidden; t.setAttribute("aria-expanded", String(!m.hidden)); return; }
-  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
+  if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.nav){ editing = null; return go(d.nav); }
   if (d.go){ editing = null; return go(d.go, {open: d.open}); }
@@ -1100,18 +1305,34 @@ document.addEventListener("click", async ev => {
   if (d.ltab){ learnTab = d.ltab; editing = null; render(); return; }
   if (d.grade != null) return gradeCard(d.grade === "1");
   if (d.qi != null){ const q = quiz.qs[+d.qi]; q.picked = +d.oj; $("#quiz-out").innerHTML = quizHTML(); return; }
+  if (d.dfilter){ dealFilter = d.dfilter; render(); return; }
+  if (d.stage){ const r = byId(d.stage); if (r){ put({...r, stage: d.to, ...(d.to === "done" ? {doneAt: now()} : {})}); toast(`${r.client}: ${stageLabel(d.to)}`); } return; }
+  if (d.key){ pressKey(d.key); return; }
+  if (d.bg){ if (d.bg === "photo" && !profile.bgPhoto){ $("#bg-file")?.click(); return; } saveProfile({bg: d.bg}); applyLook(); render(); return; }
   if (d.sfilter){ stockFilter = d.sfilter; render(); return; }
   if (d.clear){ const r = byId(d.clear); if (r){ put({...r, cleared: now()}); toast(`${r.name} cleared.`); } return; }
   if (d.theme){ setTheme(d.theme); render(); return; }
   if (d.find){ const r = byId(d.find); if (!r) return;
     if (r.kind === "card"){ learnTab = "library"; cardSearch = r.drug; }
-    editing = ["task", "appt", "biz", "project", "stock"].includes(r.kind) ? r : null;
-    go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects", stock: "stock"}[r.kind] || "today");
+    editing = ["task", "appt", "biz", "project", "stock", "deal"].includes(r.kind) ? r : null;
+    go({task: "tasks", appt: "appts", card: "learn", log: "log", biz: "biz", project: "projects", stock: "stock", deal: "deals"}[r.kind] || "today");
     if (editing) setTimeout(() => { const f = document.querySelector("details.adder"); if (f) f.open = true; }, 30); return; }
   if (d.prompt){ go("ai"); $("#chat-in").value = d.prompt; sendChat(); return; }
   switch (t.id){
     case "load-examples": loadExamples(); break;
     case "backup-btn": downloadBackup(); break;
+    case "photo-btn": $("#photo-file")?.click(); break;
+    case "photo-clear": saveProfile({photo: ""}); render(); break;
+    case "bg-upload": $("#bg-file")?.click(); break;
+    case "logo-btn": $("#logo-file")?.click(); break;
+    case "logo-clear": saveProfile({logo: ""}); applyLook(); render(); break;
+    case "lock-now": lockNow(); break;
+    case "lock-forgot": lockMode = "forgot"; renderLock(); break;
+    case "lock-back": lockMode = "pin"; renderLock(); break;
+    case "lock-wipe":
+      if (!t.classList.contains("armed")){ t.classList.add("armed"); t.textContent = "Tap again to erase"; break; }
+      for (const x of items.slice()) await remove(x.id); chat = []; saveChat(); saveProfile({pinHash: "", pinSalt: ""}); locked = false; renderLock(); toast("Task was reset. Restore your backup in Settings."); go("settings"); break;
+    case "pin-remove": saveProfile({pinHash: "", pinSalt: "", pinLen: 0}); toast("PIN removed."); render(); break;
     case "restore-btn": $("#restore-file")?.click(); break;
     case "install-btn": if (installPrompt){ installPrompt.prompt(); installPrompt.userChoice.finally(() => { installPrompt = null; render(); }); } break;
     case "insight-ai": insightAI(t); break;
@@ -1142,7 +1363,13 @@ document.addEventListener("input", ev => {
   if (ev.target.closest?.(".calc")) calc();
   if (ev.target.id === "global-search"){ globalQ = ev.target.value; render(); }
 });
-document.addEventListener("change", ev => { if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
+document.addEventListener("change", async ev => {
+  const id = ev.target.id, f = ev.target.files?.[0];
+  if (id === "photo-file" && f){ try { if (saveProfile({photo: await readImage(f, 320)})) toast("Profile photo saved."); } catch { toast("Couldn't read that image."); } render(); }
+  if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1600, "image/jpeg", .78), bg: "photo"})) toast("Background saved."); } catch { toast("Couldn't read that image."); } applyLook(); render(); }
+  if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch { toast("Couldn't read that image."); } applyLook(); render(); }
+  if (id === "wm-toggle"){ saveProfile({watermark: ev.target.checked}); applyLook(); }
+  if (["pf-name", "pf-role", "pf-company", "pf-partner", "pf-currency"].includes(id)){ saveProfile({[id.slice(3) === "currency" ? "currency" : id.slice(3)]: ev.target.value.trim()}); render(); } if (ev.target.closest?.(".calc")) calc(); if (ev.target.id === "restore-file" && ev.target.files[0]) restoreBackup(ev.target.files[0]); });
 
 document.addEventListener("submit", ev => {
   ev.preventDefault(); unlockAudio();
@@ -1151,7 +1378,7 @@ document.addEventListener("submit", ev => {
     const due = fromInput($("#t-due").value);
     const repeat = $("#t-repeat").value;
     if (repeat && !due){ toast("Pick a time for a repeating goal."); $("#t-due").focus(); return; }
-    const data = {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null, repeat};
+    const data = {title: v("#t-title"), due, remind: $("#t-remind").checked && !!due, notes: v("#t-notes"), bizId: $("#t-biz").value || null, repeat, who: $("#t-who").value};
     if (editing?.kind === "task") put({...editing, ...data, notified: editing.due === due ? editing.notified : null}); else add("task", {...data, done: false});
     toast((editing ? "Goal updated" : "Goal added") + (due ? `, reminder at ${fmtWhen(due)}` : "")); editing = null; openForm = null;
   } else if (f === "appt-form"){
@@ -1177,6 +1404,20 @@ document.addEventListener("submit", ev => {
     if (editing?.kind === "stock") put({...editing, ...data, notified: editing.expiry === expiry && editing.alertDays === alertDays ? editing.notified : null}); else add("stock", data);
     toast(`Saved. Task will alert you ${alertDays} days before ${fmtDay(expiry)}.`); editing = null; openForm = null;
   } else if (f === "ix-form") checkInteractions();
+  else if (f === "deal-form"){
+    const nextAt = fromInput($("#dl-at").value), val = parseFloat(v("#dl-value").replace(/[^\d.]/g, "")) || 0;
+    const data = {client: v("#dl-client"), company: v("#dl-company"), contact: v("#dl-contact"), service: $("#dl-service").value, stage: $("#dl-stage").value, value: val, who: $("#dl-who").value, nextStep: v("#dl-next"), nextAt, remind: $("#dl-remind").checked && !!nextAt, notes: v("#dl-notes")};
+    if (data.stage === "done" && editing?.stage !== "done") data.doneAt = now();
+    if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else add("deal", data);
+    toast(`${editing ? "Updated" : "Added"} ${data.client}${nextAt && data.remind ? ", reminder " + fmtWhen(nextAt) : ""}`); editing = null; openForm = null;
+  }
+  else if (f === "pin-form"){
+    const a = v("#pin-new"), b = v("#pin-confirm");
+    if (!/^\d{4,6}$/.test(a)){ toast("Use 4 to 6 digits."); return; }
+    if (a !== b){ toast("The two PINs don't match."); return; }
+    (async () => { const salt = [...crypto.getRandomValues(new Uint8Array(12))].map(x => x.toString(16).padStart(2, "0")).join("");
+      saveProfile({pinSalt: salt, pinHash: await pinHash(a, salt), pinLen: a.length}); toast("PIN set. Task locks when you open it and after 2 minutes away."); render(); })();
+  }
   else if (f === "quiz-form") makeQuiz();
   else if (f === "chat-form") sendChat();
   else if (f === "key-form"){ const k = v("#api-key").replace(/\s+/g, "");
@@ -1185,6 +1426,7 @@ document.addEventListener("submit", ev => {
 });
 document.addEventListener("keydown", ev => {
   if (ev.target.id === "chat-in" && ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); sendChat(); }
+  if (locked){ if (/^\d$/.test(ev.key)) pressKey(ev.key); else if (ev.key === "Backspace") pressKey("del"); return; }
   if (ev.key === "Escape"){ closeMenu(); document.body.classList.remove("sheet-open"); }
 });
 
@@ -1214,7 +1456,7 @@ function checkReminders(){
     const at = remindAt(x);
     if (at && at <= now() && !x.notified && (now() - at < DAY || x.kind === "stock")){
       put({...x, notified: now()}); chime();
-      toast((x.kind === "stock" ? "Expiry: " : x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
+      toast((x.kind === "deal" ? "Client: " : x.kind === "stock" ? "Expiry: " : x.kind === "appt" ? "Appointment: " : "Reminder: ") + reminderText(x), true, x.kind === "task" ? x.id : null);
       showSystemNotification(x);
     }
   }
@@ -1222,7 +1464,7 @@ function checkReminders(){
 async function showSystemNotification(x){
   try {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const title = x.kind === "stock" ? "Stock expiry" : x.kind === "appt" ? "Appointment" : "Task reminder", body = reminderText(x);
+    const title = x.kind === "deal" ? "Client follow-up" : x.kind === "stock" ? "Stock expiry" : x.kind === "appt" ? "Appointment" : "Task reminder", body = reminderText(x);
     const reg = swReg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
     if (reg) await reg.showNotification(title, {body, tag: x.id, icon: "icon-192.png", badge: "icon-192.png", requireInteraction: true, data: {id: x.id}});
     else new Notification(title, {body});
@@ -1261,23 +1503,35 @@ async function exportIcs(x){
 function snapshot(){
   return JSON.stringify({
     now: new Date().toString(),
-    user: "A pharmacist who runs businesses and builds apps and websites.",
-    goals: of("task").map(t => ({id: t.id, title: t.title, repeat: t.repeat || undefined, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: byId(t.bizId)?.name, notes: t.notes})),
+    user: aboutUser(),
+    goals: of("task").map(t => ({id: t.id, who: whoLabel(t.who || "me"), title: t.title, repeat: t.repeat || undefined, due: t.due ? new Date(t.due).toString() : null, done: !!t.done, business: byId(t.bizId)?.name, notes: t.notes})),
     appointments: of("appt").filter(a => a.start > now() - 14 * DAY).map(a => ({id: a.id, client: a.client, purpose: a.purpose, start: new Date(a.start).toString(), minutes: a.duration, status: a.status, location: a.location, notes: a.notes})),
     drugCards: of("card").map(c => ({drug: c.drug, cls: c.cls, memoryLevel: c.box || 1})),
     log: of("log").sort((a, b) => b.at - a.at).slice(0, 30).map(l => ({when: new Date(l.at).toString(), text: l.text, about: l.tag})),
     businesses: of("biz").map(b => ({name: b.name, status: b.status, url: b.url, notes: b.notes})),
     projects: of("project").map(p => ({name: p.name, status: p.status, url: p.url, notes: p.notes, lastChecked: new Date(p.checkedAt || p.updatedAt).toString()})),
+    clientsAndDeals: of("deal").map(d => ({id: d.id, client: d.client, company: d.company, service: d.service, stage: d.stage, value: d.value, who: whoLabel(d.who), nextStep: d.nextStep, nextAt: d.nextAt ? new Date(d.nextAt).toString() : null, notes: d.notes})),
     stockExpiry: of("stock").filter(x => !x.cleared).map(x => ({name: x.name, batch: x.batch, expires: new Date(x.expiry).toDateString(), daysLeft: stockLeft(x)})),
     learnedPatterns: learnPatterns().tips
   });
 }
-const RULES = `You are Task AI, a sharp, warm personal assistant inside the user's command-center app. The user is a pharmacist who also runs businesses and builds apps and websites. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
+function aboutUser(){ const nm = profile.name || "the user"; return `${nm}${profile.role ? ", " + profile.role : ""}, co-runs ${profile.company || "Brandbridge"} (private limited) with ${partner()}: web development, AI automations, digital advertising and innovation projects. ${firstName() || "They"} is also a pharmacist who runs a pharmacy and keeps studying. Task is their personal command centre for all of this.`; }
+const RULES = () => `You are Task AI, a sharp, warm personal assistant inside ${firstName() || "the user"}'s command-centre app. ${aboutUser()} Money values are in ${profile.currency || "the local currency"}. For Brandbridge work, think like a growth-minded agency co-founder: pipeline, follow-ups, proposals, delivery and cash flow. Be concise and practical: short paragraphs or brief lists, plain text (no markdown headers or tables). When asked to add, book, log, update or complete something, use the tools, then confirm in one line. Convert relative dates and times using the current time in the data. For drug and clinical questions, answer at a pharmacist's level, name the key cautions, and remind them to confirm doses against their national formulary or the product label. Never invent facts about their businesses, clients or projects.`;
 const tools = [
   {name: "add_goal", description: "Add a goal/task. Optional due time as ISO 8601 local datetime like 2026-10-04T10:00. Optional repeat (needs a due time): daily, weekdays, weekly, monthly.",
-   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},
+   inputSchema: {type: "object", properties: {title: {type: "string"}, due: {type: "string"}, notes: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, repeat: {type: "string", enum: ["daily", "weekdays", "weekly", "monthly"]}}, required: ["title"]},
    execute: async i => { const due = i.due ? new Date(String(i.due)).getTime() : null; if (i.due && isNaN(due)) throw new Error("Unreadable due time");
-     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false, repeat: due && i.repeat ? String(i.repeat) : ""}); return {id: r.id}; }},
+     const r = await add("task", {title: String(i.title), due, remind: !!due, notes: String(i.notes || ""), bizId: null, done: false, who: String(i.who || "me"), repeat: due && i.repeat ? String(i.repeat) : ""}); return {id: r.id}; }},
+  {name: "add_deal", description: "Add a Brandbridge client or deal. service: Web development, AI automation, Digital advertising, Branding & design, Consulting or Other. stage: lead, proposal, active, done, lost. who: me, partner or both. nextAt is ISO 8601 local datetime for the next step reminder.",
+   inputSchema: {type: "object", properties: {client: {type: "string"}, company: {type: "string"}, contact: {type: "string"}, service: {type: "string"}, stage: {type: "string", enum: ["lead", "proposal", "active", "done", "lost"]}, value: {type: "number"}, who: {type: "string", enum: ["me", "partner", "both"]}, nextStep: {type: "string"}, nextAt: {type: "string"}, notes: {type: "string"}}, required: ["client"]},
+   execute: async i => { const nextAt = i.nextAt ? new Date(String(i.nextAt)).getTime() : null; if (i.nextAt && isNaN(nextAt)) throw new Error("Unreadable nextAt");
+     const r = await add("deal", {client: String(i.client), company: String(i.company || ""), contact: String(i.contact || ""), service: String(i.service || "Other"), stage: String(i.stage || "lead"), value: Number(i.value) || 0, who: String(i.who || "me"), nextStep: String(i.nextStep || ""), nextAt, remind: !!nextAt, notes: String(i.notes || "")}); return {id: r.id}; }},
+  {name: "update_deal", description: "Update a client/deal by id: stage, value, nextStep, nextAt (ISO local datetime), who, notes.",
+   inputSchema: {type: "object", properties: {id: {type: "string"}, stage: {type: "string", enum: ["lead", "proposal", "active", "done", "lost"]}, value: {type: "number"}, nextStep: {type: "string"}, nextAt: {type: "string"}, who: {type: "string", enum: ["me", "partner", "both"]}, notes: {type: "string"}}, required: ["id"]},
+   execute: async i => { const r = byId(String(i.id)); if (!r || r.kind !== "deal") throw new Error("No deal with that id"); const p = {};
+     ["stage", "nextStep", "who", "notes"].forEach(k => { if (i[k] != null) p[k] = String(i[k]); }); if (i.value != null) p.value = Number(i.value);
+     if (i.nextAt){ const t = new Date(String(i.nextAt)).getTime(); if (isNaN(t)) throw new Error("Unreadable nextAt"); p.nextAt = t; p.remind = true; p.notified = null; }
+     if (p.stage === "done") p.doneAt = now(); await put({...r, ...p}); return "updated"; }},
   {name: "add_stock_item", description: "Track a stock item's expiry date. expiry is YYYY-MM-DD. alertDays defaults to 90.",
    inputSchema: {type: "object", properties: {name: {type: "string"}, expiry: {type: "string"}, batch: {type: "string"}, qty: {type: "string"}, location: {type: "string"}, alertDays: {type: "number"}}, required: ["name", "expiry"]},
    execute: async i => { const expiry = new Date(String(i.expiry).slice(0, 10) + "T09:00").getTime(); if (isNaN(expiry)) throw new Error("Unreadable expiry date");
@@ -1369,7 +1623,7 @@ async function sendChat(){
   if (!sample){ if (bubble()){ bubble().textContent = aiOffText(); bubble().removeAttribute("id"); } return; }
   aiCtl = new AbortController(); $("#chat-send").disabled = true; $("#chat-stop").hidden = false;
   const lim = await sample.limits().catch(() => null);
-  const input = [{role: "user", content: RULES + "\n\nCurrent data (JSON):\n" + snapshot()}, ...chat.slice(-16)];
+  const input = [{role: "user", content: RULES() + "\n\nCurrent data (JSON):\n" + snapshot()}, ...chat.slice(-16)];
   try {
     const {text: answer} = await sample(input, {cache: false, signal: aiCtl.signal, ...(lim?.tools ? {tools} : {}),
       onText: ({text}) => { const b = bubble(); if (b){ b.textContent = text; const lg = $("#chat-log"); if (lg) lg.scrollTop = lg.scrollHeight; } }});
@@ -1391,8 +1645,8 @@ async function runInto(btn, outSel, prompt, store){
   catch (e){ const o = $(outSel); if (o) o.textContent = errCopy(e); }
   btn.disabled = false;
 }
-const briefing = btn => runInto(btn, "#brief-out", `${RULES}\n\nWrite my daily briefing: today's appointments and goals, anything overdue, study cards due, anything about my businesses and projects that needs attention, and the 3 things to focus on next. Under 170 words.\n\nData:\n${snapshot()}`, t => briefCache = t);
-const summarizeProjects = btn => runInto(btn, "#proj-summary-out", `${RULES}\n\nSummarize my apps and websites: one line per project (status, what changed, risk), then the single most important next action. Flag any not checked in over 3 days.\n\nData:\n${snapshot()}`, t => projSummary = t);
+const briefing = btn => runInto(btn, "#brief-out", `${RULES()}\n\nWrite my daily briefing: today's meetings, Brandbridge client follow-ups and pipeline, goals (mine and ${partner()}'s), anything overdue, pharmacy items (expiring stock, study cards due), projects that need attention, and the 3 things to focus on next. Under 170 words.\n\nData:\n${snapshot()}`, t => briefCache = t);
+const summarizeProjects = btn => runInto(btn, "#proj-summary-out", `${RULES()}\n\nSummarize my apps and websites: one line per project (status, what changed, risk), then the single most important next action. Flag any not checked in over 3 days.\n\nData:\n${snapshot()}`, t => projSummary = t);
 async function aiFillCard(btn){
   const name = ($("#c-drug")?.value || "").trim(); if (!name){ toast("Type a drug name first."); $("#c-drug")?.focus(); return; }
   btn.disabled = true; btn.textContent = "Filling...";
@@ -1424,13 +1678,17 @@ async function makeQuiz(){
 /* ---------- Examples ---------- */
 async function loadExamples(){
   const base = new Date(); base.setMinutes(0, 0, 0); const b = base.getTime();
-  const b1 = await add("biz", {name: "Example: Community Pharmacy", status: "active", url: "", notes: "Example entry. Two counters, weekday clinic hours 9 to 6."});
-  await add("task", {title: "Example: Check expiry dates on shelf B", due: b + 2 * HOUR, remind: true, notes: "", bizId: b1.id, done: false});
-  await add("task", {title: "Example: Order antimalarial stock", due: null, remind: false, notes: "", bizId: b1.id, done: false});
-  await add("appt", {client: "Example: Jane Doe", phone: "+000 000 000", purpose: "Blood pressure check", start: b + 3 * HOUR, duration: 15, lead: 30, location: "Pharmacy", notes: "Example entry. On amlodipine 5 mg.", status: "scheduled", bizId: b1.id});
-  await add("appt", {client: "Example: John Smith", phone: "", purpose: "Medication review", start: b + DAY + 2 * HOUR, duration: 30, lead: 60, location: "Phone call", notes: "Example entry.", status: "scheduled", bizId: b1.id});
-  await add("log", {text: "Example: Counselled 4 clients on inhaler technique", tag: "Pharmacy", at: now() - 3 * HOUR});
-  await add("project", {name: "Example: Pharmacy website", status: "live", url: "", repo: "", notes: "Example entry.", checkedAt: now() - 2 * HOUR});
+  const bb = await add("biz", {name: "Example: Brandbridge Ltd", status: "active", url: "https://brandbridgeacademy.site", notes: "Example entry. Web development, AI automations and digital advertising."});
+  const ph = await add("biz", {name: "Example: Community Pharmacy", status: "active", url: "", notes: "Example entry."});
+  await add("deal", {client: "Example: John Kamau", company: "Acme Hotels", contact: "+000 000 000", service: "Web development", stage: "proposal", value: 250000, who: "me", nextStep: "Follow up on proposal", nextAt: b + 2 * HOUR, remind: true, notes: "Example entry. New booking website."});
+  await add("deal", {client: "Example: Grace Wanjiru", company: "Green Farms", contact: "", service: "AI automation", stage: "active", value: 180000, who: "partner", nextStep: "Demo the WhatsApp order bot", nextAt: b + DAY + 3 * HOUR, remind: true, notes: "Example entry."});
+  await add("deal", {client: "Example: Lisa", company: "Lisa Boutique", contact: "", service: "Digital advertising", stage: "lead", value: 60000, who: "both", nextStep: "Call to qualify", nextAt: b + 2 * DAY, remind: true, notes: "Example entry. Instagram and Facebook ads."});
+  await add("task", {title: "Example: Send invoice to Green Farms", who: "partner", due: b + 3 * HOUR, remind: true, notes: "", bizId: bb.id, done: false});
+  await add("task", {title: "Example: Check expiry dates on shelf B", who: "me", due: null, remind: false, notes: "", bizId: ph.id, done: false});
+  await add("appt", {client: "Example: Acme Hotels", phone: "", purpose: "Discovery call", start: b + 4 * HOUR, duration: 30, lead: 30, location: "Google Meet", notes: "Example entry.", status: "scheduled", bizId: bb.id});
+  await add("appt", {client: "Example: Jane Doe", phone: "", purpose: "Medication review", start: b + DAY + 2 * HOUR, duration: 30, lead: 60, location: "Pharmacy", notes: "Example entry.", status: "scheduled", bizId: ph.id});
+  await add("log", {text: "Example: Launched the Facebook ad campaign for Lisa Boutique", tag: "Brandbridge", at: now() - 3 * HOUR});
+  await add("project", {name: "Example: brandbridgeacademy.site", status: "live", url: "https://brandbridgeacademy.site", repo: "", notes: "Example entry.", checkedAt: now() - 2 * HOUR});
   await loadStarterDeck(true);
   toast("Examples loaded. Delete them anytime with the bin icon.");
 }
@@ -1470,7 +1728,7 @@ async function setupOffline(){
 }
 addEventListener("online", () => render());
 addEventListener("offline", () => render());
-loadLocal(); render(); setupOffline(); mirrorToIdb();
+loadLocal(); applyLook(); if (hasPin()) locked = true; renderLock(); render(); setupOffline(); mirrorToIdb();
 setInterval(() => { updateTitle(); checkReminders(); }, 15000);
 setTimeout(checkReminders, 1500);
 document.addEventListener("pointerdown", unlockAudio, {once: true});
