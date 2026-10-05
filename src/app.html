@@ -385,6 +385,10 @@ body.pop-open{overflow:hidden}
 .linkish{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
 .pop-body > .card.daily{border:0;padding:0;background:none;box-shadow:none}
 @media (min-width:600px){.daily-q .opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+.daily-note{display:grid;gap:8px}.daily-note h3{margin:0;font-size:17px}.daily-note .row-meta{justify-content:space-between}
+.daily-main{margin:0;font-size:15.5px;line-height:1.5;font-weight:600}
+.daily-why{background:var(--sunk);border-radius:var(--r-sm);padding:10px 12px}.daily-why b{font-size:12.5px;color:var(--muted)}.daily-why p{margin:3px 0 0;font-size:14px;line-height:1.5}
+.daily-note small{color:var(--muted);font-size:12px}
 /* Library */
 .lib-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .lib-form .search{flex:1 1 220px;min-width:0}.lib-form .search input{width:100%}
@@ -1044,7 +1048,7 @@ function viewToday(){
     ${schedule.length || unscheduled.length ? shortList("today-all", "Today's schedule", [...schedule.map(s => s.html), ...unscheduled.map(taskRow)], 3, "Meetings, follow-ups and goals") : empty("Nothing scheduled today.", "Add an appointment or a goal with a time and Task will remind you.")}
   </section>
   <div class="pgrid">
-    ${(dailyAuto(), panel("daily", "learn", "Daily practice", dailyMeta(), `<section class="card daily">${dailyHTML()}</section>`, "From your books, works offline"))}
+    ${(dailyAuto(), panel("daily", "learn", "Daily notes", dailyMeta(), `<section class="card daily">${dailyHTML()}</section>`, "Pharmacy and skin, works offline"))}
     ${panel("brief", "ai", "Daily briefing", briefCache ? "Ready to read" : "Summary of your day", `<section class="card"><div class="card-head"><p class="sub" style="margin:0">Meetings, Brandbridge clients, goals, pharmacy and study.</p><button class="btn sm primary" id="brief-btn">${IC.ai}Brief me</button></div><div class="brief ${briefCache ? "" : "placeholder"}" id="brief-out">${esc(briefCache || "Tap Brief me for a short summary of your day.")}</div></section>`)}
     ${panel("attention", "stock", "Needs attention", expiring.length + attention.length ? `${expiring.length + attention.length} item${expiring.length + attention.length === 1 ? "" : "s"}` : "All clear", `<section class="card">
         ${expiring.length ? `<ul class="list">${expiring.slice(0, 6).map(x => `<li class="row"><div class="row-main"><div class="row-title">${esc(x.name)}</div><div class="row-meta">${stockPill(x)}${x.batch ? `<span>Batch ${esc(x.batch)}</span>` : ""}</div></div></li>`).join("")}</ul>` : ""}
@@ -1178,7 +1182,7 @@ function viewLearn(){
       <p class="caution" style="margin-top:12px">AI questions can contain mistakes. Check anything you'll use in practice against your references.</p></section>
       <section class="card" id="quiz-out" ${quiz?.qs || quiz?.status ? "" : "hidden"}>${quizHTML()}</section>`;
   }
-  return head + body;
+  return (learnTab === "daily" ? `<div class="btn-row">${tabs}</div>` : head) + body;
 }
 function quizHTML(){
   if (!quiz) return "";
@@ -1457,7 +1461,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.8";
+const APP_VERSION = "2.8.1";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1906,72 +1910,77 @@ function viewBooks(){
     ${panel("lib-zim", "tools", "Suggested books", "Zimbabwe law, EDLIZ, textbooks", libShelf(), "What to add")}</div>`;
 }
 
-/* ---------- Daily practice: questions and a tip every day, ready offline ---------- */
-// Claude writes a pack from your books while you're online; Task hands out 5 questions and a tip a day from it.
-// With no pack left, questions and tips come straight from your books.
-const DAILY_N = 5;
-let daily = {pack: [], tips: [], day: "", set: [], tip: null, i: 0, refilledAt: 0, streak: 0, lastDone: "", ...lsGet("task.daily", {})};
+/* ---------- Daily notes: short pharmacy and skin notes with explanations, ready offline ---------- */
+// Claude writes notes from your books while you're online; Task shows a few each day, even offline.
+// With no saved notes left, notes come straight from your books.
+const DAILY_N = 4;
+let daily = lsGet("task.daily", {});
+if (daily.v !== 2) daily = {v: 2, notes: [], day: "", set: [], i: 0, refilledAt: 0, streak: 0, lastDone: ""};
 const saveDaily = () => lsSet("task.daily", daily);
 let dailyBusy = false;
-async function libRandomChunks(n){
-  const mem = await libLoad(), good = mem.filter(c => c.t.length > 500 && libBook(c.b)?.cat !== "other" || c.t.length > 800);
-  const pool = good.length ? good : mem, out = [];
-  for (let k = 0; k < n * 4 && out.length < n && pool.length; k++){ const c = pool[Math.floor(Math.random() * pool.length)]; if (!out.includes(c)) out.push(c); }
+const SKIN_RE = /\b(skin|dermat\w*|eczema|acne|psoriasis|fung\w*|tinea|scabies|rash\w*|topical|cream|ointment|emollient|sunscreen|pigment\w*|melasma|wound|burns?|itch\w*|urticaria)\b/i;
+const PHARM_RE = /\b(dispens\w*|counsel\w*|label\w*|storage|store|expiry|tablets?|capsules?|syrup|dose|dosing|interaction\w*|adverse|pregnan\w*|children|elderly|renal|refer\w*|prescription|first.line)\b/i;
+async function libRandomChunks(n, prefer){
+  const mem = await libLoad(), good = mem.filter(c => c.t.length > 400);
+  const pool = good.length ? good : mem, liked = prefer ? pool.filter(c => prefer.test(c.t)) : [], out = [];
+  for (let k = 0; k < n * 6 && out.length < n && pool.length; k++){ const from = liked.length && Math.random() < .75 ? liked : pool; const c = from[Math.floor(Math.random() * from.length)]; if (!out.includes(c)) out.push(c); }
   return out;
 }
-const TIP_CUE = /\b(should|must|always|never|avoid|do not|don't|counsel|monitor|caution|refer|check|ensure|advise)\b/i;
-async function dailyOffline(){
-  const qs = [], chunks = await libRandomChunks(6);
-  for (const c of chunks){ if (qs.length >= DAILY_N) break; const terms = libTok(c.t.slice(0, 200)).slice(0, 3);
-    qs.push(...libQuiz(terms.join(" "), [{c, terms, hit: 1, score: 1}], 2).map(q => ({...q, why: "", src: libWhere(c)}))); }
-  let tip = null;
-  for (const c of await libRandomChunks(12)){ const s = c.t.replace(/\s+/g, " ").split(/(?<=[.;])\s+(?=[A-Z])/).find(x => TIP_CUE.test(x) && x.length > 50 && x.length < 240 && /^[A-Z][a-z]/.test(x) && !/[?|{}<>@#_~]|\s[a-z]\s[A-Z|]/.test(x) && (x.match(/[a-z]/g) || []).length > x.length * .6); if (s){ tip = {text: s, src: libWhere(c)}; break; } }
-  return {qs: qs.slice(0, DAILY_N), tip};
+const cleanSent = x => x.length > 50 && x.length < 240 && /^[A-Z][a-z]/.test(x) && !/[?|{}<>@#_~]|\s[a-z]\s[A-Z|]/.test(x) && (x.match(/[a-z]/g) || []).length > x.length * .6;
+async function dailyOffline(n){
+  const out = [], seen = new Set();
+  for (const c of [...await libRandomChunks(n * 3, SKIN_RE), ...await libRandomChunks(n * 3, PHARM_RE)]){
+    if (out.length >= n || seen.has(c)) continue; seen.add(c);
+    const sents = c.t.replace(/\s+/g, " ").split(/(?<=[.;])\s+(?=[A-Z])/);
+    const k = sents.findIndex((x, j) => cleanSent(x) && !/^(Refer to|See|Table|Figure|For more)\b/.test(x) && (SKIN_RE.test(x) || PHARM_RE.test(x)) && cleanSent(sents[j + 1] || "")); if (k < 0) continue;
+    const why = sents.slice(k + 1, k + 3).filter(cleanSent).join(" ");
+    out.push({topic: SKIN_RE.test(sents[k]) ? "Skin" : "Pharmacy", title: libBook(c.b)?.title || "From your books", note: sents[k], why, src: libWhere(c)});
+  }
+  return out;
 }
 async function dailyEnsure(){
   if (daily.day === dayKey(now())) return;
-  let qs = daily.pack.splice(0, DAILY_N), tip = daily.tips.shift() || null;
-  if ((qs.length < DAILY_N || !tip) && libBooks.length){ try { const off = await dailyOffline(); qs = qs.concat(off.qs).slice(0, DAILY_N); tip ||= off.tip; } catch {} }
-  if (!qs.length && !tip) return;
-  Object.assign(daily, {day: dayKey(now()), set: qs.map(q => ({...q, picked: null})), tip, i: 0}); saveDaily();
+  let set = daily.notes.splice(0, DAILY_N);
+  if (set.length < DAILY_N && libBooks.length){ try { set = set.concat(await dailyOffline(DAILY_N - set.length)); } catch {} }
+  if (!set.length) return;
+  Object.assign(daily, {day: dayKey(now()), set, i: 0}); saveDaily();
 }
 async function dailyRefill(force){
-  if (dailyBusy || !libBooks.length || !navigator.onLine) return;
-  if (!force && (daily.pack.length >= 20 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
+  if (dailyBusy || !navigator.onLine) return;
+  if (!force && (daily.notes.length >= 16 || now() - (daily.refilledAt || 0) < 6 * HOUR)) return;
   const sample = await getSample(); if (!sample) return;
   dailyBusy = true; if (force) render();
   try {
-    const chunks = await libRandomChunks(6);
-    const cards = of("card").map(c => c.drug).slice(0, 30).join(", ");
-    const r = await askJson(sample, `You are preparing daily study material for a practising pharmacist in Zimbabwe, from his own books. Use ONLY facts stated in these passages:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n${cards ? "Drugs he is studying: " + cards + "\n\n" : ""}Return JSON {"questions": [...], "tips": [...]}. Write 12 multiple-choice questions: practical scenarios, doses, first-line choices, monitoring, counselling, legal duties. Each: {"q": question, "options": [4 short options], "answer": index 0-3, "why": one sentence, "src": the passage label exactly as given, e.g. "${libWhere(chunks[0])}"}. Vary the correct position. Then 4 practical tips, each {"text": one or two sentences a pharmacist can use today, "src": passage label}. If a passage has nothing useful, skip it.`);
-    const qs = (r?.questions || []).filter(q => q?.q && Array.isArray(q.options) && q.options.length >= 2 && Number.isInteger(+q.answer)).map(q => ({q: String(q.q), options: q.options.map(String), answer: +q.answer, why: String(q.why || ""), src: String(q.src || "")}));
-    const tips = (r?.tips || []).filter(t => t?.text).map(t => ({text: String(t.text), src: String(t.src || "")}));
-    daily.pack.push(...qs); daily.tips.push(...tips); daily.refilledAt = now(); saveDaily();
-    if (force) toast(`Added ${qs.length} questions and ${tips.length} tips for offline days.`);
+    const chunks = libBooks.length ? [...await libRandomChunks(3, SKIN_RE), ...await libRandomChunks(3, PHARM_RE)] : [];
+    const r = await askJson(sample, `You write short daily study notes for a practising community pharmacist in Zimbabwe who loves skin care and cosmetics.
+${chunks.length ? `Passages from his own books:\n\n${chunks.map((c, i) => `[${i + 1}] ${libWhere(c)}:\n${c.t.slice(0, 1400)}`).join("\n\n")}\n\n` : ""}Write 8 notes: about half on skin (conditions, topical products, cosmetics and skin care, counselling) and half on everyday pharmacy practice (dispensing, counselling, doses, storage, interactions, special groups, Zimbabwe practice).
+Return a JSON array. Each item: {"topic": "Skin" or "Pharmacy", "title": a few words, "note": one or two plain sentences with the key fact, "why": two or three sentences explaining why it matters or how to use it at the counter, "src": the passage label exactly as given (e.g. "${chunks[0] ? libWhere(chunks[0]) : "General knowledge"}") or "General knowledge" if not from a passage}.
+Prefer facts from the passages. Only add general knowledge that is well established; never invent doses. Keep each note simple.`);
+    const notes = (Array.isArray(r) ? r : r?.notes || []).filter(x => x?.note).map(x => ({topic: /skin/i.test(x.topic) ? "Skin" : "Pharmacy", title: String(x.title || ""), note: String(x.note), why: String(x.why || ""), src: String(x.src || "")}));
+    daily.notes.push(...notes); daily.refilledAt = now(); saveDaily();
+    if (force) toast(`Saved ${notes.length} notes for the coming days.`);
   } catch (e){ if (force) toast(errCopy(e)); }
   dailyBusy = false; if (force || view === "learn" || view === "today") render();
 }
 function dailyHTML(){
-  const set = daily.set || [], done = set.filter(q => q.picked != null).length, right = set.filter(q => q.picked === q.answer).length;
-  const canAI = inClaude || !!apiKey();
-  const tip = daily.tip ? `<div class="daily-tip"><b>${IC.ai}Tip of the day</b><p>${esc(daily.tip.text)}</p>${daily.tip.src ? `<small>${esc(daily.tip.src)}</small>` : ""}</div>` : "";
-  const status = `<p class="sub" style="margin:0">${daily.pack.length ? `${daily.pack.length} questions saved for offline days.` : libBooks.length ? "No saved questions yet. Questions come straight from your books." : "Add books to your Library for daily questions."}${canAI && libBooks.length ? ` <button class="linkish" data-dailymore="1" ${dailyBusy ? "disabled" : ""}>${dailyBusy ? "Preparing…" : "Prepare more"}</button>` : ""}</p>`;
-  if (!set.length) return tip + (libBooks.length ? `<div class="btn-row"><button class="btn primary" data-dailystart="1">Start today's questions</button></div>` : `<div class="btn-row"><button class="btn primary" data-nav="books">${IC.book}Open Library</button></div>`) + status;
-  if (daily.i >= set.length) return tip + `<div class="daily-done"><b>${right} of ${set.length} correct today</b><span>${daily.streak > 1 ? daily.streak + "-day streak. " : ""}New questions tomorrow.</span></div><div class="btn-row"><button class="btn sm" data-dailyi="0">Go over them again</button></div>` + status;
-  const q = set[daily.i], ans = q.picked != null;
-  return `<div class="quiz-q daily-q"><div class="row-meta"><span>Question ${daily.i + 1} of ${set.length}</span><span>${right} correct</span></div><div class="q">${esc(q.q)}</div>
-    <div class="opts">${q.options.map((o, j) => `<button class="opt ${ans ? (j === q.answer ? "right" : j === q.picked ? "wrong" : "") : ""}" data-dpick="${j}" ${ans ? "disabled" : ""}>${String.fromCharCode(65 + j)}. ${esc(o)}</button>`).join("")}</div>
-    ${ans ? `<div class="why">${esc(q.why || "")}${q.src ? `<br><small>${esc(q.src)}</small>` : ""}</div>` : ""}</div>
-    <div class="btn-row" style="justify-content:space-between">${daily.i ? `<button class="btn sm" data-dailyi="${daily.i - 1}">Back</button>` : "<span></span>"}${ans ? `<button class="btn sm primary" data-dailyi="${daily.i + 1}">${daily.i + 1 < set.length ? "Next" : "Finish"}${IC.chev}</button>` : ""}</div>`;
+  const set = daily.set || [], canAI = inClaude || !!apiKey();
+  const status = `<p class="sub" style="margin:0">${daily.notes.length ? `${daily.notes.length} notes saved for the coming days.` : libBooks.length ? "Notes come straight from your books." : "Add books to your Library, or your API key, for daily notes."}${canAI ? ` <button class="linkish" data-dailymore="1" ${dailyBusy ? "disabled" : ""}>${dailyBusy ? "Preparing…" : "Prepare more"}</button>` : ""}</p>`;
+  if (!set.length || daily.day !== dayKey(now())) return `<div class="btn-row"><button class="btn primary" data-dailystart="1">${IC.learn}Show today's notes</button></div>` + status;
+  if (daily.i >= set.length) return `<div class="daily-done"><b>That's today's ${set.length} notes</b><span>${daily.streak > 1 ? daily.streak + " days in a row. " : ""}New notes tomorrow.</span></div><div class="btn-row"><button class="btn sm" data-dailyi="0">Read them again</button></div>` + status;
+  const n = set[daily.i];
+  return `<article class="daily-note"><div class="row-meta"><span class="pill ${n.topic === "Skin" ? "s-warn" : "s-good"}">${esc(n.topic)}</span><span>Note ${daily.i + 1} of ${set.length}</span></div>
+    ${n.title ? `<h3>${esc(n.title)}</h3>` : ""}<p class="daily-main">${esc(n.note)}</p>
+    ${n.why ? `<div class="daily-why"><b>Why it matters</b><p>${esc(n.why)}</p></div>` : ""}${n.src ? `<small>${esc(n.src)}</small>` : ""}</article>
+    <div class="btn-row" style="justify-content:space-between">${daily.i ? `<button class="btn sm" data-dailyi="${daily.i - 1}">Back</button>` : "<span></span>"}<button class="btn sm primary" data-dailyi="${daily.i + 1}">${daily.i + 1 < set.length ? "Next" : "Done"}${IC.chev}</button></div>`;
 }
-function dailyMeta(){ const set = daily.set || []; if (daily.day !== dayKey(now()) || !set.length) return libBooks.length ? "5 questions and a tip" : "Add books first"; const left = set.filter(q => q.picked == null).length; return left ? `${left} of ${set.length} left today` : "Done for today"; }
-function dailyPick(j){
-  const q = daily.set[daily.i]; if (!q || q.picked != null) return; q.picked = j;
-  if (daily.set.every(x => x.picked != null) && daily.lastDone !== dayKey(now())){ daily.streak = daily.lastDone === dayKey(now() - DAY) ? (daily.streak || 0) + 1 : 1; daily.lastDone = dayKey(now()); }
+function dailyMeta(){ const set = daily.set || []; if (daily.day !== dayKey(now()) || !set.length) return "Pharmacy and skin notes"; return daily.i >= set.length ? "Read today" : `${set.length - daily.i} of ${set.length} to read`; }
+function dailyGo(i){
+  daily.i = i;
+  if (i >= (daily.set || []).length && daily.lastDone !== dayKey(now())){ daily.streak = daily.lastDone === dayKey(now() - DAY) ? (daily.streak || 0) + 1 : 1; daily.lastDone = dayKey(now()); }
   saveDaily(); render();
 }
 let dailyTried = "";
-const dailyAuto = () => { if (daily.day !== dayKey(now()) && dailyTried !== dayKey(now()) && (daily.pack.length || libBooks.length)){ dailyTried = dayKey(now()); dailyEnsure().then(() => { if (view === "today" || view === "learn") render(); }).catch(() => {}); } };
+const dailyAuto = () => { if (daily.day !== dayKey(now()) && dailyTried !== dayKey(now()) && (daily.notes.length || libBooks.length)){ dailyTried = dayKey(now()); dailyEnsure().then(() => { if (view === "today" || view === "learn") render(); }).catch(() => {}); } };
 
 function viewTools(){
   const t0 = `<section class="card calc" data-calc="dose"><div class="card-head"><div><h2>Weight-based dose</h2><p class="sub">Children or any mg/kg dosing</p></div></div>
@@ -2285,9 +2294,8 @@ document.addEventListener("click", async ev => {
   if (d.new){ closeMenu(); editing = null; draftCard = null; const map = {task: "tasks", appt: "appts", card: "learn", log: "log", stock: "stock", deal: "deals"}; if (d.new === "card") learnTab = "library"; go(map[d.new], {open: d.new}); return; }
   if (d.sheet){ document.body.classList.add("sheet-open"); return; }
   if (d.pop){ openPop(d.pop); return; }
-  if (d.dpick != null){ dailyPick(+d.dpick); return; }
-  if (d.dailyi != null){ daily.i = +d.dailyi; saveDaily(); render(); return; }
-  if (d.dailystart){ dailyTried = dayKey(now()); await dailyEnsure(); if (!daily.set?.length) toast("Couldn't make questions yet. Add a book with readable text."); render(); return; }
+  if (d.dailyi != null){ dailyGo(+d.dailyi); return; }
+  if (d.dailystart){ dailyTried = dayKey(now()); await dailyEnsure(); if (!daily.set?.length || daily.day !== dayKey(now())){ if (inClaude || apiKey()){ await dailyRefill(true); await dailyEnsure(); } if (daily.day !== dayKey(now())) toast("No notes yet. Add a book with readable text, or your API key."); } render(); return; }
   if (d.dailymore){ dailyRefill(true); return; }
   if (d.libshelf != null){ libShelfTab = +d.libshelf; render(); return; }
   if (d.libread != null){ libRead = +d.libread; render(); openPop("lib-read"); return; }
