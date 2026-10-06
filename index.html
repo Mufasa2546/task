@@ -372,6 +372,13 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .sugg-pop{position:fixed;z-index:95;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line-strong);border-radius:var(--r-sm);box-shadow:0 10px 30px rgba(0,0,0,.28);overflow:hidden}
 .sugg-pop[hidden]{display:none}.sugg-pop button{all:unset;cursor:pointer;padding:11px 14px;font-size:15px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid var(--line)}
 .sugg-pop button:last-child{border-bottom:0}.sugg-pop button:hover,.sugg-pop button:focus-visible{background:var(--sunk)}
+.stmt{list-style:none;margin:0 0 12px;padding:0}.stmt li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.stmt li span{min-width:0;color:var(--muted);font-size:14px}.stmt li small{display:block;font-size:12px;margin-top:2px;line-height:1.35}
+.stmt li b{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px}
+.stmt .stmt-h{display:block;border:0;padding:12px 0 2px;font-weight:700;font-size:13px;color:var(--fg);text-transform:none}.stmt .stmt-h:first-child{padding-top:0}
+.stmt .owe b{color:var(--bad)}.stmt .ok b{color:var(--good)}
+.stmt .stmt-total{border:0;margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--sunk)}.stmt .stmt-total span{color:var(--fg);font-weight:700}.stmt .stmt-total b{font-size:18px}
+.months{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
 .pay-grid small{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}.cp-more{margin-top:10px;flex-wrap:wrap}.fee-form{margin-top:12px;padding-top:12px!important;border-top:1px solid var(--line)}
 .pay-grid .owe b{color:var(--bad)}.pay-grid .ok b{color:var(--good)}.cp-next{margin:0 0 12px}
 .rx-img{all:unset;display:block;width:100%;max-height:52vh;overflow:hidden;border-radius:var(--r-sm);background:var(--sunk);cursor:zoom-in;margin-bottom:6px}
@@ -1665,7 +1672,7 @@ function viewSettings(){
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.18.1";
+const APP_VERSION = "2.18.2";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -2502,19 +2509,31 @@ function billing(d, t = now()){
   const pays = paysOf(d.id), sumOf = f => pays.filter(f).reduce((s, p) => s + (+p.amount || 0), 0);
   let setupPaid = sumOf(p => p.for === "setup"), monthlyPaid = sumOf(p => p.for === "monthly");
   const loose = sumOf(p => !p.for), toSetup = Math.min(loose, Math.max(0, setup - setupPaid)); setupPaid += toSetup; monthlyPaid += loose - toSetup;
-  const nextDue = started && !d.billStop ? addMonths(d.billStart, months) : null;
-  return {setup, setupPaid, setupLeft: setup - setupPaid, monthly: feeAt(d, nextDue || t), months, monthlyCharged, monthlyPaid, monthlyLeft: monthlyCharged - monthlyPaid,
+  const nextDue = started && !d.billStop ? addMonths(d.billStart, months) : null, atDelivery = Math.min(setup, sumOf(p => p.delivery));
+  // Month by month, oldest first; monthly payments clear the oldest month first.
+  let pot = monthlyPaid; const ledger = [];
+  for (let m = 0; m < months; m++){ const due = addMonths(d.billStart, m), fee = feeAt(d, due), got = Math.min(fee, Math.max(0, pot)); pot -= got; ledger.push({due, fee, got}); }
+  return {atDelivery, ledger, setup, setupPaid, setupLeft: setup - setupPaid, monthly: feeAt(d, nextDue || t), months, monthlyCharged, monthlyPaid, monthlyLeft: monthlyCharged - monthlyPaid,
     charged: setup + monthlyCharged, paid: setupPaid + monthlyPaid, balance: setup + monthlyCharged - setupPaid - monthlyPaid, nextDue};
 }
 const owedClients = () => of("deal").filter(hasPlan).map(d => ({d, b: billing(d)})).filter(x => x.b.balance > 0);
 const balPill = d => { if (!hasPlan(d)) return ""; const b = billing(d); return b.balance > 0 ? `<span class="pill s-bad">Owes ${money(b.balance)}</span>` : `<span class="pill s-good">Paid up</span>`; };
 const amt = sel => parseFloat(($(sel)?.value || "").replace(/[^\d.]/g, "")) || 0;
-function planFrom(setupSel, monthlySel, startSel){
-  const setupFee = amt(setupSel), monthly = amt(monthlySel), day = $(startSel)?.value;
-  let billStart = day ? new Date(day + "T09:00").getTime() : null;
-  if (monthly && !billStart) billStart = addMonths(new Date().setHours(9, 0, 0, 0), 1); // monthly payments usually start a month after the initial fee
-  return {setupFee, monthly, billStart};
+function planFrom(p){
+  const setupFee = amt(`#${p}-setup`), monthly = amt(`#${p}-monthly`), day = $(`#${p}-delivered`)?.value;
+  const deliveredAt = day ? new Date(day + "T09:00").getTime() : setupFee || monthly ? new Date().setHours(9, 0, 0, 0) : null;
+  // Monthly charges start the month after delivery and repeat on the same day every month.
+  return {setupFee, monthly, deliveredAt, billStart: monthly && deliveredAt ? addMonths(deliveredAt, 1) : null};
 }
+const deliveredOf = d => d.deliveredAt || (d.billStart ? addMonths(d.billStart, -1) : null);
+const deliveryPay = id => of("pay").find(p => p.dealId === id && p.delivery);
+// "Paid at delivery" is kept as a payment towards the initial fee, so it shows in the history like any other.
+function setDeliveryPay(dealId, amount, at){
+  const x = deliveryPay(dealId);
+  if (amount > 0) x ? put({...x, amount, at: at || x.at}) : add("pay", {dealId, amount, at: at || now(), for: "setup", delivery: true, note: "Paid at delivery"});
+  else if (x) remove(x.id);
+}
+const ordinal = n => n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th");
 // Phone numbers saved without a country code get the one for where this phone is, so WhatsApp links work.
 const DIAL = {"Africa/Harare": "263", "Africa/Nairobi": "254", "Africa/Johannesburg": "27", "Africa/Lusaka": "260", "Africa/Kampala": "256", "Africa/Dar_es_Salaam": "255", "Africa/Lagos": "234", "Africa/Accra": "233", "Africa/Gaborone": "267", "Africa/Maputo": "258", "Africa/Blantyre": "265", "Africa/Kigali": "250", "Europe/London": "44"};
 const phoneOf = c => { const m = String(c || "").match(/\+?\d[\d\s().-]{6,}\d/); return m ? m[0].replace(/[^\d+]/g, "") : ""; };
@@ -2533,12 +2552,21 @@ function clientPop(d){
       : `<p class="sub">Add a phone number to WhatsApp or call ${esc(d.client)} from here.</p><div class="btn-row"><button class="btn" data-edit="${d.id}">${IC.edit}Add phone number</button></div>`}</section>`;
   const fd = b.nextDue || now(), forDefault = b.monthlyLeft > 0 || b.setupLeft <= 0 ? "monthly" : "setup";
   const feeHist = (d.fees || []).length ? `<p class="sub cp-next">Monthly fee: ${[[d.billStart, +d.monthly || 0], ...d.fees.map(f => [f.from, f.amount])].sort((x, y) => x[0] - y[0]).map(([f, a]) => `${money0(a)} from ${new Date(f).toLocaleDateString([], {month: "short", year: "numeric"})}`).join(", then ")}.</p>` : "";
-  const pay = hasPlan(d) ? `<div class="pay-grid">
-      <div><span>Initial fee</span><b>${money0(b.setup)}</b><small>${!b.setup ? "None" : b.setupLeft > 0 ? `${money0(b.setupPaid)} paid, ${money0(b.setupLeft)} left` : "Paid in full"}</small></div>
-      <div><span>Monthly fee</span><b>${money0(b.monthly)}</b><small>${b.months ? `${b.months} month${b.months === 1 ? "" : "s"}, ${b.monthlyLeft > 0 ? money0(b.monthlyLeft) + " owed" : "up to date"}` : "Not started yet"}</small></div>
-      <div><span>Paid so far</span><b>${money0(b.paid)}</b><small>${pays.length} payment${pays.length === 1 ? "" : "s"}</small></div>
-      <div class="${b.balance > 0 ? "owe" : "ok"}"><span>${b.balance > 0 ? "Balance due" : b.balance < 0 ? "Paid ahead" : "Balance"}</span><b>${money0(Math.abs(b.balance))}</b><small>${b.balance > 0 ? "Initial and monthly together" : "Nothing owed"}</small></div></div>
-    <p class="sub cp-next">${b.nextDue ? `Next monthly payment ${esc(fmtDay(b.nextDue))}: ${money0(b.monthly)}. It carries on every month until you stop it.` : d.billStop ? `Monthly payments stopped ${esc(fmtDay(d.billStop))}.` : "No monthly fee set yet."}</p>${feeHist}
+  const line = (l, v, cls = "", sub = "") => `<li class="${cls}"><span>${l}${sub ? `<small>${sub}</small>` : ""}</span><b>${v}</b></li>`;
+  const dlv = deliveredOf(d), day = d.billStart ? new Date(d.billStart).getDate() : null, unpaid = b.ledger.filter(m => m.got < m.fee);
+  const recent = b.ledger.slice(-6).reverse();
+  const pay = hasPlan(d) ? `<ul class="stmt">
+      <li class="stmt-h">Initial fee${dlv ? ` · delivered ${esc(new Date(dlv).toLocaleDateString([], {day: "numeric", month: "short", year: "numeric"}))}` : ""}</li>
+      ${line("Charged", money0(b.setup))}
+      ${line("Paid at delivery", money0(b.atDelivery))}
+      ${b.setupPaid - b.atDelivery > 0 ? line("Paid after delivery", money0(b.setupPaid - b.atDelivery)) : ""}
+      ${line(b.setupLeft > 0 ? "Still owing" : "Owing", b.setupLeft > 0 ? money0(b.setupLeft) : "Paid in full", b.setupLeft > 0 ? "owe" : "ok")}
+      <li class="stmt-h">Monthly fee</li>
+      ${b.monthly || b.months ? line("Charged every month", money0(b.monthly), "", d.billStop ? `Stopped ${esc(fmtDay(d.billStop))}` : day ? `Automatically on the ${ordinal(day)}, from ${esc(new Date(d.billStart).toLocaleDateString([], {month: "long", year: "numeric"}))}, while we maintain the site` : "") : line("Charged every month", "None yet")}
+      ${b.months ? line(`Charged so far (${b.months} month${b.months === 1 ? "" : "s"})`, money0(b.monthlyCharged)) + line("Paid", money0(b.monthlyPaid)) + line(b.monthlyLeft > 0 ? "Still owing" : "Owing", b.monthlyLeft > 0 ? money0(b.monthlyLeft) : "Up to date", b.monthlyLeft > 0 ? "owe" : "ok", unpaid.length ? `${unpaid.length} month${unpaid.length === 1 ? "" : "s"} not fully paid` : "") : ""}
+      ${b.nextDue ? line("Next charge", money0(b.monthly), "", esc(fmtDay(b.nextDue))) : ""}
+      <li class="stmt-total ${b.balance > 0 ? "owe" : "ok"}"><span>${b.balance > 0 ? "Total owing" : b.balance < 0 ? "Paid ahead" : "Total owing"}</span><b>${b.balance ? money0(Math.abs(b.balance)) : "Nothing"}</b></li></ul>
+    ${recent.length ? `<div class="months">${recent.map(m => `<span class="pill ${m.got >= m.fee ? "s-good" : m.got ? "s-warn" : "s-bad"}">${esc(new Date(m.due).toLocaleDateString([], {month: "short", year: "numeric"}))} ${m.got >= m.fee ? "paid" : m.got ? "part" : "unpaid"}</span>`).join("")}</div>` : ""}${feeHist}
     <form class="form" id="pay-form" data-deal="${d.id}" style="padding:0">
       <label class="field">Payment for<select id="py-for" data-setup="${Math.max(0, b.setupLeft)}" data-monthly="${b.monthlyLeft > 0 ? b.monthlyLeft : b.monthly}"><option value="monthly" ${forDefault === "monthly" ? "selected" : ""}>Monthly fee</option>${b.setup ? `<option value="setup" ${forDefault === "setup" ? "selected" : ""}>Initial fee</option>` : ""}</select></label>
       <label class="field">Amount (${cur})<input id="py-amt" inputmode="decimal" required value="${forDefault === "setup" ? Math.max(0, b.setupLeft) || "" : (b.monthlyLeft > 0 ? b.monthlyLeft : b.monthly) || ""}"></label>
@@ -2552,11 +2580,12 @@ function clientPop(d){
       : `<div class="btn-row cp-more"><button class="btn sm" data-feeedit="${d.id}">${IC.edit}Change monthly fee</button>${d.billStart ? `<button class="btn sm ghost" data-billing="${d.id}" data-to="${d.billStop ? "on" : "off"}">${d.billStop ? "Restart monthly" : "Stop monthly"}</button>` : ""}</div>`}`
     : `<p class="sub">Add the initial fee and the monthly fee. Task adds the monthly fee every month on its own until you stop it, and keeps the balance up to date. The initial fee can be paid in parts.</p>
     <form class="form" id="plan-form" data-deal="${d.id}" style="padding:0">
-      <label class="field">Initial fee (${cur})<input id="pl-setup" inputmode="decimal"></label>
-      <label class="field">Monthly fee (${cur})<input id="pl-monthly" inputmode="decimal"></label>
-      <label class="field">First monthly payment<input id="pl-start" type="date" value="${dateVal(addMonths(now(), 1))}"></label>
+      <label class="field">Initial fee charged (${cur})<input id="pl-setup" inputmode="decimal"></label>
+      <label class="field">Paid at delivery (${cur})<input id="pl-paidnow" inputmode="decimal"></label>
+      <label class="field">Delivered on<input id="pl-delivered" type="date" value="${dateVal()}"></label>
+      <label class="field">Monthly fee, from the next month (${cur})<input id="pl-monthly" inputmode="decimal"></label>
       <div class="btn-row"><button class="btn primary" type="submit">${IC.pay}Save payment plan</button></div></form>`;
-  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span><span>${x.for === "setup" ? "Initial fee" : x.for === "monthly" ? "Monthly fee" : "Payment"}</span>${x.note ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
+  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span><span>${x.delivery ? "At delivery" : x.for === "setup" ? "Initial fee" : x.for === "monthly" ? "Monthly fee" : "Payment"}</span>${x.note && !x.delivery ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
   const more = d.nextStep || d.notes ? `<section class="card">${d.nextStep ? `<p><b>Next:</b> ${esc(d.nextStep)}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</p>` : ""}${d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}</section>` : "";
   return {title: d.client, sub: [d.company !== d.client && d.company, d.service].filter(Boolean).join(" · ") || "Client", html: `${head}
     <section class="card"><div class="card-head"><div><h2>Payments</h2></div>${hasPlan(d) ? `<button class="btn sm ghost" data-edit="${d.id}">${IC.edit}Change plan</button>` : ""}</div>${pay}</section>
@@ -2589,9 +2618,10 @@ function viewDeals(){
       <label class="field">Service<select id="dl-service">${SERVICES.map(x => `<option ${(e?.service || SERVICES[0]) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label class="field">Stage<select id="dl-stage">${STAGES.map(([k, l]) => `<option value="${k}" ${(e?.stage || "lead") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field">Value (${esc(profile.currency || "amount")})<input id="dl-value" inputmode="decimal" value="${esc(e?.value || "")}"></label>
-      <label class="field">Initial fee<input id="dl-setup" inputmode="decimal" value="${esc(e?.setupFee || "")}"></label>
-      <label class="field">Monthly fee<input id="dl-monthly" inputmode="decimal" value="${e && hasPlan(e) ? (billing(e).monthly || "") : ""}"></label>
-      <label class="field">First monthly payment<input id="dl-billstart" type="date" value="${e?.billStart ? toInput(e.billStart).slice(0, 10) : ""}"></label>
+      <label class="field">Initial fee charged<input id="dl-setup" inputmode="decimal" value="${esc(e?.setupFee || "")}"></label>
+      <label class="field">Paid at delivery<input id="dl-paidnow" inputmode="decimal" value="${e ? (deliveryPay(e.id)?.amount || "") : ""}"></label>
+      <label class="field">Delivered on<input id="dl-delivered" type="date" value="${e && deliveredOf(e) ? dateVal(deliveredOf(e)) : ""}"></label>
+      <label class="field">Monthly fee (from the next month)<input id="dl-monthly" inputmode="decimal" value="${e && hasPlan(e) ? (billing(e).monthly || "") : ""}"></label>
       <label class="field">Who handles it<select id="dl-who">${WHO().map(([k, l]) => `<option value="${k}" ${normWho(e?.who || "me") === normWho(k) ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
       <label class="field">Next step<input id="dl-next" value="${esc(e?.nextStep)}" data-list="next-steps"><datalist id="next-steps"><option>Call to qualify</option><option>Send proposal</option><option>Follow up on proposal</option><option>Send invoice</option><option>Kickoff meeting</option><option>Deliver first draft</option><option>Ask for a review</option></datalist></label>
       <label class="field">When<input id="dl-at" type="datetime-local" value="${toInput(e ? e.nextAt : n)}"></label>
@@ -3038,13 +3068,15 @@ document.addEventListener("submit", ev => {
   else if (f === "deal-form"){
     const nextAt = fromInput($("#dl-at").value), val = parseFloat(v("#dl-value").replace(/[^\d.]/g, "")) || 0;
     const data = {client: v("#dl-client"), company: v("#dl-company"), contact: v("#dl-contact"), service: $("#dl-service").value, stage: $("#dl-stage").value, value: val, who: $("#dl-who").value, nextStep: v("#dl-next"), nextAt, remind: $("#dl-remind").checked && !!nextAt, notes: v("#dl-notes"),
-      ...planFrom("#dl-setup", "#dl-monthly", "#dl-billstart")};
-    // Months already charged keep their old fee; a new monthly amount starts from the next payment.
-    if (editing?.kind === "deal" && editing.billStart && billing(editing).months > 0){ const b = billing(editing);
+      ...planFrom("dl")};
+    // Months already charged keep their old fee; a new monthly amount starts from the next payment. Changing the delivery date moves the monthly dates.
+    if (editing?.kind === "deal" && editing.billStart && billing(editing).months > 0){ const b = billing(editing), sameDay = dateVal(deliveredOf(editing)) === $("#dl-delivered").value;
       if (data.monthly !== b.monthly) data.fees = [...(editing.fees || []), {from: b.nextDue || now(), amount: data.monthly}];
-      data.monthly = editing.monthly; data.billStart = editing.billStart; }
+      data.monthly = editing.monthly; if (sameDay){ data.billStart = editing.billStart; data.deliveredAt = deliveredOf(editing); } else data.billStart = addMonths(data.deliveredAt, 1); }
     if (data.stage === "done" && editing?.stage !== "done") data.doneAt = now();
-    if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else add("deal", data);
+    const dealId = editing?.kind === "deal" ? editing.id : uid(), paidNow = amt("#dl-paidnow");
+    if (editing?.kind === "deal") put({...editing, ...data, notified: editing.nextAt === nextAt ? editing.notified : null}); else put({id: dealId, kind: "deal", createdAt: now(), ...data});
+    if (data.setupFee || deliveryPay(dealId)) setDeliveryPay(dealId, Math.min(paidNow, data.setupFee || paidNow), data.deliveredAt);
     toast(`${editing ? "Updated" : "Added"} ${data.client}${nextAt && data.remind ? ", reminder " + fmtWhen(nextAt) : ""}`); editing = null; openForm = null;
   }
   else if (f === "pay-form"){
@@ -3055,13 +3087,13 @@ document.addEventListener("submit", ev => {
   else if (f === "fee-form"){
     const dl = byId(ev.target.dataset.deal), a = amt("#fe-amt"), day = $("#fe-from").value; if (!dl || !day){ toast("Type the new fee and when it starts."); return; }
     const from = new Date(day + "T00:00").getTime(); feeEdit = null; document.activeElement?.blur();
-    put(dl.billStart ? {...dl, fees: [...(dl.fees || []).filter(f => f.from !== from), {from, amount: a}]} : {...dl, monthly: a, billStart: new Date(day + "T09:00").getTime()});
+    put(dl.billStart ? {...dl, fees: [...(dl.fees || []).filter(f => f.from !== from), {from, amount: a}]} : {...dl, monthly: a, billStart: new Date(day + "T09:00").getTime(), deliveredAt: deliveredOf(dl) || addMonths(new Date(day + "T09:00").getTime(), -1)});
     toast(`${dl.client}'s monthly fee is ${money(a) || "0"} from ${fmtDay(from)}. Earlier months keep their old fee.`); return;
   }
   else if (f === "plan-form"){
-    const dl = byId(ev.target.dataset.deal); if (!dl) return; const plan = planFrom("#pl-setup", "#pl-monthly", "#pl-start");
+    const dl = byId(ev.target.dataset.deal); if (!dl) return; const plan = planFrom("pl");
     if (!plan.setupFee && !plan.monthly){ toast("Type the initial fee, the monthly fee, or both."); return; }
-    document.activeElement?.blur(); put({...dl, ...plan}); toast(`Payment plan saved for ${dl.client}.`); return;
+    const paidNow = amt("#pl-paidnow"); document.activeElement?.blur(); put({...dl, ...plan}); if (plan.setupFee) setDeliveryPay(dl.id, Math.min(paidNow, plan.setupFee), plan.deliveredAt); toast(`Payment plan saved for ${dl.client}.`); return;
   }
   else if (f === "cream-form"){
     const price = amt("#cr-price"), paidTxt = v("#cr-paid"), day = $("#cr-at").value;
