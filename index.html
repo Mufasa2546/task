@@ -173,6 +173,10 @@ details.adder[open] > summary{border-bottom:1px solid var(--line)}
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px 14px;padding:16px 18px 18px;align-items:end}
 .form .wide{grid-column:1/-1}
 .field{display:grid;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);min-width:0}
+input[type=date],input[type=datetime-local],input[type=time],input[type=month]{-webkit-appearance:none;appearance:none;display:block;width:100%;max-width:100%;min-width:0;text-align:left;line-height:1.3}
+input::-webkit-date-and-time-value{text-align:left;margin:0;min-width:0}input::-webkit-datetime-edit{padding:0;min-width:0;overflow:hidden}
+input::-webkit-calendar-picker-indicator{margin-left:4px;flex:none}
+.field,.form>*{min-width:0}
 input,select,textarea{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;width:100%;min-width:0;min-height:42px;font-size:16px}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 textarea{resize:vertical;min-height:80px}
@@ -379,6 +383,24 @@ label.btn{cursor:pointer;user-select:none;-webkit-user-select:none}
 .stmt .owe b{color:var(--bad)}.stmt .ok b{color:var(--good)}
 .stmt .stmt-total{border:0;margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--sunk)}.stmt .stmt-total span{color:var(--fg);font-weight:700}.stmt .stmt-total b{font-size:18px}
 .months{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+#print-area{display:none}.rc-note{margin-bottom:12px}.rc-logo-prev{width:44px;height:44px;object-fit:contain;border-radius:8px;background:#fff;flex:none}
+.share-note{margin:0 0 12px;flex-wrap:wrap}
+@media print{
+  body.printing>*:not(#print-area){display:none!important}html:has(body.printing),body.printing{background:#fff!important;background-image:none!important}body.printing::before,body.printing::after{display:none!important}
+  body.printing #print-area{display:block;color:#111;font:13px/1.45 "Plus Jakarta Sans",system-ui,sans-serif}
+  @page{margin:14mm}
+  .rc{max-width:720px;margin:0 auto}.rc-head{display:flex;gap:16px;align-items:center;padding-bottom:14px;border-bottom:3px solid #0b2340}
+  .rc-head img{width:72px;height:72px;object-fit:contain}.rc-head h1{margin:0;font-size:20px;color:#0b2340}.rc-head p{margin:4px 0 0;color:#444;font-size:12px}
+  .rc-title{display:flex;justify-content:space-between;align-items:flex-end;margin:18px 0 10px}.rc-title h2{margin:0;font-size:26px;letter-spacing:.08em;text-transform:uppercase;color:#c8a24b}
+  .rc-title dl{display:grid;grid-template-columns:auto auto;gap:2px 12px;margin:0;font-size:12px}.rc-title dt{color:#666}.rc-title dd{margin:0;font-weight:700;text-align:right}
+  .rc-to{margin:8px 0 16px}.rc-to span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#666}.rc-to b{font-size:16px}.rc-to p{margin:2px 0 0;color:#333}
+  .rc table{width:100%;border-collapse:collapse;margin:0 0 16px}.rc td,.rc th{padding:8px 10px;text-align:left;vertical-align:top}.rc td:last-child,.rc th:last-child{text-align:right;white-space:nowrap}
+  .rc-items thead th{background:#0b2340;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:12px}
+  .rc-items tbody td{border-bottom:1px solid #ddd}.rc-items small{color:#555}.rc-items tfoot td{font-weight:800;font-size:16px;border-top:2px solid #0b2340}
+  .rc-sum caption{text-align:left;font-weight:700;padding:0 10px 6px;color:#0b2340}.rc-sum td{border-bottom:1px solid #eee;font-size:12.5px}.rc-sum .rc-total td{font-weight:800;border-bottom:0;border-top:2px solid #0b2340}
+  .rc-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-top:28px}.rc-foot span{display:block;font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.06em}
+  .rc-foot i{display:block;width:200px;border-bottom:1px solid #333;height:34px}.rc-foot small{color:#666}.rc-foot p{margin:0;color:#0b2340;font-weight:600}
+}
 .pay-grid small{display:block;font-size:12px;color:var(--muted);margin-top:2px;line-height:1.3}.cp-more{margin-top:10px;flex-wrap:wrap}.fee-form{margin-top:12px;padding-top:12px!important;border-top:1px solid var(--line)}
 .pay-grid .owe b{color:var(--bad)}.pay-grid .ok b{color:var(--good)}.cp-next{margin:0 0 12px}
 .rx-img{all:unset;display:block;width:100%;max-height:52vh;overflow:hidden;border-radius:var(--r-sm);background:var(--sunk);cursor:zoom-in;margin-bottom:6px}
@@ -672,7 +694,7 @@ let pending = lsGet(PKEY, {});
 let apiOk = false, syncing = false, lastSync = lsGet("task.lastSync", 0), syncErr = "", authOpen = false, authMode = "signin", authMsg = "";
 const signedIn = () => !!session?.token;
 function spaceOf(x){
-  if (x.kind === "deal" || x.kind === "project" || x.kind === "pay") return "team";
+  if (x.kind === "deal" || x.kind === "project" || x.kind === "pay" || x.kind === "bizinfo") return "team";
   if (x.kind === "task") return !isMe(x.who) || x.shared ? "team" : "me";
   if (x.kind === "biz" || x.kind === "appt") return x.shared ? "team" : "me";
   if (x.kind === "log") return x.shared || /brandbridge/i.test(x.tag || "") || (profile.company && x.tag === profile.company) ? "team" : "me";
@@ -752,7 +774,7 @@ async function syncNow(){
     if (applyRemoteProfile() || aiNew) render();
     if (!firstSync) updTell(arrived);
     else if (!byId(profileItemId()) && (profile.name || profile.photo || profile.logo)) queueProfileSync(true);
-    lastSync = now(); lsSet("task.lastSync", lastSync);
+    lastSync = now(); lsSet("task.lastSync", lastSync); loadAiShared();
   } catch (e) { syncErr = e?.code === "signed_out" ? "" : "Couldn't sync (" + (e?.code || "offline") + "). Will retry."; }
   syncing = false;
   if (view === "settings") render(); else renderChrome();
@@ -1033,6 +1055,7 @@ const IC = {
   mail: I('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5L12 13l8.5-6.5"/>'),
   camera: I('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   pay: I('<rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v5M17.5 9.5v5"/>'),
+  receipt: I('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h4"/>'),
   rx: I('<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 16V8h2.5a2 2 0 0 1 0 4H9M11 12l4 5M15 12.5l-3 4"/>')
 };
 
@@ -1452,10 +1475,19 @@ function keyCard(){
       <div class="row-meta"><span>Key …${esc(ks[p].slice(-4))}</span></div></div>
       <div class="row-actions">${main || order.length < 2 ? "" : `<button class="btn sm" data-aimain="${p}">Use only</button>`}<button class="btn sm" data-aitest="${p}">Test</button><button class="icon-btn" data-aidel="${p}" aria-label="Remove ${esc(P.short)} key">${IC.trash}</button></div><div class="ai-model">${p === "anthropic" ? "<span>Claude Opus</span>" : p === "openrouter" ? `<select data-aimodel="openrouter" aria-label="OpenRouter model">${[["openrouter/auto", "Best model (needs credit)"], ["openrouter/free", "Free models"]].map(([v, l]) => `<option value="${v}" ${v === m ? "selected" : ""}>${l}</option>`).join("")}</select>` : list.length ? `<select data-aimodel="${p}" aria-label="${esc(P.short)} model">${list.map(x => `<option ${x === m ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>` : m ? `<span>${esc(m)}</span>` : ""}</div></li>`; }).join("");
   return `<section class="card" id="ai-settings"><div class="card-head"><div><h2>AI settings</h2><p class="sub">${order.length ? `Task AI is on. ${order.length < 2 ? "Add another key as a backup if you like." : auto ? "Auto: each job goes to the best AI you have, shown by the tags. If one fails, Task tries the next." : `Using ${esc(AI_PROV[order[0]].short)} only. <button type="button" class="linkish" data-aimain="auto">Switch to Auto</button>`}${signedIn() ? " Your keys sync to your other devices." : ""}` : `Add a key from Claude, ChatGPT, Gemini, Groq, Mistral or another AI. ${signedIn() ? "It follows you to your other devices signed in as " + esc(session.user.email) + ", stays private to you and is never put in backups." : "It's saved only on this device and never put in backups. Sign in to use it on your other devices too."}`}</p></div>${order.length ? `<span class="pill s-good">On</span>` : `<span class="pill s-warn">Off</span>`}</div>
+    ${shareCard()}
     ${rows ? `<ul class="list ai-keys">${rows}</ul>` : ""}
     <form id="key-form" class="btn-row"><input id="api-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste any AI key" aria-label="AI key" style="flex:1 1 200px"><select id="api-prov" aria-label="Which AI is this key from" style="flex:0 1 150px;width:auto"><option value="">Detect AI</option>${Object.entries(AI_PROV).map(([p, P]) => `<option value="${p}">${esc(P.short)}</option>`).join("")}</select><button class="btn primary" type="submit" id="key-save">Save key</button></form>
     <p class="sub" style="margin:8px 0 0">Free keys: ${Object.values(AI_PROV).filter(P => P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Paid: ${Object.values(AI_PROV).filter(P => !P.free).map(P => `<a href="${P.link}" target="_blank" rel="noopener">${esc(P.short)}</a>`).join(" · ")}. Task tells most keys apart; for Mistral or Cohere, pick it in the list.</p>
     <p class="caution" style="margin-top:12px">Never share a key or post it anywhere. Anyone who has it can spend your credit. If one leaks, delete it where you made it and make a new one.</p></section>`;
+}
+function shareCard(){
+  if (inClaude || !signedIn()) return "";
+  const names = ps => ps.map(p => AI_PROV[p]?.short).filter(Boolean).join(", ");
+  if (aiShared && !aiShared.mine) return `<div class="notice share-note"><p><b>Using ${esc(aiShared.by || partner())}'s AI keys</b> (${esc(names(aiShared.provs))}). They stay hidden, so they can't be seen or copied here. You can still add your own key below.</p></div>`;
+  if (!Object.keys(aiKeys()).length) return "";
+  return `<div class="notice share-note"><p>${aiShared?.mine ? `<b>${esc(partner())} is using your keys.</b> They can't see or copy them.` : `Let ${esc(partner())} use your keys too. They won't be able to see or copy them.`}</p>
+    <button class="btn sm ${aiShared?.mine ? "" : "primary"}" data-aishare="${aiShared?.mine ? "off" : "on"}">${aiShared?.mine ? "Stop sharing" : "Share with " + esc(partner())}</button></div>`;
 }
 async function testKey(btn, p){
   p ||= aiOrder()[0]; const was = btn?.textContent;
@@ -1472,7 +1504,7 @@ function viewAI(){
   POPS["ai-sugg"] = {title: "Suggestions", sub: "Tap one to ask Task AI", html: `<div class="sugg-list">${AI_SUGG.map(c => `<button class="btn" data-prompt="${esc(c)}">${esc(c)}</button>`).join("")}</div>`};
   return `<section class="card chat">
     <div class="chat-bar"><button class="btn sm" data-pop="ai-sugg">${IC.ai}Suggestions</button>
-      ${many ? `<select id="ai-pick" data-aipick="1" aria-label="Which AI answers"><option value="auto" ${aiAuto() ? "selected" : ""}>Auto AI</option>${Object.keys(AI_PROV).filter(p => aiKeys()[p]).map(p => `<option value="${p}" ${!aiAuto() && p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)}</option>`).join("")}</select>` : "<span></span>"}
+      ${many ? `<select id="ai-pick" data-aipick="1" aria-label="Which AI answers"><option value="auto" ${aiAuto() ? "selected" : ""}>Auto AI</option>${Object.keys(AI_PROV).filter(aiHas).map(p => `<option value="${p}" ${!aiAuto() && p === aiOrder()[0] ? "selected" : ""}>${esc(AI_PROV[p].short)}</option>`).join("")}</select>` : "<span></span>"}
       <span class="chat-bar-end">${inClaude ? "" : `<button class="icon-btn" data-pop="ai-key" aria-label="AI settings" title="AI settings">${IC.settings}${apiKey() ? "" : `<span class="dot-warn"></span>`}</button>`}${chat.length ? `<button class="icon-btn" id="chat-clear" aria-label="Clear chat" title="Clear chat">${IC.trash}</button>` : ""}</span></div>
     <div class="chat-log" id="chat-log">${chat.length ? chat.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${esc(m.role === "user" ? m.content : plain(m.content))}</div>`).join("") : `<div class="msg sys">Ask anything, or tell Task what to add. It knows your goals, meetings, clients, drug cards and books.</div>`}${aiState === "off" ? `<div class="msg sys">${esc(aiOffText())}</div>` : ""}</div>
     <form class="chat-form" id="chat-form"><textarea id="chat-in" placeholder="Message Task AI" aria-label="Message"></textarea><button class="btn primary" type="submit" id="chat-send">Send</button><button class="btn" type="button" id="chat-stop" hidden>Stop</button></form>
@@ -1667,12 +1699,28 @@ function viewSettings(){
       ${panel("set-look", "settings", "Look", bgName + " background · " + ({auto: "auto", light: "light", dark: "dark"})[theme] + " mode", lookSec, "")}
       ${inClaude ? "" : panel("set-pin", "lock", "PIN lock", hasPin() ? "On" : "Off", pinSec, "")}
       ${panel("set-app", "download", "App and alerts", "Notifications " + notif.toLowerCase(), appSec, "")}
+      ${panel("set-receipt", "receipt", "Receipts", bizInfo().phone || bizInfo().address ? "Business details set" : "Add phone and address", receiptSec(), "Shown on every receipt")}
       ${panel("set-backup", "download", "Backup", lb ? "Last backup " + ago(lb) : "No backup yet", backupSec, "")}
       ${panel("set-danger", "trash", "Erase data", "Remove everything", dangerSec, "")}
       ${panel("set-about", "more", "About", "Task " + APP_VERSION, aboutSec, "")}
     </div>`;
 }
-const APP_VERSION = "2.18.2";
+function receiptSec(){
+  const B = bizInfo(), logo = B.logo || profile.logo;
+  return `<section class="card"><form class="form" id="rc-form" style="padding:0">
+    <label class="field wide">Business name<input id="rc-name" value="${esc(B.name || "Brandbridge (Private) Limited")}"></label>
+    <label class="field">Phone<input id="rc-phone" type="tel" value="${esc(B.phone)}"></label>
+    <label class="field">Email<input id="rc-email" type="email" value="${esc(B.email)}"></label>
+    <label class="field wide">Address<input id="rc-address" value="${esc(B.address)}"></label>
+    <label class="field">Website<input id="rc-website" value="${esc(B.website || "brandbridge.site")}"></label>
+    <label class="field">Thank-you line<input id="rc-footer" value="${esc(B.footer || "Thank you for your business.")}"></label>
+    <div class="btn-row wide"><button class="btn primary" type="submit">Save details</button></div></form>
+    <div class="set-row" style="margin-top:12px"><div class="t"><b>Logo on receipts</b><span>${B.logo ? "Your receipt logo" : profile.logo ? "Using your profile logo" : "Using the Task icon until you add one"}</span></div>
+      ${logo ? `<img class="rc-logo-prev" src="${esc(logo)}" alt="">` : ""}<label class="btn">${IC.upload}${B.logo ? "Change" : "Add logo"}<input type="file" id="rc-logo" accept="image/*" hidden></label></div>
+    <p class="sub" style="margin:10px 0 0">${esc(partner())} sees the same details, so receipts match whoever prints them.</p></section>`;
+}
+const saveBizInfo = patch => { const B = bizInfo(); return put(B.id ? {...B, ...patch} : {id: uid(), kind: "bizinfo", createdAt: now(), ...patch}); };
+const APP_VERSION = "2.19";
 
 /* ---------- Expiry tracker ---------- */
 const stockLeft = x => Math.ceil((x.expiry - new Date().setHours(0, 0, 0, 0)) / DAY);
@@ -1786,11 +1834,11 @@ async function visionModel(p){
   if (p === "openrouter") return aiModel(p) === "openrouter/free" ? "openrouter/free" : "openrouter/auto";
   if (p === "mistral") return "mistral-medium-latest";
   if (p === "cohere") return "command-a-vision-07-2025";
-  if (p === "groq"){ try { const r = await fetch(AI_PROV.groq.base + "/models", {headers: {authorization: "Bearer " + aiKeys().groq}}); const ids = ((await r.json()).data || []).map(m => m.id); return ids.find(i => /llama-4-maverick/.test(i)) || ids.find(i => /llama-4|vision/.test(i)) || "meta-llama/llama-4-scout-17b-16e-instruct"; } catch { return "meta-llama/llama-4-scout-17b-16e-instruct"; } }
+  if (p === "groq"){ try { const r = await fetch(aiBase("groq") + "/models", {headers: aiAuth("groq")}); const ids = ((await r.json()).data || []).map(m => m.id); return ids.find(i => /llama-4-maverick/.test(i)) || ids.find(i => /llama-4|vision/.test(i)) || "meta-llama/llama-4-scout-17b-16e-instruct"; } catch { return "meta-llama/llama-4-scout-17b-16e-instruct"; } }
   return aiModel(p) || await aiPickModel(p);
 }
 async function visionAsk(prompt, img){
-  const ks = aiKeys(), order = aiOrder("study").filter(p => VISION.includes(p) && ks[p]);
+  const order = aiOrder("study").filter(p => VISION.includes(p) && aiHas(p));
   if (!order.length) throw {code: "no_vision"};
   const mt = img.slice(5, img.indexOf(";")), b64 = img.slice(img.indexOf(",") + 1); let last = {code: "no_vision"};
   for (const p of order){
@@ -1798,12 +1846,12 @@ async function visionAsk(prompt, img){
       let text = "";
       if (p === "anthropic"){
         const {default: Anthropic} = await import("https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0/+esm");
-        const r = await new Anthropic({apiKey: ks.anthropic, dangerouslyAllowBrowser: true}).beta.messages.create({model: "claude-opus-5-5", max_tokens: 4000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+        const r = await new Anthropic({...anthOpts(), dangerouslyAllowBrowser: true}).beta.messages.create({model: "claude-opus-5-5", max_tokens: 4000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
           messages: [{role: "user", content: [{type: "image", source: {type: "base64", media_type: mt, data: b64}}, {type: "text", text: prompt}]}]});
         if (r.stop_reason === "refusal") throw {code: "refused"};
         text = r.content.filter(b => b.type === "text").map(b => b.text).join("");
       } else {
-        const res = await fetch(AI_PROV[p].base + "/chat/completions", {method: "POST", headers: {"content-type": "application/json", authorization: "Bearer " + ks[p], ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
+        const res = await fetch(aiBase(p) + "/chat/completions", {method: "POST", headers: {"content-type": "application/json", ...aiAuth(p), ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
           body: JSON.stringify({model: await visionModel(p), messages: [{role: "user", content: [{type: "text", text: prompt}, {type: "image_url", image_url: {url: img}}]}]})});
         if (!res.ok) throw {code: res.status === 401 || res.status === 403 ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 402 ? "no_credit" : "upstream_error"};
         const j = await res.json(); text = j.choices?.[0]?.message?.content || "";
@@ -1820,7 +1868,7 @@ async function rxCheck(btn){
   const set = t => { rxOut = t; const o = $("#rx-out"); if (o){ o.classList.remove("placeholder"); o.textContent = t; } };
   if (inClaude){ set("Photo checks work in the installed Task app with your own AI key."); return; }
   if (!navigator.onLine){ set("You're offline. Connect to the internet to check the photo."); return; }
-  if (!Object.keys(aiKeys()).some(p => VISION.includes(p))){ set("Reading photos needs a Claude, ChatGPT, Gemini, OpenRouter, Mistral, Groq or Cohere key. Add one in Task AI, AI settings. Gemini and Groq keys are free."); return; }
+  if (!VISION.some(aiHas)){ set("Reading photos needs a Claude, ChatGPT, Gemini, OpenRouter, Mistral, Groq or Cohere key. Add one in Task AI, AI settings. Gemini and Groq keys are free."); return; }
   rxBusy = true; btn.disabled = true; set("Reading the prescription...");
   try { set(plain(await visionAsk(RX_PROMPT(($("#rx-note")?.value || "").trim()), rxImg))); }
   catch (e){ set(e?.code === "no_vision" ? "None of your AI keys can read photos." : errCopy(e)); }
@@ -2543,7 +2591,40 @@ function contactBtns(c, sm){
   const p = phoneOf(c), m = emailOf(c), z = sm ? " sm" : "";
   return (p ? `<a class="btn${z} wa" href="${waLink(p)}" target="_blank" rel="noopener">${IC.wa}WhatsApp</a><a class="btn${z}" href="tel:${esc(p)}">${IC.phone}Call</a>` : "") + (m ? `<a class="btn${z}" href="mailto:${esc(m)}">${IC.mail}Email</a>` : "");
 }
-let clientId = null, feeEdit = null;
+let clientId = null, feeEdit = null, lastPay = null;
+/* ---------- Receipts ---------- */
+// Business details shared by both partners, so a receipt looks the same whoever prints it.
+const bizInfo = () => of("bizinfo").sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0] || {};
+const rcptNo = x => "BB-" + new Date(x.at).toISOString().slice(0, 10).replace(/-/g, "") + "-" + x.id.replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase();
+function receiptHTML(x){
+  const d = byId(x.dealId) || {}, B = bizInfo(), b = billing(d), cur = n => money(n) || "0", logo = B.logo || profile.logo || "icon-512.png";
+  const what = x.delivery ? "Initial fee, paid at delivery" : x.for === "setup" ? "Initial fee (part payment)" : x.for === "monthly" ? "Monthly website maintenance fee" : "Payment";
+  const day = t => new Date(t).toLocaleDateString([], {day: "numeric", month: "long", year: "numeric"});
+  const row = (l, v, cls = "") => `<tr class="${cls}"><td>${l}</td><td>${v}</td></tr>`;
+  return `<div class="rc">
+    <header class="rc-head"><img src="${esc(logo)}" alt=""><div><h1>${esc(B.name || "Brandbridge (Private) Limited")}</h1>
+      <p>${[B.address, B.phone, B.email, B.website].filter(Boolean).map(esc).join(" · ")}</p></div></header>
+    <div class="rc-title"><h2>Receipt</h2><dl><dt>Receipt no.</dt><dd>${rcptNo(x)}</dd><dt>Date</dt><dd>${day(x.at)}</dd></dl></div>
+    <div class="rc-to"><span>Received from</span><b>${esc(d.client || "Client")}</b>${d.company && d.company !== d.client ? `<p>${esc(d.company)}</p>` : ""}${d.contact ? `<p>${esc(d.contact)}</p>` : ""}</div>
+    <table class="rc-items"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>
+      <tr><td>${what}${d.service ? `<br><small>${esc(d.service)}</small>` : ""}${x.note && !x.delivery ? `<br><small>Paid by ${esc(x.note)}</small>` : ""}</td><td>${cur(x.amount)}</td></tr></tbody>
+      <tfoot><tr><td>Total received</td><td>${cur(x.amount)}</td></tr></tfoot></table>
+    ${hasPlan(d) ? `<table class="rc-sum"><caption>Account as of ${day(now())}</caption><tbody>
+      ${b.setup ? row("Initial fee", cur(b.setup)) + row("Initial fee paid", cur(b.setupPaid)) + row("Initial fee owing", cur(Math.max(0, b.setupLeft))) : ""}
+      ${b.monthly || b.months ? row(`Monthly fee${b.nextDue ? ", next due " + day(b.nextDue) : ""}`, cur(b.monthly)) + row("Monthly fees owing", cur(Math.max(0, b.monthlyLeft))) : ""}
+      ${row(b.balance < 0 ? "Paid ahead" : "Total balance owing", cur(Math.abs(b.balance)), "rc-total")}</tbody></table>` : ""}
+    <footer class="rc-foot"><div><span>Received by</span><b>${esc(profile.name || "")}</b><i></i><small>Signature</small></div>
+      <p>${esc(B.footer || "Thank you for your business.")}</p></footer></div>`;
+}
+function printReceipt(id){
+  const x = byId(id); if (!x) return;
+  let area = $("#print-area"); if (!area){ area = document.createElement("div"); area.id = "print-area"; document.body.appendChild(area); }
+  area.innerHTML = receiptHTML(x); document.body.classList.add("printing");
+  const done = () => { document.body.classList.remove("printing"); removeEventListener("afterprint", done); };
+  addEventListener("afterprint", done);
+  const imgs = [...area.querySelectorAll("img")].filter(i => !i.complete);
+  Promise.all(imgs.map(i => new Promise(r => { i.onload = i.onerror = r; }))).then(() => setTimeout(() => window.print(), 60));
+}
 const dateVal = t => toInput(t || now()).slice(0, 10);
 function clientPop(d){
   const b = billing(d), pays = paysOf(d.id), cur = esc(profile.currency || "amount"), money0 = n => money(n) || "0";
@@ -2585,9 +2666,11 @@ function clientPop(d){
       <label class="field">Delivered on<input id="pl-delivered" type="date" value="${dateVal()}"></label>
       <label class="field">Monthly fee, from the next month (${cur})<input id="pl-monthly" inputmode="decimal"></label>
       <div class="btn-row"><button class="btn primary" type="submit">${IC.pay}Save payment plan</button></div></form>`;
-  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span><span>${x.delivery ? "At delivery" : x.for === "setup" ? "Initial fee" : x.for === "monthly" ? "Monthly fee" : "Payment"}</span>${x.note && !x.delivery ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions">${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
+  const hist = pays.length ? `<ul class="list">${pays.map(x => `<li class="row"><div class="row-main"><div class="row-title">${money(x.amount)}</div><div class="row-meta"><span>${esc(fmtDay(x.at))}</span><span>${x.delivery ? "At delivery" : x.for === "setup" ? "Initial fee" : x.for === "monthly" ? "Monthly fee" : "Payment"}</span>${x.note && !x.delivery ? `<span>${esc(x.note)}</span>` : ""}${x._by ? `<span>by ${esc(x._by.split(/\s+/)[0])}</span>` : ""}</div></div><div class="row-actions"><button class="icon-btn" data-receipt="${x.id}" aria-label="Print receipt" title="Print receipt">${IC.receipt}</button>${delBtn(x.id)}</div></li>`).join("")}</ul>` : `<p class="sub">No payments recorded yet.</p>`;
+  const justPaid = lastPay && pays.find(x => x.id === lastPay);
   const more = d.nextStep || d.notes ? `<section class="card">${d.nextStep ? `<p><b>Next:</b> ${esc(d.nextStep)}${d.nextAt ? ", " + esc(fmtWhen(d.nextAt)) : ""}</p>` : ""}${d.notes ? `<div class="row-notes">${esc(d.notes)}</div>` : ""}</section>` : "";
   return {title: d.client, sub: [d.company !== d.client && d.company, d.service].filter(Boolean).join(" · ") || "Client", html: `${head}
+    ${justPaid ? `<div class="notice rc-note"><p>${money(justPaid.amount)} recorded.</p><button class="btn sm primary" data-receipt="${justPaid.id}">${IC.receipt}Print receipt</button></div>` : ""}
     <section class="card"><div class="card-head"><div><h2>Payments</h2></div>${hasPlan(d) ? `<button class="btn sm ghost" data-edit="${d.id}">${IC.edit}Change plan</button>` : ""}</div>${pay}</section>
     <section class="card"><div class="card-head"><div><h2>Payment history</h2><p class="sub">${pays.length} payment${pays.length === 1 ? "" : "s"}</p></div></div>${hist}</section>
     ${more}<div class="btn-row"><button class="btn" data-edit="${d.id}">${IC.edit}Edit client</button></div>`};
@@ -2828,7 +2911,7 @@ function shortList(key, title, rows, n = 3, sub = ""){
 }
 function openPop(k){ if (!POPS[k]) return; popKey = k; fillPop(); $("#pop").hidden = false; document.body.classList.add("pop-open"); }
 function fillPop(){ const p = POPS[popKey]; if (!p) return closePop(); $("#pop-title").textContent = p.title; $("#pop-sub").textContent = p.sub || ""; $("#pop-sub").hidden = !p.sub; $("#pop-body").innerHTML = p.html; }
-function closePop(){ if (popKey === "client") clientId = null; popKey = null; const el = $("#pop"); if (!el || el.hidden) return; el.hidden = true; $("#pop-body").innerHTML = ""; document.body.classList.remove("pop-open"); }
+function closePop(){ if (popKey === "client"){ clientId = null; lastPay = null; } popKey = null; const el = $("#pop"); if (!el || el.hidden) return; el.hidden = true; $("#pop-body").innerHTML = ""; document.body.classList.remove("pop-open"); }
 document.querySelector("#pop [data-popclose]").innerHTML = IC.close;
 document.getElementById("pop").addEventListener("click", e => { if (e.target.id === "pop") closePop(); });
 
@@ -2885,6 +2968,8 @@ document.addEventListener("click", async ev => {
   if (d.sound){ lsSet("task.sound", d.sound); unlockAudio(); lastRing = 0; ring(); render(); return; }
   if (d.aimain){ aiSet("task.aiMain", d.aimain); toast(d.aimain === "auto" ? "Task now picks the best AI for each job." : `Task now uses ${AI_PROV[d.aimain].short} for everything.`); render(); return; }
   if (d.aitest){ testKey(t, d.aitest); return; }
+  if (d.receipt){ printReceipt(d.receipt); return; }
+  if (d.aishare){ t.disabled = true; await shareKeys(d.aishare === "on"); return; }
   if (d.aidel){ const ks = aiKeys(); if (confirm(`Remove your ${AI_PROV[d.aidel].short} key${signedIn() ? " from all your devices" : " from this device"}?`)){ delete ks[d.aidel]; aiSet("task.aiKeys", ks); if (d.aidel === "anthropic") try { localStorage.removeItem("task.apiKey"); } catch {} toast("Key removed."); render(); } return; }
   if (d.libdel){ const b = libBook(d.libdel); if (b && confirm(`Remove ${b.title} from this device?`)){ await libDelBook(d.libdel); toast("Book removed."); render(); } return; }
   if (d.libask){ closePop(); go("books"); libRun(d.libask); return; }
@@ -3021,6 +3106,7 @@ document.addEventListener("change", async ev => {
   if (id === "bg-file" && f){ try { if (saveProfile({bgPhoto: await readImage(f, 1400, "image/jpeg", .75), bg: "photo"})) toast("Background saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "logo-file" && f){ try { if (saveProfile({logo: await readImage(f, 600, "image/png"), watermark: true})) toast("Logo saved as your watermark."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; applyLook(); render(); }
   if (id === "py-for"){ const a = $("#py-amt"), o = ev.target.dataset; if (a) a.value = (ev.target.value === "setup" ? o.setup : o.monthly) || ""; }
+  if (id === "rc-logo" && f){ try { saveBizInfo({logo: await readImage(f, 400, "image/png")}); toast("Receipt logo saved."); } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if ((id === "rx-cam" || id === "rx-file") && f){ try { rxImg = await readImage(f, 1800, "image/jpeg", .88); rxOut = ""; rxEnh = false; } catch (e) { toast(imgErr(e)); } ev.target.value = ""; render(); }
   if (id === "lib-file" && ev.target.files?.length){ const fs = [...ev.target.files]; ev.target.value = ""; libImport(fs); }
   if (ev.target.dataset?.aipick){ aiSet("task.aiMain", ev.target.value); toast(ev.target.value === "auto" ? "Task now picks the best AI for each job." : `Task AI now answers with ${AI_PROV[ev.target.value].short}.`); render(); }
@@ -3082,7 +3168,7 @@ document.addEventListener("submit", ev => {
   else if (f === "pay-form"){
     const dl = byId(ev.target.dataset.deal), a = amt("#py-amt"); if (!dl || !a){ toast("Type the amount paid."); return; }
     const day = $("#py-at").value, at = day ? new Date(day + "T12:00").getTime() : now();
-    const left = billing(dl).balance - a; add("pay", {dealId: dl.id, amount: a, at, note: v("#py-note"), for: $("#py-for")?.value || "monthly"}); document.activeElement?.blur(); toast(`Recorded ${money(a)} from ${dl.client}. ${left > 0 ? "Still owes " + money(left) + "." : "All paid up."}`); return;
+    const left = billing(dl).balance - a, pid = uid(); lastPay = pid; put({id: pid, kind: "pay", createdAt: now(), dealId: dl.id, amount: a, at, note: v("#py-note"), for: $("#py-for")?.value || "monthly"}); document.activeElement?.blur(); toast(`Recorded ${money(a)} from ${dl.client}. ${left > 0 ? "Still owes " + money(left) + "." : "All paid up."}`); return;
   }
   else if (f === "fee-form"){
     const dl = byId(ev.target.dataset.deal), a = amt("#fe-amt"), day = $("#fe-from").value; if (!dl || !day){ toast("Type the new fee and when it starts."); return; }
@@ -3102,6 +3188,7 @@ document.addEventListener("submit", ev => {
     toast(`${editing ? "Updated" : "Saved"} ${data.product || "order"} for ${data.client}. Profit ${money(data.price - data.cost) || "0"}.`); editing = null; openForm = null;
     setTimeout(() => { const dt = document.querySelector('details[data-form="cream"]'); if (dt) dt.open = false; }, 0);
   }
+  else if (f === "rc-form"){ document.activeElement?.blur(); saveBizInfo({name: v("#rc-name"), phone: v("#rc-phone"), email: v("#rc-email"), address: v("#rc-address"), website: v("#rc-website"), footer: v("#rc-footer")}); toast("Receipt details saved."); return; }
   else if (f === "auth-form"){ submitAuth(); return; }
   else if (f === "pin-form"){
     const a = v("#pin-new"), b = v("#pin-confirm");
@@ -3322,7 +3409,27 @@ function aiKeys(){
 // Signed in, keys and the chosen AI follow you to your other devices (private to you, never shared with your team or put in backups).
 const AI_SYNC = ["task.aiKeys", "task.aiMain", "task.aiModel"];
 const aiItemId = () => (typeof session !== "undefined" && session?.user?.id) ? "aikeys-" + session.user.id : null;
-function aiSet(k, v){ lsSet(k, v); lsSet("task.aiAt", now()); queueAiSync(); }
+function aiSet(k, v){ lsSet(k, v); lsSet("task.aiAt", now()); queueAiSync();
+  if (aiShared?.mine){ clearTimeout(aiSet.t); aiSet.t = setTimeout(() => shareKeys(Object.keys(aiKeys()).length > 0, true), 600); } }
+// A partner's shared keys: requests go through Task's server, which adds the key, so nobody else can see or copy it.
+let aiShared = lsGet("task.aiShared", null), aiSharedAt = 0;
+async function loadAiShared(force){
+  if (inClaude || !signedIn() || !apiOk || (!force && now() - aiSharedAt < 5 * MIN)) return; aiSharedAt = now();
+  try { const was = JSON.stringify(aiShared); aiShared = (await api("ai/shared")).shared; lsSet("task.aiShared", aiShared);
+    if (JSON.stringify(aiShared) !== was){ aiState = "unknown"; if (view === "ai" || popKey === "ai-key") render(); } } catch {}
+}
+async function shareKeys(on, quiet){
+  try { await api("ai/share", {on, keys: aiKeys(), models: lsGet("task.aiModel", {})}); await loadAiShared(true);
+    if (!quiet) toast(on ? `${partner()} can now use your AI keys. They can't see or copy them.` : `${partner()} can no longer use your AI keys.`); }
+  catch (e){ if (!quiet) toast(e?.code === "no_keys" ? "Add a key first." : e?.code === "no_team" ? `Invite ${partner()} to your team first (Settings, Account).` : "Couldn't change sharing. Check your connection."); }
+  render();
+}
+const ownKey = p => aiKeys()[p];
+const sharedHas = p => !inClaude && signedIn() && !aiShared?.mine && !!aiShared?.provs?.includes(p);
+const aiHas = p => !!ownKey(p) || sharedHas(p);
+const aiBase = p => ownKey(p) ? AI_PROV[p].base : location.origin + "/api/ai/p/" + p;
+const aiAuth = p => ({authorization: "Bearer " + (ownKey(p) || session?.token || "")});
+const anthOpts = () => ownKey("anthropic") ? {apiKey: ownKey("anthropic")} : {apiKey: null, authToken: session?.token, baseURL: location.origin + "/api/ai/p/anthropic"};
 function queueAiSync(first){
   const id = aiItemId(); if (!id) return;
   const ai = Object.fromEntries(AI_SYNC.map(k => [k, lsGet(k, null)]));
@@ -3344,17 +3451,17 @@ const AI_RANK = {chat: ["anthropic", "openai", "gemini", "openrouter", "mistral"
 const AI_JOBS = [["chat", "Chat"], ["study", "Study"], ["quick", "Quick jobs"]];
 // He asked for automatic choice, so v2.14 turns Auto on once; picking one AI later still sticks.
 if (!lsGet("task.aiAutoOn", 0)){ lsSet("task.aiMain", "auto"); lsSet("task.aiAutoOn", 1); }
-const aiAuto = () => { const m = lsGet("task.aiMain", "auto"); return !m || m === "auto" || !aiKeys()[m]; };
+const aiAuto = () => { const m = lsGet("task.aiMain", "auto"); return !m || m === "auto" || !aiHas(m); };
 function aiOrder(job){
   const ks = aiKeys(), rank = AI_RANK[job] || AI_RANK.chat;
   // OpenRouter on its free models is weaker, so it goes last.
   const r = p => p === "openrouter" && aiModel(p) === "openrouter/free" ? 50 : rank.indexOf(p);
-  const have = Object.keys(AI_PROV).filter(p => ks[p]).sort((a, b) => r(a) - r(b));
+  const have = Object.keys(AI_PROV).filter(aiHas).sort((a, b) => r(a) - r(b));
   const main = lsGet("task.aiMain", "auto");
   return aiAuto() ? have : [main, ...have.filter(p => p !== main)];
 }
-const aiModel = p => lsGet("task.aiModel", {})[p] || AI_PROV[p].model || "";
-function apiKey(){ const p = aiOrder()[0]; return p ? aiKeys()[p] : ""; }
+const aiModel = p => lsGet("task.aiModel", {})[p] || (!ownKey(p) && aiShared?.models?.[p]) || AI_PROV[p].model || "";
+function apiKey(){ const p = aiOrder()[0]; return p ? ownKey(p) || "shared" : ""; }
 // Standalone mode: call the main AI with the user's own key, then the other keys if it fails.
 async function apiSample(input, opts = {}){
   const order = opts.only ? [opts.only] : aiOrder(opts.job); let last = {code: "bad_key"};
@@ -3372,7 +3479,7 @@ async function apiSample(input, opts = {}){
 // Picks a current chat model from the provider's own list, so it keeps working as models change.
 async function aiPickModel(p){
   if (p === "anthropic" || p === "openrouter") return aiModel(p);
-  const res = await fetch(AI_PROV[p].base + "/models", {headers: {authorization: "Bearer " + aiKeys()[p]}});
+  const res = await fetch(aiBase(p) + "/models", {headers: aiAuth(p)});
   if (res.status === 401 || res.status === 403 || res.status === 400) throw {code: "bad_key"};
   if (!res.ok) throw {code: "upstream_error"};
   const ids = ((await res.json()).data || []).map(m => ({id: String(m.id).replace(/^models\//, ""), at: m.created || 0}));
@@ -3398,8 +3505,8 @@ async function openaiSample(p, input, opts = {}){
     if (opts.signal?.aborted) throw {code: "cancelled", text: all};
     let res;
     try {
-      res = await fetch(P.base + "/chat/completions", {method: "POST", signal: opts.signal,
-        headers: {"content-type": "application/json", authorization: "Bearer " + aiKeys()[p], ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
+      res = await fetch(aiBase(p) + "/chat/completions", {method: "POST", signal: opts.signal,
+        headers: {"content-type": "application/json", ...aiAuth(p), ...(p === "openrouter" ? {"X-Title": "Task"} : {})},
         body: JSON.stringify({model, messages, ...(apiTools.length ? {tools: apiTools} : {})})});
     } catch { throw {code: opts.signal?.aborted ? "cancelled" : "offline", text: all}; }
     // No OpenRouter credit: switch to its free models (they don't need credit) and try again.
@@ -3423,7 +3530,7 @@ async function openaiSample(p, input, opts = {}){
 }
 async function claudeSample(input, opts = {}){
   const {default: Anthropic} = await import("https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0/+esm");
-  const client = new Anthropic({apiKey: aiKeys().anthropic, dangerouslyAllowBrowser: true});
+  const client = new Anthropic({...anthOpts(), dangerouslyAllowBrowser: true});
   const messages = typeof input === "string" ? [{role: "user", content: input}] : input.map(m => ({role: m.role, content: m.content}));
   const apiTools = (opts.tools || []).map(t => ({name: t.name, description: t.description, input_schema: t.inputSchema || {type: "object", properties: {}}}));
   let all = "";

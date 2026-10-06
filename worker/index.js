@@ -28,6 +28,8 @@ export default {
 };
 
 const enc = new TextEncoder();
+const AI_BASE = { anthropic: "https://api.anthropic.com", openai: "https://api.openai.com/v1", gemini: "https://generativelanguage.googleapis.com/v1beta/openai", openrouter: "https://openrouter.ai/api/v1",
+  groq: "https://api.groq.com/openai/v1", cerebras: "https://api.cerebras.ai/v1", mistral: "https://api.mistral.ai/v1", huggingface: "https://router.huggingface.co/v1", cohere: "https://api.cohere.ai/compatibility/v1" };
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 const rand = n => hex(crypto.getRandomValues(new Uint8Array(n)));
 const sha = async s => hex(await crypto.subtle.digest("SHA-256", enc.encode(s)));
@@ -109,6 +111,7 @@ export class Store extends DurableObject {
       CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
       CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL, p256dh TEXT, auth TEXT, tz TEXT, created INTEGER);
       CREATE TABLE IF NOT EXISTS push_sent (item_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (item_id, at));
+      CREATE TABLE IF NOT EXISTS ai_share (team_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, keys TEXT NOT NULL, models TEXT, updated INTEGER);
     `);
     // Everyone in a team is a co-owner (Brandbridge has two equal owners).
     this.sql.exec("UPDATE members SET role = 'owner' WHERE role != 'owner'");
@@ -137,6 +140,9 @@ export class Store extends DurableObject {
       if (path === "push/subscribe") return this.subscribe(user, body);
       if (path === "push/unsubscribe") { this.sql.exec("DELETE FROM push_subs WHERE endpoint = ? AND user_id = ?", String(body.endpoint || ""), user.id); return json({ ok: true }); }
       if (path === "push/test") { const n = await this.pushTo([user.id], { title: "Task alert", body: "Alerts are working. You'll get these even when Task is closed.", tag: "task-test" }); return json({ sent: n }); }
+      if (path === "ai/share") return this.aiShare(user, body);
+      if (path === "ai/shared") return this.aiShared(user);
+      if (path.startsWith("ai/p/")) return this.aiProxy(user, req, path.slice(5), url, body);
       if (path === "sites") return req.method === "POST" ? this.addSite(user, body) : json({ sites: this.sitesOf(user) });
       if (path === "sites/remove") return this.removeSite(user, body);
       if (path === "sites/check") return this.checkSite(user, body);
@@ -145,6 +151,37 @@ export class Store extends DurableObject {
     } catch (e) {
       return json({ error: "server", message: String(e && e.message || e) }, 500);
     }
+  }
+
+  // ---------- Shared AI keys ----------
+  // A partner can let the rest of the team use their AI keys. The keys stay on the server: the others' requests come
+  // here, get the key added, and go on to the AI company, so nobody else can see or copy them.
+  aiShare(user, b) {
+    const team = this.teamOf(user.id); if (!team) return json({ error: "no_team" }, 400);
+    if (!b.on) { this.sql.exec("DELETE FROM ai_share WHERE team_id = ? AND user_id = ?", team.id, user.id); return json({ ok: true, on: false }); }
+    const keys = {}; for (const [p, k] of Object.entries(b.keys || {})) if (AI_BASE[p] && typeof k === "string" && k.length < 400) keys[p] = k;
+    if (!Object.keys(keys).length) return json({ error: "no_keys" }, 400);
+    const models = {}; for (const [p, m] of Object.entries(b.models || {})) if (AI_BASE[p] && typeof m === "string" && m.length < 200) models[p] = m;
+    this.sql.exec("INSERT INTO ai_share (team_id, user_id, keys, models, updated) VALUES (?, ?, ?, ?, ?) ON CONFLICT(team_id) DO UPDATE SET user_id = excluded.user_id, keys = excluded.keys, models = excluded.models, updated = excluded.updated",
+      team.id, user.id, JSON.stringify(keys), JSON.stringify(models), Date.now());
+    return json({ ok: true, on: true });
+  }
+  aiShared(user) {
+    const team = this.teamOf(user.id), row = team && this.one("SELECT a.*, u.name FROM ai_share a JOIN users u ON u.id = a.user_id WHERE a.team_id = ?", team.id);
+    if (!row) return json({ shared: null });
+    return json({ shared: { by: row.name, mine: row.user_id === user.id, provs: Object.keys(JSON.parse(row.keys)), models: JSON.parse(row.models || "{}"), updated: row.updated } });
+  }
+  async aiProxy(user, req, rest, url, body) {
+    const team = this.teamOf(user.id), row = team && this.one("SELECT keys FROM ai_share WHERE team_id = ?", team.id);
+    const i = rest.indexOf("/"), p = rest.slice(0, i), sub = rest.slice(i + 1), key = row && JSON.parse(row.keys)[p];
+    if (!key) return json({ error: { type: "authentication_error", message: "No shared key for this AI." } }, 401);
+    const ok = p === "anthropic" ? sub === "v1/messages" : sub === "chat/completions" || sub === "models";
+    if (!ok) return json({ error: "not_allowed" }, 403);
+    const h = { "content-type": "application/json" };
+    if (p === "anthropic") { h["x-api-key"] = key; h["anthropic-version"] = req.headers.get("anthropic-version") || "2023-06-01"; const beta = req.headers.get("anthropic-beta"); if (beta) h["anthropic-beta"] = beta; }
+    else { h.authorization = "Bearer " + key; if (p === "openrouter") h["X-Title"] = "Task"; }
+    const res = await fetch(AI_BASE[p] + "/" + sub + url.search, { method: req.method, headers: h, body: req.method === "POST" ? JSON.stringify(body) : undefined });
+    return new Response(res.body, { status: res.status, headers: { "content-type": res.headers.get("content-type") || "application/json", "cache-control": "no-store" } });
   }
 
   bearer(req) { const h = req.headers.get("authorization") || ""; return h.startsWith("Bearer ") ? h.slice(7) : ""; }
